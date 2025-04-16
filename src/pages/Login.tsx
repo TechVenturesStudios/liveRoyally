@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/ui/logo";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -18,7 +20,29 @@ const Login = () => {
     setError("");
 
     // In a real app, we would make an API call to authenticate the user
-    // For now, let's simulate a successful login
+    // For this demo, let's simulate a login validation
+    
+    // This is a simple validation - in a real app, this would be server-side
+    if (email === "" || password === "") {
+      setError("Email and password are required");
+      return;
+    }
+    
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    
+    // Simulate a failed login (for testing purposes)
+    // In a real app, this would be based on actual authentication
+    // For now, any password with "invalid" will trigger an error
+    if (password.includes("invalid")) {
+      setError("Incorrect email or password. Please try again.");
+      toast.error("Login failed", {
+        description: "Incorrect email or password combination"
+      });
+      return;
+    }
     
     // Simulate getting the user type based on email
     // In a real application, this would come from the backend after authentication
@@ -43,6 +67,11 @@ const Login = () => {
     
     // Store the user in localStorage
     localStorage.setItem("user", JSON.stringify(user));
+    
+    // Show success toast
+    toast.success("Login successful", {
+      description: "Welcome back!"
+    });
     
     // Redirect to the dashboard
     navigate("/dashboard");
@@ -76,9 +105,9 @@ const Login = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                  {error}
-                </div>
+                <Alert variant="destructive" className="bg-red-50">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
               <div className="space-y-2">
@@ -103,7 +132,9 @@ const Login = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       // In a real app, this would navigate to a password reset page
-                      alert("Password reset functionality would be here");
+                      toast.info("Password Reset", {
+                        description: "Password reset functionality would be implemented here"
+                      });
                     }}
                   >
                     Forgot Password?
