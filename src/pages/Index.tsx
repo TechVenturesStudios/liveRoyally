@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/ui/logo";
@@ -15,7 +16,7 @@ const Index = () => {
           <Logo />
           <div className="space-x-4">
             <Button 
-              className="bg-royal hover:bg-royal-dark text-white"
+              className="bg-gold hover:bg-gold-dark text-charcoal text-lg px-8 py-6"
               onClick={() => navigate("/login")}
             >
               Sign In
