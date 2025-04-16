@@ -1,10 +1,11 @@
+
 import React from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Database, Download, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Database, FileText } from "lucide-react";
+import SchemaTable from "@/components/database/SchemaTable";
+import ReportsGrid from "@/components/database/ReportsGrid";
+import ImplementationRecommendations from "@/components/database/ImplementationRecommendations";
 
 const DatabaseSchemaView = () => {
   return (
@@ -29,196 +30,15 @@ const DatabaseSchemaView = () => {
         </TabsList>
 
         <TabsContent value="schema">
-          <Card>
-            <CardHeader>
-              <CardTitle>Voucher Redemption Tracking Schema</CardTitle>
-              <CardDescription>
-                Database structure for tracking all voucher redemptions and validations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Column Name</TableHead>
-                    <TableHead>Data Type</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Example Value</TableHead>
-                    <TableHead>Required</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">Unique User ID's</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Unique identifier of the member</TableCell>
-                    <TableCell>30001</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">Network ID</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Network identifier (e.g., royal)</TableCell>
-                    <TableCell>royal</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">Event ID</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Identifier for the event where voucher was distributed</TableCell>
-                    <TableCell>EV0001</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">Voucher ID</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Unique identifier for the voucher</TableCell>
-                    <TableCell>VC12345</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">Date of Record</TableCell>
-                    <TableCell>timestamp</TableCell>
-                    <TableCell>Date and time when the voucher was redeemed</TableCell>
-                    <TableCell>2025-04-16T14:32:21Z</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">Zip Code (of User ID)</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Zip code of the user</TableCell>
-                    <TableCell>90210</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <SchemaTable />
         </TabsContent>
 
         <TabsContent value="reports">
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Reports</CardTitle>
-              <CardDescription>
-                Standard reports that can be generated from redemption data
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold">Redemption Summary Report</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Overview of all voucher redemptions by date range
-                      </p>
-                    </div>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Download className="h-4 w-4" />
-                      <span>Export</span>
-                    </Button>
-                  </div>
-                  <ul className="list-disc pl-5 text-sm space-y-2 text-gray-600">
-                    <li>Total redemptions by date range</li>
-                    <li>Breakdown by voucher type</li>
-                    <li>Value of redemptions</li>
-                    <li>Geographic distribution of redemptions</li>
-                  </ul>
-                </Card>
-
-                <Card className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold">Demographic Analysis</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Demographic breakdown of voucher redemptions
-                      </p>
-                    </div>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Download className="h-4 w-4" />
-                      <span>Export</span>
-                    </Button>
-                  </div>
-                  <ul className="list-disc pl-5 text-sm space-y-2 text-gray-600">
-                    <li>Redemptions by age group</li>
-                    <li>Redemptions by gender</li>
-                    <li>Redemptions by ethnicity</li>
-                    <li>Cross-tabulation of demographics</li>
-                  </ul>
-                </Card>
-
-                <Card className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold">Provider Performance</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Analysis of voucher redemptions by provider
-                      </p>
-                    </div>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Download className="h-4 w-4" />
-                      <span>Export</span>
-                    </Button>
-                  </div>
-                  <ul className="list-disc pl-5 text-sm space-y-2 text-gray-600">
-                    <li>Redemption counts by provider</li>
-                    <li>Value of redemptions by provider</li>
-                    <li>Provider location analysis</li>
-                    <li>Provider redemption trends</li>
-                  </ul>
-                </Card>
-
-                <Card className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold">Event Effectiveness</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Analysis of voucher redemptions by originating event
-                      </p>
-                    </div>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Download className="h-4 w-4" />
-                      <span>Export</span>
-                    </Button>
-                  </div>
-                  <ul className="list-disc pl-5 text-sm space-y-2 text-gray-600">
-                    <li>Redemption rates by event</li>
-                    <li>Time-to-redemption analysis</li>
-                    <li>Event ROI calculations</li>
-                    <li>Comparative event performance</li>
-                  </ul>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
+          <ReportsGrid />
         </TabsContent>
       </Tabs>
 
-      <div className="mt-8 bg-blue-50 p-6 rounded-lg border border-blue-200">
-        <h3 className="text-lg font-bold text-blue-800 mb-2">Implementation Recommendations</h3>
-        <p className="text-blue-700 mb-4">
-          Based on the requirements, here are the recommended approaches for tracking voucher redemptions:
-        </p>
-        <ul className="list-disc pl-5 space-y-3 text-blue-700">
-          <li>
-            <strong>Database Storage:</strong> Store all redemption data in a dedicated database table. This enables real-time 
-            reporting and analysis. Use the schema shown above.
-          </li>
-          <li>
-            <strong>Report Generation:</strong> Provide downloadable reports in CSV and PDF formats for offline analysis. 
-            These can be generated on-demand or scheduled automatically.
-          </li>
-          <li>
-            <strong>Data Capture:</strong> When a provider scans a voucher, all the required information should be captured 
-            automatically from the QR code and user profile.
-          </li>
-          <li>
-            <strong>Analytics Dashboard:</strong> Provide a real-time analytics dashboard that visualizes redemption data 
-            across different dimensions (demographics, geography, time).
-          </li>
-        </ul>
-      </div>
+      <ImplementationRecommendations />
     </DashboardLayout>
   );
 };
