@@ -48,103 +48,47 @@ const DatabaseSchemaView = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow>
-                    <TableCell className="font-medium">redemption_id</TableCell>
-                    <TableCell>uuid</TableCell>
-                    <TableCell>Unique identifier for each redemption record</TableCell>
-                    <TableCell>b5d2d8e4-3cc9-4b2a-91d3-6c71b3847c22</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
                   <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">user_id</TableCell>
+                    <TableCell className="font-medium">Unique User ID's</TableCell>
                     <TableCell>string</TableCell>
-                    <TableCell>Unique identifier of the member using the voucher</TableCell>
+                    <TableCell>Unique identifier of the member</TableCell>
                     <TableCell>30001</TableCell>
                     <TableCell>Yes</TableCell>
                   </TableRow>
                   <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">network_id</TableCell>
+                    <TableCell className="font-medium">Network ID</TableCell>
                     <TableCell>string</TableCell>
                     <TableCell>Network identifier (e.g., royal)</TableCell>
                     <TableCell>royal</TableCell>
                     <TableCell>Yes</TableCell>
                   </TableRow>
                   <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">event_id</TableCell>
+                    <TableCell className="font-medium">Event ID</TableCell>
                     <TableCell>string</TableCell>
                     <TableCell>Identifier for the event where voucher was distributed</TableCell>
                     <TableCell>EV0001</TableCell>
                     <TableCell>Yes</TableCell>
                   </TableRow>
                   <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">voucher_id</TableCell>
+                    <TableCell className="font-medium">Voucher ID</TableCell>
                     <TableCell>string</TableCell>
                     <TableCell>Unique identifier for the voucher</TableCell>
                     <TableCell>VC12345</TableCell>
                     <TableCell>Yes</TableCell>
                   </TableRow>
                   <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">redemption_date</TableCell>
+                    <TableCell className="font-medium">Date of Record</TableCell>
                     <TableCell>timestamp</TableCell>
                     <TableCell>Date and time when the voucher was redeemed</TableCell>
                     <TableCell>2025-04-16T14:32:21Z</TableCell>
                     <TableCell>Yes</TableCell>
                   </TableRow>
                   <TableRow className="bg-blue-50">
-                    <TableCell className="font-medium">zip_code</TableCell>
+                    <TableCell className="font-medium">Zip Code (of User ID)</TableCell>
                     <TableCell>string</TableCell>
                     <TableCell>Zip code of the user</TableCell>
                     <TableCell>90210</TableCell>
                     <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">gender</TableCell>
-                    <TableCell>integer</TableCell>
-                    <TableCell>Gender of the user (1: Male, 2: Female, 3: Other)</TableCell>
-                    <TableCell>2</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">age_range</TableCell>
-                    <TableCell>integer</TableCell>
-                    <TableCell>Age range of the user (1: 18-24, 2: 25-34, 3: 35-44, 4: 45-54, 5: 55-64, 6: 65+)</TableCell>
-                    <TableCell>3</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">ethnicity</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Ethnicity of the user</TableCell>
-                    <TableCell>Hispanic/Latino</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">use_case_id</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Type of voucher (A1: % off, B1: $ off, C1: free item)</TableCell>
-                    <TableCell>B1</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">provider_id</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>ID of the provider who validated the voucher</TableCell>
-                    <TableCell>P20001</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">provider_location</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Location of the provider where redemption occurred</TableCell>
-                    <TableCell>Downtown Branch</TableCell>
-                    <TableCell>No</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">value_redeemed</TableCell>
-                    <TableCell>decimal</TableCell>
-                    <TableCell>Monetary value of the voucher that was redeemed</TableCell>
-                    <TableCell>25.00</TableCell>
-                    <TableCell>No</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
