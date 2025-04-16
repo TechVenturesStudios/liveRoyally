@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -10,7 +9,9 @@ import {
   Clock, 
   BarChart3, 
   PlusCircle,
-  Medal
+  Medal,
+  Users,
+  Building
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -161,20 +162,20 @@ const Dashboard = () => {
             stats: "24 Total"
           },
           {
-            title: "Approve Events",
-            description: "Review and publish events",
-            icon: PlusCircle,
-            path: "/dashboard/approve-events",
+            title: "Providers",
+            description: "Manage service providers",
+            icon: Users,
+            path: "/dashboard/providers",
             color: "bg-green-100 text-green-600",
-            stats: "3 To Review"
+            stats: "15 Active"
           },
           {
-            title: "Analytics",
-            description: "Global engagement metrics",
-            icon: BarChart3,
-            path: "/dashboard/analytics",
+            title: "Partners",
+            description: "Manage network partners",
+            icon: Building,
+            path: "/dashboard/partners",
             color: "bg-purple-100 text-purple-600",
-            stats: "1,250 Engagements"
+            stats: "8 Active"
           }
         ];
       default:

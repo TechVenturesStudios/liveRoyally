@@ -10,6 +10,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/dashboard/Dashboard";
 import VoucherPage from "./pages/dashboard/VoucherPage";
 import ScanVoucher from "./pages/dashboard/ScanVoucher";
+import ProvidersDashboard from "./pages/dashboard/ProvidersDashboard";
+import PartnersDashboard from "./pages/dashboard/PartnersDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +29,8 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/vouchers" element={<VoucherPage />} />
           <Route path="/dashboard/scan" element={<ScanVoucher />} />
+          <Route path="/dashboard/providers" element={<ProvidersDashboard />} />
+          <Route path="/dashboard/partners" element={<PartnersDashboard />} />
           <Route path="/dashboard/*" element={<Dashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
