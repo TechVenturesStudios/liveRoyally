@@ -57,6 +57,34 @@ const schemaFields: SchemaField[] = [
   },
 ];
 
+// Sample user data for demonstration
+const sampleUsers = [
+  {
+    userId: "30001",
+    networkId: "royal",
+    eventId: "EV0001",
+    voucherId: "VC12345",
+    dateOfRecord: "2025-04-16T14:32:21Z",
+    zipCode: "90210",
+  },
+  {
+    userId: "30002",
+    networkId: "royal",
+    eventId: "EV0002",
+    voucherId: "VC12346",
+    dateOfRecord: "2025-04-15T10:15:30Z",
+    zipCode: "90211",
+  },
+  {
+    userId: "30003",
+    networkId: "premium",
+    eventId: "EV0003",
+    voucherId: "VC12347",
+    dateOfRecord: "2025-04-14T09:45:12Z",
+    zipCode: "90212",
+  },
+];
+
 const SchemaTable = () => {
   return (
     <Card>
@@ -70,21 +98,23 @@ const SchemaTable = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[200px]">Column Name</TableHead>
-              <TableHead className="w-[120px]">Data Type</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="w-[150px]">Example Value</TableHead>
-              <TableHead className="w-[100px] text-center">Required</TableHead>
+              <TableHead className="w-[120px]">Unique User ID's</TableHead>
+              <TableHead className="w-[120px]">Network ID</TableHead>
+              <TableHead className="w-[120px]">Event ID</TableHead>
+              <TableHead className="w-[120px]">Voucher ID</TableHead>
+              <TableHead className="w-[180px]">Date of Record</TableHead>
+              <TableHead className="w-[120px]">Zip Code</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {schemaFields.map((field, index) => (
-              <TableRow key={index} className="bg-blue-50">
-                <TableCell className="font-medium">{field.name}</TableCell>
-                <TableCell>{field.dataType}</TableCell>
-                <TableCell>{field.description}</TableCell>
-                <TableCell>{field.example}</TableCell>
-                <TableCell className="text-center">{field.required ? "Yes" : "No"}</TableCell>
+            {sampleUsers.map((user, index) => (
+              <TableRow key={index} className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}>
+                <TableCell className="font-medium">{user.userId}</TableCell>
+                <TableCell>{user.networkId}</TableCell>
+                <TableCell>{user.eventId}</TableCell>
+                <TableCell>{user.voucherId}</TableCell>
+                <TableCell>{user.dateOfRecord}</TableCell>
+                <TableCell>{user.zipCode}</TableCell>
               </TableRow>
             ))}
           </TableBody>
