@@ -1,4 +1,3 @@
-
 import React from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -56,11 +55,46 @@ const DatabaseSchemaView = () => {
                     <TableCell>b5d2d8e4-3cc9-4b2a-91d3-6c71b3847c22</TableCell>
                     <TableCell>Yes</TableCell>
                   </TableRow>
-                  <TableRow>
+                  <TableRow className="bg-blue-50">
                     <TableCell className="font-medium">user_id</TableCell>
                     <TableCell>string</TableCell>
-                    <TableCell>Identifier of the member using the voucher</TableCell>
+                    <TableCell>Unique identifier of the member using the voucher</TableCell>
                     <TableCell>30001</TableCell>
+                    <TableCell>Yes</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-blue-50">
+                    <TableCell className="font-medium">network_id</TableCell>
+                    <TableCell>string</TableCell>
+                    <TableCell>Network identifier (e.g., royal)</TableCell>
+                    <TableCell>royal</TableCell>
+                    <TableCell>Yes</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-blue-50">
+                    <TableCell className="font-medium">event_id</TableCell>
+                    <TableCell>string</TableCell>
+                    <TableCell>Identifier for the event where voucher was distributed</TableCell>
+                    <TableCell>EV0001</TableCell>
+                    <TableCell>Yes</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-blue-50">
+                    <TableCell className="font-medium">voucher_id</TableCell>
+                    <TableCell>string</TableCell>
+                    <TableCell>Unique identifier for the voucher</TableCell>
+                    <TableCell>VC12345</TableCell>
+                    <TableCell>Yes</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-blue-50">
+                    <TableCell className="font-medium">redemption_date</TableCell>
+                    <TableCell>timestamp</TableCell>
+                    <TableCell>Date and time when the voucher was redeemed</TableCell>
+                    <TableCell>2025-04-16T14:32:21Z</TableCell>
+                    <TableCell>Yes</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-blue-50">
+                    <TableCell className="font-medium">zip_code</TableCell>
+                    <TableCell>string</TableCell>
+                    <TableCell>Zip code of the user</TableCell>
+                    <TableCell>90210</TableCell>
                     <TableCell>Yes</TableCell>
                   </TableRow>
                   <TableRow>
@@ -85,45 +119,10 @@ const DatabaseSchemaView = () => {
                     <TableCell>Yes</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium">network_id</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Network identifier (e.g., royal)</TableCell>
-                    <TableCell>royal</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">event_id</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Identifier for the event where voucher was distributed</TableCell>
-                    <TableCell>EV0001</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
                     <TableCell className="font-medium">use_case_id</TableCell>
                     <TableCell>string</TableCell>
                     <TableCell>Type of voucher (A1: % off, B1: $ off, C1: free item)</TableCell>
                     <TableCell>B1</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">voucher_id</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Unique identifier for the voucher</TableCell>
-                    <TableCell>VC12345</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">redemption_date</TableCell>
-                    <TableCell>timestamp</TableCell>
-                    <TableCell>Date and time when the voucher was redeemed</TableCell>
-                    <TableCell>2025-04-16T14:32:21Z</TableCell>
-                    <TableCell>Yes</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">zip_code</TableCell>
-                    <TableCell>string</TableCell>
-                    <TableCell>Zip code of the user</TableCell>
-                    <TableCell>90210</TableCell>
                     <TableCell>Yes</TableCell>
                   </TableRow>
                   <TableRow>
