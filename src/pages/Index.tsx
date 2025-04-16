@@ -16,7 +16,7 @@ const Index = () => {
           <Logo />
           <div className="space-x-4">
             <Button 
-              className="bg-gold hover:bg-gold-dark text-charcoal text-lg px-8 py-6"
+              className="bg-royal hover:bg-royal-dark text-white"
               onClick={() => navigate("/login")}
             >
               Sign In
@@ -49,7 +49,7 @@ const Index = () => {
             </Button>
             <Button 
               variant="outline" 
-              className="border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+              className="bg-gold hover:bg-gold-dark text-charcoal text-lg px-8 py-6"
               onClick={() => navigate("/login")}
             >
               Sign In
