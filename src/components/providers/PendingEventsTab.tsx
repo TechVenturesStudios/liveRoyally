@@ -1,9 +1,10 @@
 
 import React from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown, ScanLine, Ticket } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Event {
   id: string;
@@ -26,6 +27,11 @@ interface PendingEventsTabProps {
 
 const PendingEventsTab = ({ events, sortOrder, toggleSortOrder }: PendingEventsTabProps) => {
   const pendingEvents = events.filter(event => event.status === "pending");
+  const navigate = useNavigate();
+
+  const handleGoToVouchers = () => {
+    navigate("/dashboard/vouchers");
+  };
 
   return (
     <Card>
@@ -78,6 +84,16 @@ const PendingEventsTab = ({ events, sortOrder, toggleSortOrder }: PendingEventsT
           </Table>
         </div>
       </CardContent>
+      <CardFooter className="pt-2 pb-4 flex justify-end">
+        <Button 
+          onClick={handleGoToVouchers}
+          className="flex items-center gap-2"
+          variant="outline"
+        >
+          <ScanLine className="h-4 w-4" />
+          <span>Scan Vouchers</span>
+        </Button>
+      </CardFooter>
     </Card>
   );
 };
