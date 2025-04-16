@@ -4,51 +4,47 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 40 33% 96%; /* Cream background */
+    --foreground: 240 25% 14%; /* Charcoal text */
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 240 25% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 240 25% 14%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 270 68% 35%; /* Royal purple */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 39 93% 57%; /* Gold */
+    --secondary-foreground: 240 25% 14%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 40 20% 92%;
+    --muted-foreground: 240 4% 46%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 39 93% 57%; /* Gold */
+    --accent-foreground: 240 25% 14%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 270 20% 86%;
+    --input: 270 20% 86%;
+    --ring: 270 68% 35%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 270 68% 35%; /* Royal purple */
+    --sidebar-foreground: 0 0% 100%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 39 93% 57%; /* Gold */
+    --sidebar-primary-foreground: 240 25% 14%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-accent: 270 40% 40%;
+    --sidebar-accent-foreground: 0 0% 100%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 270 30% 30%;
+    --sidebar-ring: 39 93% 57%;
   }
 
   .dark {
@@ -90,6 +86,8 @@
   }
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
+
 @layer base {
   * {
     @apply border-border;
@@ -97,5 +95,48 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cormorant Garamond', serif;
+    @apply font-semibold;
+  }
+
+  h1 {
+    @apply text-4xl sm:text-5xl md:text-6xl;
+  }
+
+  h2 {
+    @apply text-3xl sm:text-4xl md:text-5xl;
+  }
+
+  h3 {
+    @apply text-2xl sm:text-3xl md:text-4xl;
+  }
+
+  button, .btn {
+    @apply transition-all duration-200;
+  }
+
+  /* Royal theme specific styles */
+  .royal-gradient {
+    @apply bg-gradient-to-r from-royal to-royal-light;
+  }
+
+  .gold-gradient {
+    @apply bg-gradient-to-r from-gold to-gold-light;
+  }
+
+  .royal-card {
+    @apply bg-white border border-royal/10 shadow-md rounded-lg p-6;
+  }
+
+  .royal-input {
+    @apply border-2 border-royal/20 focus:border-royal/70 focus:ring-royal/30 rounded-md;
+  }
+
+  .royal-header {
+    @apply text-royal font-semibold;
   }
 }
