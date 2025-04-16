@@ -1,0 +1,187 @@
+
+import React from "react";
+import { UserType } from "@/types/user";
+import DashboardCard from "./DashboardCard";
+import { 
+  Package, 
+  Calendar, 
+  Clock, 
+  BarChart3, 
+  PlusCircle,
+  Medal,
+  Users,
+  Building
+} from "lucide-react";
+
+interface DashboardCardsProps {
+  userType: UserType;
+}
+
+const DashboardCards = ({ userType }: DashboardCardsProps) => {
+  const dashboardCards = getDashboardCards(userType);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {dashboardCards.map((card, index) => (
+        <DashboardCard
+          key={index}
+          title={card.title}
+          description={card.description}
+          icon={card.icon}
+          path={card.path}
+          color={card.color}
+          stats={card.stats}
+        />
+      ))}
+    </div>
+  );
+};
+
+const getDashboardCards = (userType: UserType) => {
+  switch (userType) {
+    case "member":
+      return [
+        {
+          title: "Upcoming Vouchers",
+          description: "View your purchased vouchers",
+          icon: Package,
+          path: "/dashboard/vouchers",
+          color: "bg-blue-100 text-blue-600",
+          stats: "2 Active"
+        },
+        {
+          title: "Purchase History",
+          description: "View your past purchases",
+          icon: Clock,
+          path: "/dashboard/history",
+          color: "bg-amber-100 text-amber-600",
+          stats: "5 Total"
+        },
+        {
+          title: "New Deals",
+          description: "Discover new offers and deals",
+          icon: PlusCircle,
+          path: "/dashboard/deals",
+          color: "bg-green-100 text-green-600",
+          stats: "8 Available"
+        },
+        {
+          title: "Engagement Score",
+          description: "View your engagement metrics",
+          icon: Medal,
+          path: "/dashboard/score",
+          color: "bg-purple-100 text-purple-600",
+          stats: "850 Points"
+        }
+      ];
+    case "provider":
+      return [
+        {
+          title: "Pending Events",
+          description: "Events you're participating in",
+          icon: Calendar,
+          path: "/dashboard/pending-events",
+          color: "bg-blue-100 text-blue-600",
+          stats: "3 Pending"
+        },
+        {
+          title: "Participation History",
+          description: "Events you've participated in",
+          icon: Clock,
+          path: "/dashboard/participated-events",
+          color: "bg-amber-100 text-amber-600",
+          stats: "12 Events"
+        },
+        {
+          title: "Upcoming Events",
+          description: "Join new network events",
+          icon: PlusCircle,
+          path: "/dashboard/upcoming-events",
+          color: "bg-green-100 text-green-600",
+          stats: "5 Available"
+        },
+        {
+          title: "Network Score",
+          description: "Your network participation metrics",
+          icon: Medal,
+          path: "/dashboard/score",
+          color: "bg-purple-100 text-purple-600",
+          stats: "1250 Points"
+        }
+      ];
+    case "partner":
+      return [
+        {
+          title: "Pending Events",
+          description: "Events awaiting approval",
+          icon: Calendar,
+          path: "/dashboard/pending-events",
+          color: "bg-blue-100 text-blue-600",
+          stats: "2 Pending"
+        },
+        {
+          title: "Published Events",
+          description: "Your past published events",
+          icon: Clock,
+          path: "/dashboard/published-events",
+          color: "bg-amber-100 text-amber-600",
+          stats: "8 Published"
+        },
+        {
+          title: "Create Event",
+          description: "Create a new network event",
+          icon: PlusCircle,
+          path: "/dashboard/create-event",
+          color: "bg-green-100 text-green-600",
+          stats: ""
+        },
+        {
+          title: "Analytics",
+          description: "View network engagement metrics",
+          icon: BarChart3,
+          path: "/dashboard/analytics",
+          color: "bg-purple-100 text-purple-600",
+          stats: "320 Purchases"
+        }
+      ];
+    case "admin":
+      return [
+        {
+          title: "Pending Events",
+          description: "Events awaiting your approval",
+          icon: Calendar,
+          path: "/dashboard/pending-events",
+          color: "bg-blue-100 text-blue-600",
+          stats: "5 Pending"
+        },
+        {
+          title: "All Events",
+          description: "View all published events",
+          icon: Clock,
+          path: "/dashboard/all-events",
+          color: "bg-amber-100 text-amber-600",
+          stats: "24 Total"
+        },
+        {
+          title: "Providers",
+          description: "Manage service providers",
+          icon: Users,
+          path: "/dashboard/providers",
+          color: "bg-green-100 text-green-600",
+          stats: "15 Active"
+        },
+        {
+          title: "Partners",
+          description: "Manage network partners",
+          icon: Building,
+          path: "/dashboard/partners",
+          color: "bg-purple-100 text-purple-600",
+          stats: "8 Active"
+        }
+      ];
+    default:
+      return [];
+  }
+};
+
+export default DashboardCards;
