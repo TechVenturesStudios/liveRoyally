@@ -12,6 +12,7 @@ import VoucherPage from "./pages/dashboard/VoucherPage";
 import ScanVoucher from "./pages/dashboard/ScanVoucher";
 import ProvidersDashboard from "./pages/dashboard/ProvidersDashboard";
 import PartnersDashboard from "./pages/dashboard/PartnersDashboard";
+import DatabaseSchemaView from "./pages/dashboard/DatabaseSchemaView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/dashboard/scan" element={<ScanVoucher />} />
           <Route path="/dashboard/providers" element={<ProvidersDashboard />} />
           <Route path="/dashboard/partners" element={<PartnersDashboard />} />
+          <Route path="/dashboard/database-schema" element={<DatabaseSchemaView />} />
           <Route path="/dashboard/*" element={<Dashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

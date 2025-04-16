@@ -4,7 +4,8 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, CheckCircle, XCircle } from "lucide-react";
+import { Search, CheckCircle, XCircle, Database, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const ScanVoucher = () => {
   const [voucherCode, setVoucherCode] = useState("");
@@ -29,16 +30,29 @@ const ScanVoucher = () => {
         networkId,
         userId,
         timestamp: new Date().toISOString(),
+        // In a real system, we would also fetch these from the user's profile
+        gender: 2, // Example: Female
+        ageRange: 3, // Example: 35-44
+        ethnicity: "Hispanic/Latino",
+        zipCode: "90210",
       });
       
       // In a real app, we'd save this redemption to a database
       console.log("Voucher redeemed:", {
-        voucherId,
-        eventId,
-        useCaseId,
-        networkId, 
-        userId,
-        timestamp: new Date().toISOString(),
+        redemption_id: crypto.randomUUID(),
+        voucher_id: voucherId,
+        event_id: eventId,
+        use_case_id: useCaseId,
+        network_id: networkId, 
+        user_id: userId,
+        gender: 2,
+        age_range: 3,
+        ethnicity: "Hispanic/Latino",
+        zip_code: "90210",
+        redemption_date: new Date().toISOString(),
+        provider_id: "P20001", // Would be the logged-in provider's ID
+        provider_location: "Downtown Branch",
+        value_redeemed: 25.00, // Example value
       });
     } else {
       setScanResult("error");
@@ -48,11 +62,19 @@ const ScanVoucher = () => {
 
   return (
     <DashboardLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold royal-header">Scan Voucher</h1>
-        <p className="text-gray-600 mt-2">
-          Validate and redeem customer vouchers
-        </p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold royal-header">Scan Voucher</h1>
+          <p className="text-gray-600 mt-2">
+            Validate and redeem customer vouchers
+          </p>
+        </div>
+        <Link to="/dashboard/database-schema">
+          <Button variant="outline" className="flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            <span>View Schema</span>
+          </Button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -108,6 +130,18 @@ const ScanVoucher = () => {
                   ? "This voucher is valid and can be redeemed."
                   : "This voucher code is invalid or has already been redeemed."}
               </p>
+              {scanResult === "success" && (
+                <div className="mt-4 text-sm text-green-600">
+                  <p className="font-medium">Data will be stored in database:</p>
+                  <ul className="list-disc pl-5 mt-1 space-y-1">
+                    <li>User demographic data (gender, age, ethnicity, zip)</li>
+                    <li>Voucher details (ID, type, value)</li>
+                    <li>Event information</li>
+                    <li>Provider details</li>
+                    <li>Timestamp of redemption</li>
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </Card>
@@ -136,6 +170,31 @@ const ScanVoucher = () => {
                 <span className="text-gray-600">User ID:</span>
                 <span className="font-medium">{voucherDetails.userId}</span>
               </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-gray-600">Gender:</span>
+                <span className="font-medium">
+                  {voucherDetails.gender === 1 ? "Male" : 
+                   voucherDetails.gender === 2 ? "Female" : "Other"}
+                </span>
+              </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-gray-600">Age Range:</span>
+                <span className="font-medium">
+                  {voucherDetails.ageRange === 1 ? "18-24" : 
+                   voucherDetails.ageRange === 2 ? "25-34" : 
+                   voucherDetails.ageRange === 3 ? "35-44" : 
+                   voucherDetails.ageRange === 4 ? "45-54" : 
+                   voucherDetails.ageRange === 5 ? "55-64" : "65+"}
+                </span>
+              </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-gray-600">Ethnicity:</span>
+                <span className="font-medium">{voucherDetails.ethnicity}</span>
+              </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-gray-600">Zip Code:</span>
+                <span className="font-medium">{voucherDetails.zipCode}</span>
+              </div>
               <div className="flex justify-between pb-2">
                 <span className="text-gray-600">Redeemed:</span>
                 <span className="font-medium">
@@ -144,17 +203,30 @@ const ScanVoucher = () => {
               </div>
             </div>
             
-            <Button 
-              className="w-full mt-6 bg-royal hover:bg-royal-dark text-white"
-              onClick={() => {
-                alert("Voucher has been redeemed successfully!");
-                setScanResult(null);
-                setVoucherDetails(null);
-                setVoucherCode("");
-              }}
-            >
-              Complete Redemption
-            </Button>
+            <div className="mt-6 flex gap-4">
+              <Button 
+                className="flex-1 bg-royal hover:bg-royal-dark text-white"
+                onClick={() => {
+                  alert("Voucher has been redeemed successfully!");
+                  setScanResult(null);
+                  setVoucherDetails(null);
+                  setVoucherCode("");
+                }}
+              >
+                Complete Redemption
+              </Button>
+              
+              <Button 
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => {
+                  alert("In a complete app, this would generate a receipt that can be emailed or printed");
+                }}
+              >
+                <FileText className="h-4 w-4" />
+                <span>Receipt</span>
+              </Button>
+            </div>
           </Card>
         )}
       </div>
