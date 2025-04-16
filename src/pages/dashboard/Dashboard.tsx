@@ -1,23 +1,17 @@
 
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import DashboardWelcome from "@/components/dashboard/DashboardWelcome";
 import DashboardCards from "@/components/dashboard/DashboardCards";
-import { getUserFromStorage } from "@/utils/userStorage";
+import { useAuthCheck } from "@/hooks/useAuthCheck";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const { user, isLoading } = useAuthCheck();
 
-  useEffect(() => {
-    const userData = getUserFromStorage();
-    if (userData) {
-      setUser(userData);
-    } else {
-      navigate("/login");
-    }
-  }, [navigate]);
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
 
   if (!user) {
     return null;

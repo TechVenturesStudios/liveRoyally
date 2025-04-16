@@ -1,40 +1,17 @@
 
-import React, { ReactNode, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { User, getUserFromStorage } from "@/utils/userStorage";
+import React, { ReactNode } from "react";
 import DashboardHeader from "./DashboardHeader";
 import DashboardSidebar from "./DashboardSidebar";
 import DashboardMobileNav from "./DashboardMobileNav";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { toast } from "sonner";
+import { useAuthCheck } from "@/hooks/useAuthCheck";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Check for user in localStorage
-    const userData = getUserFromStorage();
-    console.log("User data from storage:", userData);
-    
-    if (!userData) {
-      console.log("No user found, redirecting to login");
-      toast.error("Please sign in to access the dashboard");
-      navigate("/login");
-      return;
-    }
-    
-    // Small delay to ensure state updates properly
-    setTimeout(() => {
-      setUser(userData);
-      setIsLoading(false);
-    }, 100);
-  }, [navigate]);
+  const { user, isLoading } = useAuthCheck();
 
   if (isLoading) {
     return <LoadingSpinner />;
