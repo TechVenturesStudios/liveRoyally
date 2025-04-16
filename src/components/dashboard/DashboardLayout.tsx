@@ -205,7 +205,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <div>
                 <p className="text-sm font-semibold">{user?.id || "User ID"}</p>
                 <p className="text-xs text-gray-500 capitalize">
-                  {user?.userType || "Member"}
+                  {user?.userType === 'provider' ? 'Provider' : (user?.userType || "Member")}
                 </p>
               </div>
             </div>
