@@ -38,6 +38,11 @@ export const getNavItems = (userType?: UserType): NavItem[] => {
       return [
         ...commonItems,
         {
+          name: "Upcoming Vouchers",
+          icon: Package,
+          path: "/dashboard/vouchers",
+        },
+        {
           name: "Purchase History",
           icon: Clock,
           path: "/dashboard/history",
