@@ -35,7 +35,6 @@ const Dashboard = () => {
     return null;
   }
 
-  // Generate cards based on user type
   const getDashboardCards = (userType: UserType) => {
     switch (userType) {
       case "member":
