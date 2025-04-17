@@ -66,6 +66,7 @@ const sampleUsers = [
     voucherId: "VC12345",
     dateOfRecord: "2025-04-16T14:32:21Z",
     zipCode: "90210",
+    providerId: "P20001"
   },
   {
     userId: "30002",
@@ -74,6 +75,7 @@ const sampleUsers = [
     voucherId: "VC12346",
     dateOfRecord: "2025-04-15T10:15:30Z",
     zipCode: "90211",
+    providerId: "P20002"
   },
   {
     userId: "30003",
@@ -82,6 +84,7 @@ const sampleUsers = [
     voucherId: "VC12347",
     dateOfRecord: "2025-04-14T09:45:12Z",
     zipCode: "90212",
+    providerId: "P20001"
   },
 ];
 
@@ -104,6 +107,7 @@ const SchemaTable = () => {
               <TableHead className="w-[120px]">Voucher ID</TableHead>
               <TableHead className="w-[180px]">Date of Record</TableHead>
               <TableHead className="w-[120px]">Zip Code</TableHead>
+              <TableHead className="w-[120px]">Provider ID</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -115,6 +119,7 @@ const SchemaTable = () => {
                 <TableCell>{user.voucherId}</TableCell>
                 <TableCell>{user.dateOfRecord}</TableCell>
                 <TableCell>{user.zipCode}</TableCell>
+                <TableCell>{user.providerId}</TableCell>
               </TableRow>
             ))}
           </TableBody>
