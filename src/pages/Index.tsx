@@ -4,9 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Crown, ShieldCheck, Zap } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Index = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -14,20 +16,22 @@ const Index = () => {
       <header className="py-4 px-6 shadow-sm bg-white">
         <div className="container mx-auto flex justify-between items-center">
           <Logo />
-          <div className="space-x-4">
-            <Button 
-              className="bg-royal hover:bg-royal-dark text-white"
-              onClick={() => navigate("/login")}
-            >
-              Sign In
-            </Button>
-            <Button 
-              className="bg-royal hover:bg-royal-dark text-white"
-              onClick={() => navigate("/register")}
-            >
-              Register
-            </Button>
-          </div>
+          {!isMobile && (
+            <div className="space-x-4">
+              <Button 
+                className="bg-royal hover:bg-royal-dark text-white"
+                onClick={() => navigate("/login")}
+              >
+                Sign In
+              </Button>
+              <Button 
+                className="bg-royal hover:bg-royal-dark text-white"
+                onClick={() => navigate("/register")}
+              >
+                Register
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -128,3 +132,4 @@ const Index = () => {
 };
 
 export default Index;
+
