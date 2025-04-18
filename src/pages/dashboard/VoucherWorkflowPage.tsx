@@ -1,12 +1,11 @@
 
 import React from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import DashboardWelcome from "@/components/dashboard/DashboardWelcome";
-import DashboardCards from "@/components/dashboard/DashboardCards";
+import VoucherWorkflow from "@/components/animations/VoucherWorkflow";
 import { useAuthCheck } from "@/hooks/useAuthCheck";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
-const Dashboard = () => {
+const VoucherWorkflowPage = () => {
   const { user, isLoading } = useAuthCheck();
 
   if (isLoading) {
@@ -19,10 +18,9 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <DashboardWelcome />
-      <DashboardCards userType={user.userType} />
+      <VoucherWorkflow />
     </DashboardLayout>
   );
 };
 
-export default Dashboard;
+export default VoucherWorkflowPage;
