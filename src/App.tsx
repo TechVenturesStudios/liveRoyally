@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +14,7 @@ import ProvidersDashboard from "./pages/dashboard/ProvidersDashboard";
 import PartnersDashboard from "./pages/dashboard/PartnersDashboard";
 import DatabaseSchemaView from "./pages/dashboard/DatabaseSchemaView";
 import NotFound from "./pages/NotFound";
+import VoucherWorkflowPage from "./pages/dashboard/VoucherWorkflowPage";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +43,7 @@ const App = () => (
           {/* Protected dashboard routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/dashboard/vouchers" element={<ProtectedRoute><VoucherPage /></ProtectedRoute>} />
+          <Route path="/dashboard/voucherworkflow" element={<ProtectedRoute><VoucherWorkflowPage /></ProtectedRoute>} />
           <Route path="/dashboard/scan" element={<ProtectedRoute><ScanVoucher /></ProtectedRoute>} />
           <Route path="/dashboard/providers" element={<ProtectedRoute><ProvidersDashboard /></ProtectedRoute>} />
           <Route path="/dashboard/partners" element={<ProtectedRoute><PartnersDashboard /></ProtectedRoute>} />
