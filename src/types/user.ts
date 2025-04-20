@@ -52,4 +52,11 @@ export interface PartnerUser extends BaseUser {
   organizationPhone: string;
 }
 
-export type User = MemberUser | ProviderUser | PartnerUser;
+export interface AdminUser extends BaseUser {
+  userType: "admin";
+  firstName?: string;
+  lastName?: string;
+  department?: string;
+}
+
+export type User = MemberUser | ProviderUser | PartnerUser | AdminUser;
