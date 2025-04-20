@@ -1,4 +1,3 @@
-
 import { 
   Package, 
   Calendar, 
@@ -133,35 +132,35 @@ export const dashboardCardItems: CardItemsByUserType = {
   admin: [
     {
       title: "Pending Events",
-      description: "Events awaiting your approval",
+      description: "Events awaiting approval",
       icon: Calendar,
-      path: "/dashboard/pending-events",
+      path: "/dashboard/admin/pending",
       color: "bg-blue-100 text-blue-600",
       stats: "5 Pending"
     },
     {
-      title: "All Events",
-      description: "View all published events",
+      title: "Historical Events",
+      description: "View all past events",
       icon: Clock,
-      path: "/dashboard/all-events",
+      path: "/dashboard/admin/history",
       color: "bg-amber-100 text-amber-600",
-      stats: "24 Total"
+      stats: "24 Published"
     },
     {
-      title: "Providers",
-      description: "Manage service providers",
-      icon: Users,
-      path: "/dashboard/providers",
+      title: "Network Analytics",
+      description: "View performance metrics",
+      icon: BarChart3,
+      path: "/dashboard/admin/analytics",
       color: "bg-green-100 text-green-600",
-      stats: "15 Active"
+      stats: "3 Networks"
     },
     {
-      title: "Partners",
-      description: "Manage network partners",
-      icon: Building,
-      path: "/dashboard/partners",
+      title: "Event Approval",
+      description: "Review and publish events",
+      icon: PlusCircle,
+      path: "/dashboard/admin/approve",
       color: "bg-purple-100 text-purple-600",
-      stats: "8 Active"
+      stats: "5 Pending"
     }
   ]
 };

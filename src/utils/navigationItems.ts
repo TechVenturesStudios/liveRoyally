@@ -1,4 +1,3 @@
-
 import { ReactNode } from "react";
 import {
   User,
@@ -105,23 +104,28 @@ const navigationItemsByType: NavItemsByUserType = {
     {
       name: "Pending Events",
       icon: Calendar,
-      path: "/dashboard/pending-events",
+      path: "/dashboard/admin/pending",
     },
     {
-      name: "All Events",
+      name: "Historical Events",
       icon: Clock,
-      path: "/dashboard/all-events",
+      path: "/dashboard/admin/history",
+    },
+    {
+      name: "Network Analytics",
+      icon: BarChart3,
+      path: "/dashboard/admin/analytics",
     },
     {
       name: "Approve Events",
       icon: PlusCircle,
-      path: "/dashboard/approve-events",
+      path: "/dashboard/admin/approve",
     },
     {
-      name: "Analytics",
-      icon: BarChart3,
-      path: "/dashboard/analytics",
-    },
+      name: "Profile",
+      icon: User,
+      path: "/dashboard/admin/profile",
+    }
   ]
 };
 

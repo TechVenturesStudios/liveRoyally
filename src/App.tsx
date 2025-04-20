@@ -15,6 +15,7 @@ import PartnersDashboard from "./pages/dashboard/PartnersDashboard";
 import DatabaseSchemaView from "./pages/dashboard/DatabaseSchemaView";
 import NotFound from "./pages/NotFound";
 import VoucherWorkflowPage from "./pages/dashboard/VoucherWorkflowPage";
+import AdminDashboard from "./pages/dashboard/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,11 @@ const App = () => (
           <Route path="/dashboard/scan" element={<ProtectedRoute><ScanVoucher /></ProtectedRoute>} />
           <Route path="/dashboard/providers" element={<ProtectedRoute><ProvidersDashboard /></ProtectedRoute>} />
           <Route path="/dashboard/partners" element={<ProtectedRoute><PartnersDashboard /></ProtectedRoute>} />
+          
+          {/* Admin Routes */}
+          <Route path="/dashboard/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/admin/*" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          
           <Route path="/dashboard/database-schema" element={<ProtectedRoute><DatabaseSchemaView /></ProtectedRoute>} />
           <Route path="/dashboard/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           
