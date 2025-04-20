@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { Calendar, Users, Medal, BarChart3 } from "lucide-react";
+import { Calendar, Users, Medal, BarChart3, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const AdminOverview = () => {
