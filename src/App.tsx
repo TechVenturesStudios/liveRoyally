@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +17,7 @@ import DatabaseSchemaView from "./pages/dashboard/DatabaseSchemaView";
 import NotFound from "./pages/NotFound";
 import VoucherWorkflowPage from "./pages/dashboard/VoucherWorkflowPage";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
+import PartnerCRMDashboard from "./pages/dashboard/PartnerCRMDashboard";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +50,9 @@ const App = () => (
           <Route path="/dashboard/scan" element={<ProtectedRoute><ScanVoucher /></ProtectedRoute>} />
           <Route path="/dashboard/providers" element={<ProtectedRoute><ProvidersDashboard /></ProtectedRoute>} />
           <Route path="/dashboard/partners" element={<ProtectedRoute><PartnersDashboard /></ProtectedRoute>} />
+          
+          {/* Partner CRM Dashboard */}
+          <Route path="/dashboard/crm" element={<ProtectedRoute><PartnerCRMDashboard /></ProtectedRoute>} />
           
           {/* Admin Routes */}
           <Route path="/dashboard/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />

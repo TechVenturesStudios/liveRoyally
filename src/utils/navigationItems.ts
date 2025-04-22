@@ -1,3 +1,4 @@
+
 import { ReactNode } from "react";
 import {
   User,
@@ -8,7 +9,9 @@ import {
   Clock,
   Medal,
   Users,
-  Building
+  Building,
+  MessageSquare,
+  Link
 } from "lucide-react";
 import { UserType } from "@/types/user";
 
@@ -97,6 +100,11 @@ const navigationItemsByType: NavItemsByUserType = {
       name: "Event Analytics",
       icon: BarChart3,
       path: "/dashboard/analytics",
+    },
+    {
+      name: "Provider CRM",
+      icon: MessageSquare,
+      path: "/dashboard/crm",
     },
   ],
   

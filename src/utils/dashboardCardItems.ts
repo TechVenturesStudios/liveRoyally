@@ -1,3 +1,4 @@
+
 import { 
   Package, 
   Calendar, 
@@ -6,7 +7,9 @@ import {
   PlusCircle,
   Medal,
   Users,
-  Building
+  Building,
+  MessageSquare,
+  Link
 } from "lucide-react";
 import { UserType } from "@/types/user";
 
@@ -121,12 +124,12 @@ export const dashboardCardItems: CardItemsByUserType = {
       stats: ""
     },
     {
-      title: "Analytics",
-      description: "View network engagement metrics",
-      icon: BarChart3,
-      path: "/dashboard/analytics",
+      title: "Provider CRM",
+      description: "Manage provider relationships",
+      icon: MessageSquare,
+      path: "/dashboard/crm",
       color: "bg-purple-100 text-purple-600",
-      stats: "320 Purchases"
+      stats: "24 Providers"
     }
   ],
   admin: [
