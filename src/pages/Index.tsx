@@ -121,8 +121,9 @@ const Index = () => {
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <Logo size="large" />
-            <div className="mt-6 md:mt-0">
+            <div className="mt-6 md:mt-0 text-center md:text-right">
               <p>&copy; {new Date().getFullYear()} Live Royally. All rights reserved.</p>
+              <p className="text-sm mt-2 opacity-80">Romans 8:31</p>
             </div>
           </div>
         </div>
@@ -132,4 +133,3 @@ const Index = () => {
 };
 
 export default Index;
-
