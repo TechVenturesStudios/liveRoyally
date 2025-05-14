@@ -19,7 +19,8 @@ const Index = () => {
           {!isMobile && (
             <div className="space-x-4">
               <Button 
-                className="bg-white hover:bg-white/90 text-brand-purple border border-brand-purple font-bold"
+                className="bg-white hover:bg-white/90 text-white border-2 border-white hover:bg-white hover:text-brand-purple font-bold"
+                variant="outline"
                 onClick={() => navigate("/login")}
               >
                 Sign In
