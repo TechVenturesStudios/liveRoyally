@@ -19,10 +19,10 @@ const Index = () => {
           {!isMobile && (
             <div className="space-x-4">
               <Button 
-                className="bg-brand-purple hover:bg-brand-purple/90 text-white"
+                className="bg-white hover:bg-white/90 text-brand-purple border border-brand-purple font-bold"
                 onClick={() => navigate("/login")}
               >
-                <span className="text-white">Sign In</span>
+                Sign In
               </Button>
               <Button 
                 className="bg-brand-pink hover:bg-brand-pink/90 text-white"
