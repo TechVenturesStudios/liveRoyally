@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/ui/logo";
@@ -52,7 +53,7 @@ const Index = () => {
             </Button>
             <Button 
               variant="outline" 
-              className="border-2 border-white hover:bg-white hover:text-brand-purple text-white text-lg px-8 py-6"
+              className="bg-white hover:bg-white/90 text-brand-purple font-bold border-2 border-white text-lg px-8 py-6"
               onClick={() => navigate("/login")}
             >
               Sign In
