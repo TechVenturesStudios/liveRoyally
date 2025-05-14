@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/ui/logo";
@@ -19,8 +18,7 @@ const Index = () => {
           {!isMobile && (
             <div className="space-x-4">
               <Button 
-                className="bg-white hover:bg-white/90 text-white border-2 border-white hover:bg-white hover:text-brand-purple font-bold"
-                variant="outline"
+                className="bg-white hover:bg-white/90 text-brand-purple border border-brand-purple font-bold"
                 onClick={() => navigate("/login")}
               >
                 Sign In
