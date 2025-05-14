@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
-import { Crown, ShieldCheck, Zap } from "lucide-react";
+import { TrendingUp, Users, RefreshCw, Building } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Index = () => {
@@ -19,13 +19,13 @@ const Index = () => {
           {!isMobile && (
             <div className="space-x-4">
               <Button 
-                className="bg-royal hover:bg-royal-dark text-white"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={() => navigate("/login")}
               >
                 Sign In
               </Button>
               <Button 
-                className="bg-royal hover:bg-royal-dark text-white"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={() => navigate("/register")}
               >
                 Register
@@ -36,24 +36,24 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="royal-gradient text-white py-20 px-6">
+      <section className="bg-gradient-to-r from-emerald-600 to-emerald-800 text-white py-20 px-6">
         <div className="container mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6">
-            Live Life <span className="text-gold">Royally</span>
+            Strengthen <span className="text-yellow-300">Local Economies</span>
           </h1>
           <p className="text-xl max-w-2xl mx-auto mb-10">
-            Connect customers and businesses with exclusive rewards and experiences through our premium engagement platform.
+            Connect businesses, consumers, and community stakeholders to circulate dollars locally and drive sustainable economic development.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Button 
-              className="bg-gold hover:bg-gold-dark text-charcoal text-lg px-8 py-6"
+              className="bg-yellow-400 hover:bg-yellow-500 text-emerald-900 text-lg px-8 py-6"
               onClick={() => navigate("/register")}
             >
-              Create an Account
+              Join Your Community
             </Button>
             <Button 
               variant="outline" 
-              className="bg-gold hover:bg-gold-dark text-charcoal text-lg px-8 py-6"
+              className="border-2 border-white hover:bg-white hover:text-emerald-700 text-white text-lg px-8 py-6"
               onClick={() => navigate("/login")}
             >
               Sign In
@@ -63,37 +63,37 @@ const Index = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-6 bg-cream">
+      <section className="py-20 px-6 bg-gray-50">
         <div className="container mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 royal-header">
-            Experience the Royal Advantage
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-emerald-700">
+            Community Economic Development
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-white p-8 rounded-lg shadow-md text-center">
-              <div className="bg-royal/10 rounded-full p-4 inline-block mb-6">
-                <Crown className="h-8 w-8 text-royal" />
+              <div className="bg-emerald-100 rounded-full p-4 inline-block mb-6">
+                <RefreshCw className="h-8 w-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-bold mb-4">Premium Experiences</h3>
+              <h3 className="text-xl font-bold mb-4">Circulate Local Dollars</h3>
               <p className="text-gray-600">
-                Access exclusive deals and offers from top businesses in your network.
+                Keep money flowing within your community by connecting local businesses and consumers.
               </p>
             </div>
             <div className="bg-white p-8 rounded-lg shadow-md text-center">
-              <div className="bg-royal/10 rounded-full p-4 inline-block mb-6">
-                <ShieldCheck className="h-8 w-8 text-royal" />
+              <div className="bg-emerald-100 rounded-full p-4 inline-block mb-6">
+                <Users className="h-8 w-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-bold mb-4">Secure Engagement</h3>
+              <h3 className="text-xl font-bold mb-4">Connect Stakeholders</h3>
               <p className="text-gray-600">
-                Safely connect with businesses through our verified QR code system.
+                Bridge the gap between businesses, consumers, and community organizations.
               </p>
             </div>
             <div className="bg-white p-8 rounded-lg shadow-md text-center">
-              <div className="bg-royal/10 rounded-full p-4 inline-block mb-6">
-                <Zap className="h-8 w-8 text-royal" />
+              <div className="bg-emerald-100 rounded-full p-4 inline-block mb-6">
+                <TrendingUp className="h-8 w-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-bold mb-4">Reward Points</h3>
+              <h3 className="text-xl font-bold mb-4">Measure Impact</h3>
               <p className="text-gray-600">
-                Earn rewards with every interaction and track your engagement score.
+                Track and analyze economic activity and development metrics within your community.
               </p>
             </div>
           </div>
@@ -101,14 +101,14 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6 bg-charcoal text-white">
+      <section className="py-20 px-6 bg-gray-800 text-white">
         <div className="container mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Join the Royal Network?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Strengthen Your Local Economy?</h2>
           <p className="text-xl max-w-2xl mx-auto mb-10">
-            Create your account today and start experiencing the benefits of Live Royally.
+            Join Local Metrics today and be part of the community economic development movement.
           </p>
           <Button 
-            className="bg-gold hover:bg-gold-dark text-charcoal text-lg px-8 py-6"
+            className="bg-yellow-400 hover:bg-yellow-500 text-gray-800 text-lg px-8 py-6"
             onClick={() => navigate("/register")}
           >
             Get Started Now
@@ -117,12 +117,12 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 bg-charcoal text-white border-t border-charcoal-light">
+      <footer className="py-12 px-6 bg-gray-900 text-white border-t border-gray-800">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <Logo size="large" />
             <div className="mt-6 md:mt-0 text-center md:text-right">
-              <p>&copy; {new Date().getFullYear()} Live Royally. All rights reserved.</p>
+              <p>&copy; {new Date().getFullYear()} Local Metrics. All rights reserved.</p>
               <p className="text-sm mt-2 opacity-80">Romans 8:31</p>
             </div>
           </div>
