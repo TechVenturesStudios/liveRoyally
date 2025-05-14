@@ -18,8 +18,8 @@ const DashboardSidebar = ({ user }: DashboardSidebarProps) => {
   return (
     <aside className="hidden md:flex md:w-64 lg:w-72 border-r border-gray-200 bg-white flex-col">
       <div className="flex-1 p-4 flex flex-col gap-1">
-        <div className="py-3 px-4 mb-2 flex items-center gap-3 bg-royal/5 rounded-md">
-          <div className="h-8 w-8 rounded-full bg-royal flex items-center justify-center text-white">
+        <div className="py-3 px-4 mb-2 flex items-center gap-3 bg-brand-purple/5 rounded-md">
+          <div className="h-8 w-8 rounded-full bg-brand-purple flex items-center justify-center text-white">
             <Crown className="h-4 w-4" />
           </div>
           <div>
@@ -34,7 +34,7 @@ const DashboardSidebar = ({ user }: DashboardSidebarProps) => {
             <Button
               key={item.name}
               variant="ghost"
-              className="w-full justify-start font-medium text-gray-600 hover:text-royal hover:bg-royal/5"
+              className="w-full justify-start font-medium text-gray-600 hover:text-brand-purple hover:bg-brand-purple/5"
               onClick={() => navigate(item.path)}
             >
               <item.icon className="h-4 w-4 mr-3" />

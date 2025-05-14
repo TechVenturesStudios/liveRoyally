@@ -33,7 +33,7 @@ const DashboardCard = ({
           <h3 className="font-bold text-lg mb-2">{title}</h3>
           <p className="text-gray-500 text-sm">{description}</p>
           {stats && (
-            <p className="text-royal font-medium mt-4">{stats}</p>
+            <p className="text-brand-purple font-medium mt-4">{stats}</p>
           )}
         </div>
         <div className={`rounded-full p-3 ${color}`}>

@@ -32,7 +32,7 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
             variant="ghost"
             size="sm"
             onClick={handleLogout}
-            className="flex items-center gap-1 text-gray-600 hover:text-red-600"
+            className="flex items-center gap-1 text-gray-600 hover:text-brand-pink"
           >
             <LogOut className="h-4 w-4" />
             <span className="hidden md:inline">Sign Out</span>

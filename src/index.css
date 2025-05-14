@@ -1,50 +1,51 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 40 33% 96%; /* Cream background */
-    --foreground: 240 25% 14%; /* Charcoal text */
+    --background: 0 0% 100%;
+    --foreground: 275 80% 15%; /* Dark purple text */
 
     --card: 0 0% 100%;
-    --card-foreground: 240 25% 14%;
+    --card-foreground: 275 80% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 25% 14%;
+    --popover-foreground: 275 80% 15%;
 
-    --primary: 270 68% 35%; /* Royal purple */
+    --primary: 275 75% 44%; /* Brand purple #761cc3 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 39 93% 57%; /* Gold */
-    --secondary-foreground: 240 25% 14%;
+    --secondary: 326 71% 55%; /* Brand pink #dc3daa */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 40 20% 92%;
-    --muted-foreground: 240 4% 46%;
+    --muted: 275 10% 92%;
+    --muted-foreground: 275 5% 45%;
 
-    --accent: 39 93% 57%; /* Gold */
-    --accent-foreground: 240 25% 14%;
+    --accent: 326 71% 55%; /* Brand pink #dc3daa */
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 270 20% 86%;
-    --input: 270 20% 86%;
-    --ring: 270 68% 35%;
+    --border: 275 20% 86%;
+    --input: 275 20% 86%;
+    --ring: 275 75% 44%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 270 68% 35%; /* Royal purple */
+    --sidebar-background: 275 75% 44%; /* Brand purple */
     --sidebar-foreground: 0 0% 100%;
 
-    --sidebar-primary: 39 93% 57%; /* Gold */
-    --sidebar-primary-foreground: 240 25% 14%;
+    --sidebar-primary: 326 71% 55%; /* Brand pink */
+    --sidebar-primary-foreground: 0 0% 100%;
 
-    --sidebar-accent: 270 40% 40%;
+    --sidebar-accent: 275 40% 55%;
     --sidebar-accent-foreground: 0 0% 100%;
 
-    --sidebar-border: 270 30% 30%;
-    --sidebar-ring: 39 93% 57%;
+    --sidebar-border: 275 30% 30%;
+    --sidebar-ring: 326 71% 55%;
   }
 
   .dark {
@@ -57,17 +58,17 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 275 75% 44%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 326 71% 55%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 326 71% 55%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
@@ -75,14 +76,15 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    
+    --sidebar-background: 275 75% 44%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 326 71% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 275 40% 55%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 275 30% 30%;
+    --sidebar-ring: 326 71% 55%;
   }
 }
 
@@ -119,24 +121,20 @@
     @apply transition-all duration-200;
   }
 
-  /* Royal theme specific styles */
-  .royal-gradient {
-    @apply bg-gradient-to-r from-royal to-royal-light;
+  /* Brand theme specific styles */
+  .brand-gradient {
+    @apply bg-gradient-to-r from-brand-purple to-brand-pink;
   }
 
-  .gold-gradient {
-    @apply bg-gradient-to-r from-gold to-gold-light;
+  .brand-card {
+    @apply bg-white border border-brand-purple/10 shadow-md rounded-lg p-6;
   }
 
-  .royal-card {
-    @apply bg-white border border-royal/10 shadow-md rounded-lg p-6;
+  .brand-input {
+    @apply border-2 border-brand-purple/20 focus:border-brand-purple/70 focus:ring-brand-purple/30 rounded-md;
   }
 
-  .royal-input {
-    @apply border-2 border-royal/20 focus:border-royal/70 focus:ring-royal/30 rounded-md;
-  }
-
-  .royal-header {
-    @apply text-royal font-semibold;
+  .brand-header {
+    @apply text-brand-purple font-semibold;
   }
 }

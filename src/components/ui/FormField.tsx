@@ -43,7 +43,7 @@ const FormField = ({
       
       {type === "select" ? (
         <Select value={value} onValueChange={onSelectChange}>
-          <SelectTrigger className="royal-input w-full">
+          <SelectTrigger className="brand-input w-full">
             <SelectValue placeholder={placeholder || `Select ${label}`} />
           </SelectTrigger>
           <SelectContent>
@@ -60,7 +60,7 @@ const FormField = ({
             id={name} 
             checked={checked} 
             onCheckedChange={onCheckboxChange} 
-            className="data-[state=checked]:bg-royal data-[state=checked]:border-royal" 
+            className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple" 
           />
           <label htmlFor={name} className="text-sm text-gray-700">{placeholder}</label>
         </div>
@@ -73,7 +73,7 @@ const FormField = ({
           required={required}
           value={value}
           onChange={onChange}
-          className="royal-input w-full"
+          className="brand-input w-full"
         />
       )}
     </div>
