@@ -22,7 +22,7 @@ const Index = () => {
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={() => navigate("/login")}
               >
-                Sign In
+                <span className="text-emerald-300">Sign In</span>
               </Button>
               <Button 
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
