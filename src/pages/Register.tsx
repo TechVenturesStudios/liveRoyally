@@ -7,6 +7,7 @@ import ProviderForm from "@/components/forms/ProviderForm";
 import PartnerForm from "@/components/forms/PartnerForm";
 import { Logo } from "@/components/ui/logo";
 import { UserType } from "@/types/user";
+import { Button } from "@/components/ui/button";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -32,12 +33,12 @@ const Register = () => {
         <div className="container mx-auto flex justify-between items-center">
           <Logo />
           <div className="space-x-4">
-            <button
+            <Button
               onClick={() => navigate("/login")}
-              className="text-royal hover:text-royal-dark transition-colors"
+              className="bg-white hover:bg-white/90 text-brand-purple border border-brand-purple font-bold"
             >
               Sign In
-            </button>
+            </Button>
           </div>
         </div>
       </header>
