@@ -1,11 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { CalendarPlus, Users, ShieldCheck, Gift, Percent, DollarSign } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 
 const VoucherWorkflow = () => {
-  const [currentStep, setCurrentStep] = useState(0);
-  
   const steps = [
     {
       title: "Partner Creates Event",
@@ -34,13 +32,6 @@ const VoucherWorkflow = () => {
     }
   ];
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentStep((prev) => (prev + 1) % steps.length);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, []);
-
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold text-royal mb-8 text-center">
@@ -51,16 +42,10 @@ const VoucherWorkflow = () => {
         {steps.map((step, index) => (
           <Card
             key={index}
-            className={`p-6 transition-all duration-500 transform ${
-              currentStep === index
-                ? 'scale-105 shadow-lg bg-cream'
-                : 'scale-100 opacity-70'
-            }`}
+            className="p-6 border-2 border-gray-100 hover:border-royal/20"
           >
             <div className="flex flex-col items-center text-center space-y-4">
-              <div className={`transition-transform duration-500 ${
-                currentStep === index ? 'animate-bounce' : ''
-              }`}>
+              <div className="mb-2">
                 {step.icon}
               </div>
               
@@ -69,13 +54,11 @@ const VoucherWorkflow = () => {
               <p className="text-sm text-gray-600">{step.description}</p>
               
               {step.subItems && (
-                <div className="mt-4 space-y-2">
+                <div className="mt-2 space-y-2">
                   {step.subItems.map((item, idx) => (
                     <div
                       key={idx}
-                      className={`flex items-center space-x-2 text-sm ${
-                        currentStep === index ? 'animate-fade-in' : ''
-                      }`}
+                      className="flex items-center space-x-2 text-sm"
                     >
                       {item.icon}
                       <span>{item.text}</span>
@@ -85,18 +68,6 @@ const VoucherWorkflow = () => {
               )}
             </div>
           </Card>
-        ))}
-      </div>
-      
-      <div className="flex justify-center mt-8 space-x-2">
-        {steps.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentStep(index)}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              currentStep === index ? 'bg-royal scale-125' : 'bg-gray-300'
-            }`}
-          />
         ))}
       </div>
     </div>
