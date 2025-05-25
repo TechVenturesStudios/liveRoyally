@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -104,11 +105,14 @@ const IntegrationsTab = () => {
       setActiveIntegrations(activeIntegrations.filter(i => i.id !== id));
       setAvailableIntegrations([...availableIntegrations, {...integration, status: "disconnected"}]);
       
-      toast(`Disconnected from ${integration.name}`);
+      toast({
+        title: `Disconnected from ${integration.name}`
+      });
     } else {
       // Connect to the integration
       if (integration.isPremium) {
-        toast("Premium integration requires a paid plan", {
+        toast({
+          title: "Premium integration requires a paid plan",
           description: "Please upgrade your account to access this integration."
         });
         return;
@@ -123,13 +127,16 @@ const IntegrationsTab = () => {
       setAvailableIntegrations(availableIntegrations.filter(i => i.id !== id));
       setActiveIntegrations([...activeIntegrations, {...integration, status: "connected"}]);
       
-      toast(`Successfully connected to ${integration.name}`);
+      toast({
+        title: `Successfully connected to ${integration.name}`
+      });
     }
   };
   
   const handleSaveZapierWebhook = () => {
     if (!zapierWebhook) {
-      toast("Please enter a valid webhook URL", {
+      toast({
+        title: "Please enter a valid webhook URL",
         variant: "destructive"
       });
       return;
@@ -146,7 +153,8 @@ const IntegrationsTab = () => {
         setAvailableIntegrations(availableIntegrations.filter(i => i.name !== "Zapier"));
         setActiveIntegrations([...activeIntegrations, {...zapierIntegration, status: "connected"}]);
         
-        toast("Zapier webhook connected", {
+        toast({
+          title: "Zapier webhook connected",
           description: "Your Zapier integration is now active."
         });
       }
