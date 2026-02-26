@@ -26,8 +26,9 @@ import {
 const mockPartners: PartnerUser[] = [
   {
     id: "PRT001",
-    networkName: "Royal Network",
-    networkCode: "ROYAL1",
+    partnerCode: "PTR-ABC123",
+    networkName: "Baton Rouge Network",
+    networkCode: "BR-001",
     email: "partner1@example.com",
     userType: "partner",
     notificationEnabled: true,
@@ -46,8 +47,9 @@ const mockPartners: PartnerUser[] = [
   },
   {
     id: "PRT002",
-    networkName: "Royal Network",
-    networkCode: "ROYAL1",
+    partnerCode: "PTR-DEF456",
+    networkName: "Lafayette Network",
+    networkCode: "LAF-002",
     email: "partner2@example.com",
     userType: "partner",
     notificationEnabled: true,
@@ -66,8 +68,9 @@ const mockPartners: PartnerUser[] = [
   },
   {
     id: "PRT003",
-    networkName: "Royal Network",
-    networkCode: "ROYAL1",
+    partnerCode: "PTR-GHI789",
+    networkName: "New Orleans Network",
+    networkCode: "NOLA-003",
     email: "partner3@example.com",
     userType: "partner",
     notificationEnabled: false,
@@ -223,14 +226,34 @@ const PartnersDashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold royal-header">Partner Dashboard</h1>
-        <p className="text-gray-600 mt-2">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-3xl font-bold royal-header">Partner Dashboard</h1>
+        <p className="text-gray-600 text-xs sm:text-base mt-1 sm:mt-2">
           Manage your organization's events and engagement in the Live Royally network
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* Mobile: compact KPI row */}
+      <div className="flex sm:hidden gap-1.5 mb-4">
+        <div className="flex-1 px-2 py-1.5 rounded-md bg-purple-50 text-left">
+          <p className="text-[9px] font-medium text-purple-800 truncate">Pending</p>
+          <p className="text-xs font-bold text-purple-900">{pendingEvents.length}</p>
+        </div>
+        <div className="flex-1 px-2 py-1.5 rounded-md bg-green-50 text-left">
+          <p className="text-[9px] font-medium text-green-800 truncate">Purchases</p>
+          <p className="text-xs font-bold text-green-900">{events.reduce((sum, event) => sum + event.purchaseCount, 0)}</p>
+        </div>
+        <div className="flex-1 flex items-center gap-1 px-2 py-1.5 rounded-md bg-amber-50 text-left">
+          <Medal className="h-3 w-3 text-amber-600 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[9px] font-medium text-amber-800 truncate">Score</p>
+            <p className="text-xs font-bold text-amber-900">{networkScore}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop: full KPI cards */}
+      <div className="hidden sm:grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -270,24 +293,25 @@ const PartnersDashboard = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-8">
         <div className="lg:col-span-2">
-          <Card className="mb-6">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardTitle>Event Management</CardTitle>
-                <Button className="bg-royal hover:bg-royal/90" onClick={() => console.log("Create event")}>
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Create Event
+          <Card className="mb-3 sm:mb-6">
+            <CardHeader className="pb-2 px-3 sm:px-6">
+              <div className="flex justify-between items-center gap-2">
+                <CardTitle className="text-sm sm:text-base">Event Management</CardTitle>
+                <Button size="sm" className="bg-royal hover:bg-royal/90 text-xs sm:text-sm" onClick={() => console.log("Create event")}>
+                  <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Create Event</span>
+                  <span className="sm:hidden">Create</span>
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               <Tabs defaultValue="pending" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-4">
-                  <TabsTrigger value="pending" className="text-sm">Pending Events</TabsTrigger>
-                  <TabsTrigger value="historical" className="text-sm">Historical Events</TabsTrigger>
-                  <TabsTrigger value="all" className="text-sm">All Events</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 mb-4 h-auto">
+                  <TabsTrigger value="pending" className="text-[10px] sm:text-sm py-1.5">Pending</TabsTrigger>
+                  <TabsTrigger value="historical" className="text-[10px] sm:text-sm py-1.5">Historical</TabsTrigger>
+                  <TabsTrigger value="all" className="text-[10px] sm:text-sm py-1.5">All Events</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="pending" className="space-y-4">

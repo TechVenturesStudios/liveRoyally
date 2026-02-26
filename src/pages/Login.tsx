@@ -1,6 +1,7 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthenticationDetails, CognitoUser } from "amazon-cognito-identity-js";
+import { userPool } from "@/lib/cognito.client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,94 +15,127 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // In a real app, we would make an API call to authenticate the user
-    // For this demo, let's simulate a login validation
-    
-    // This is a simple validation - in a real app, this would be server-side
-    if (email === "" || password === "") {
+    if (!email || !password) {
       setError("Email and password are required");
       return;
     }
-    
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-    
-    // Simulate a failed login (for testing purposes)
-    // In a real app, this would be based on actual authentication
-    // For now, any password with "invalid" will trigger an error
-    if (password.includes("invalid")) {
-      setError("Incorrect email or password. Please try again.");
-      toast.error("Login failed", {
-        description: "Incorrect email or password combination"
-      });
-      return;
-    }
-    
-    // Simulate getting the user type based on email
-    // In a real application, this would come from the backend after authentication
-    let userType = "member"; // default
-    
-    if (email.includes("provider")) {
-      userType = "provider";
-    } else if (email.includes("partner")) {
-      userType = "partner";
-    } else if (email.includes("admin")) {
-      userType = "admin";
-    }
-    
-    // Simulate a user object
-    const user = {
-      id: userType === "member" ? "30001123" : 
-           userType === "provider" ? "20001123" : 
-           userType === "partner" ? "10001123" : "00001123",
-      email,
-      userType
-    };
-    
-    // Store the user in localStorage
-    localStorage.setItem("user", JSON.stringify(user));
-    
-    // Show success toast
-    toast.success("Login successful", {
-      description: "Welcome back!"
+
+    setLoading(true);
+
+    const user = new CognitoUser({
+      Username: email,
+      Pool: userPool,
     });
-    
-    // Redirect to the dashboard
-    navigate("/dashboard");
+
+    const authDetails = new AuthenticationDetails({
+      Username: email,
+      Password: password,
+    });
+
+    user.authenticateUser(authDetails, {
+      onSuccess: async (session) => {
+        console.log("Login successful:", session);
+        toast.success("Login successful", { description: "Welcome back!" });
+
+        const idToken = session.getIdToken().getJwtToken();
+        const accessToken = session.getAccessToken().getJwtToken();
+        const cognitoSub = session.getIdToken().payload.sub;
+
+        // Store tokens
+        localStorage.setItem("idToken", idToken);
+        localStorage.setItem("accessToken", accessToken);
+
+        try {
+          const res = await fetch(
+            `https://6dgikqae3grzlgeasd2l3fatku0vsadv.lambda-url.us-east-2.on.aws/?cognitoId=${cognitoSub}`
+          );
+
+          const data = await res.json();
+          console.log("DB user info:", data);
+
+          if (!res.ok || !data.user_type) {
+            throw new Error("User does not exist in database");
+          }
+
+          // Choose the right profile object based on user_type
+          let profile: any = null;
+          if (data.user_type === "member") {
+            profile = data.member_profile;
+          } else if (data.user_type === "provider") {
+            profile = data.provider_profile;
+          } else if (data.user_type === "partner") {
+            profile = data.partner_profile;
+          }
+
+          // Store a richer user object in localStorage
+          localStorage.setItem(
+            "user",
+            JSON.stringify({
+              id: data.user_id,
+              email: data.email,
+              userType: data.user_type,
+              displayId: data.display_id,
+              firstName: data.first_name,
+              lastName: data.last_name,
+              phoneNumber: data.phone_number,
+              profile:data.profile, // member/provider/partner profile depending on userType
+            })
+          );
+
+          // Go to role router (which will send them to the right dashboard)
+          navigate("/dashboard");
+        } catch (err: any) {
+          console.error("DB lookup error:", err);
+          setError("Could not load user profile.");
+          toast.error("Login error", {
+            description: err.message || "User profile not found in the database",
+          });
+        }
+
+        setLoading(false);
+      },
+
+
+      onFailure: (err) => {
+        console.error("Login failed:", err);
+        setError(err.message || "Authentication failed");
+        toast.error("Login failed", { description: err.message });
+        setLoading(false);
+      },
+
+      newPasswordRequired: () => {
+        setError("A new password is required (temporary password detected).");
+        toast.info("Password change required");
+        setLoading(false);
+      },
+    });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cream to-cream-dark flex flex-col">
-      {/* Header */}
       <header className="py-4 px-6 shadow-sm bg-white">
         <div className="container mx-auto flex justify-between items-center">
           <Logo />
-          <div className="space-x-4">
-            <button
-              onClick={() => navigate("/register")}
-              className="text-royal hover:text-royal-dark transition-colors"
-            >
-              Register
-            </button>
-          </div>
+          <button
+            onClick={() => navigate("/register")}
+            className="text-royal hover:text-royal-dark transition-colors"
+          >
+            Register
+          </button>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center p-6">
         <Card className="royal-card w-full max-w-md">
           <div className="space-y-6 p-6">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold royal-header">Sign In</h1>
-              <p className="text-gray-600 mt-2">Welcome back to Live Royally</p>
-            </div>
+            <h1 className="text-2xl font-bold royal-header text-center">Sign In</h1>
+            <p className="text-gray-600 text-center">Welcome back to Live Royally</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
@@ -111,78 +145,51 @@ const Login = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label>Email Address</Label>
                 <Input
-                  id="email"
                   type="email"
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="royal-input"
                 />
               </div>
 
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <a
-                    href="#"
-                    className="text-sm text-royal hover:text-royal-dark"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      // In a real app, this would navigate to a password reset page
-                      toast.info("Password Reset", {
-                        description: "Password reset functionality would be implemented here"
-                      });
-                    }}
-                  >
-                    Forgot Password?
-                  </a>
-                </div>
+                <Label>Password</Label>
                 <Input
-                  id="password"
                   type="password"
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="royal-input"
                 />
               </div>
 
               <Button
                 type="submit"
                 className="w-full bg-royal hover:bg-royal-dark text-white"
+                disabled={loading}
               >
-                Sign In
+                {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
 
-            <div className="text-center pt-4">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{" "}
-                <a
-                  className="text-royal hover:text-royal-dark font-medium"
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/register");
-                  }}
-                >
-                  Register
-                </a>
-              </p>
-            </div>
+            <p className="text-center text-sm text-gray-600 pt-4">
+              Don't have an account?{" "}
+              <span
+                className="text-royal hover:text-royal-dark cursor-pointer"
+                onClick={() => navigate("/register")}
+              >
+                Register
+              </span>
+            </p>
           </div>
         </Card>
       </main>
 
-      {/* Footer */}
-      <footer className="py-6 bg-charcoal text-white">
-        <div className="container mx-auto text-center">
-          <p>&copy; {new Date().getFullYear()} Live Royally. All rights reserved.</p>
-        </div>
+      <footer className="py-6 bg-charcoal text-white text-center">
+        <p>&copy; {new Date().getFullYear()} Live Royally. All rights reserved.</p>
       </footer>
     </div>
   );

@@ -58,7 +58,7 @@ const navigationItemsByType: NavItemsByUserType = {
     {
       name: "New Deals",
       icon: PlusCircle,
-      path: "/dashboard/deals",
+      path: "/dashboard/member/deals",
     },
   ],
   
@@ -84,17 +84,17 @@ const navigationItemsByType: NavItemsByUserType = {
     {
       name: "Pending Events",
       icon: Calendar,
-      path: "/dashboard/pending-events",
+      path: "/dashboard/partner/pending-events",
     },
     {
       name: "Published Events",
       icon: Clock,
-      path: "/dashboard/published-events",
+      path: "/dashboard/partner/published-events",
     },
     {
       name: "Create Event",
       icon: PlusCircle,
-      path: "/dashboard/create-event",
+      path: "/dashboard/partner/create-event",
     },
     {
       name: "Event Analytics",

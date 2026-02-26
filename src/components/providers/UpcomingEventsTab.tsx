@@ -3,8 +3,8 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowUp, ArrowDown, CheckCircle2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { ArrowUp, ArrowDown, Clock, CalendarCheck } from "lucide-react";
 
 interface Event {
   id: string;
@@ -26,22 +26,20 @@ interface UpcomingEventsTabProps {
 }
 
 const UpcomingEventsTab = ({ events, sortOrder, toggleSortOrder }: UpcomingEventsTabProps) => {
+  // Approved by partner but start date hasn't arrived yet — not visible to members
   const upcomingEvents = events.filter(event => event.status === "active");
-  const { toast } = useToast();
-
-  const handleSignUp = (eventTitle: string) => {
-    toast({
-      title: "Success",
-      description: `You've signed up for ${eventTitle}`,
-    });
-  };
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Upcoming Events</CardTitle>
-          <CardDescription>New opportunities to participate in the network</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarCheck className="h-5 w-5 text-primary" />
+            Upcoming Events
+          </CardTitle>
+          <CardDescription>
+            Partner-approved events awaiting their start date — not yet visible to members
+          </CardDescription>
         </div>
         <Button 
           variant="ghost" 
@@ -59,11 +57,11 @@ const UpcomingEventsTab = ({ events, sortOrder, toggleSortOrder }: UpcomingEvent
             <TableHeader>
               <TableRow>
                 <TableHead>Event</TableHead>
-                <TableHead>Date</TableHead>
+                <TableHead>Start Date</TableHead>
                 <TableHead>Time</TableHead>
                 <TableHead>Location</TableHead>
-                <TableHead>Potential Points</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead>Points</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -75,19 +73,16 @@ const UpcomingEventsTab = ({ events, sortOrder, toggleSortOrder }: UpcomingEvent
                   <TableCell>{event.location}</TableCell>
                   <TableCell>{event.networkScore}</TableCell>
                   <TableCell>
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleSignUp(event.title)}
-                    >
-                      <CheckCircle2 className="mr-1 h-4 w-4" />
-                      Sign Up
-                    </Button>
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Clock className="h-3 w-3" />
+                      Awaiting Start Date
+                    </Badge>
                   </TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6 text-gray-500">
-                    No upcoming events found
+                  <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                    No upcoming approved events
                   </TableCell>
                 </TableRow>
               )}
@@ -98,5 +93,4 @@ const UpcomingEventsTab = ({ events, sortOrder, toggleSortOrder }: UpcomingEvent
     </Card>
   );
 };
-
 export default UpcomingEventsTab;

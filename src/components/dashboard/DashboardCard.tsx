@@ -30,7 +30,7 @@ const DashboardCard = ({
     >
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="font-bold text-lg mb-2">{title}</h3>
+          <h3 className="font-barlow font-bold text-lg mb-2">{title}</h3>
           <p className="text-gray-500 text-sm">{description}</p>
           {stats && (
             <p className="text-brand-purple font-medium mt-4">{stats}</p>

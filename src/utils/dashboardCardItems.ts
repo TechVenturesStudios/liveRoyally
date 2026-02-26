@@ -37,7 +37,7 @@ export const dashboardCardItems: CardItemsByUserType = {
       icon: Package,
       path: "/dashboard/vouchers",
       color: "bg-blue-100 text-blue-600",
-      stats: "2 Active"
+      stats: "..."
     },
     {
       title: "Purchase History",
@@ -45,7 +45,7 @@ export const dashboardCardItems: CardItemsByUserType = {
       icon: Clock,
       path: "/dashboard/history",
       color: "bg-amber-100 text-amber-600",
-      stats: "5 Total"
+      stats: "..."
     },
     {
       title: "New Deals",
@@ -53,7 +53,7 @@ export const dashboardCardItems: CardItemsByUserType = {
       icon: PlusCircle,
       path: "/dashboard/deals",
       color: "bg-green-100 text-green-600",
-      stats: "8 Available"
+      stats: "..."
     },
     {
       title: "Engagement Score",
@@ -61,7 +61,7 @@ export const dashboardCardItems: CardItemsByUserType = {
       icon: Medal,
       path: "/dashboard/score",
       color: "bg-purple-100 text-purple-600",
-      stats: "850 Points"
+      stats: "..."
     }
   ],
   provider: [

@@ -34,7 +34,7 @@ const VoucherWorkflow = () => {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-royal mb-8 text-center">
+      <h2 className="text-2xl font-barlow font-bold text-royal mb-8 text-center">
         Voucher Package Creation Workflow
       </h2>
       
@@ -49,7 +49,7 @@ const VoucherWorkflow = () => {
                 {step.icon}
               </div>
               
-              <h3 className="font-semibold text-lg text-royal">{step.title}</h3>
+              <h3 className="font-barlow font-bold text-lg text-royal">{step.title}</h3>
               
               <p className="text-sm text-gray-600">{step.description}</p>
               

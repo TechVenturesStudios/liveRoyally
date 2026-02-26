@@ -19,11 +19,11 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
         {navItems.slice(0, 5).map((item) => (
           <button
             key={item.name}
-            className="flex flex-col items-center py-2 px-3 text-xs text-gray-600 hover:text-royal"
+            className="flex flex-col items-center py-1.5 px-2 text-[10px] text-gray-600 hover:text-royal"
             onClick={() => navigate(item.path)}
           >
-            <item.icon className="h-5 w-5 mb-1" />
-            <span>{item.name}</span>
+            <item.icon className="h-4 w-4 mb-0.5" />
+            <span className="whitespace-nowrap">{item.shortName || item.name}</span>
           </button>
         ))}
       </div>

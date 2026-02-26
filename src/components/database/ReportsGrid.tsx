@@ -14,7 +14,7 @@ const ReportCard = ({ title, description, items }: ReportCardProps) => (
   <Card className="p-6">
     <div className="flex justify-between items-start mb-4">
       <div>
-        <h3 className="text-lg font-bold">{title}</h3>
+        <h3 className="text-lg font-barlow font-bold">{title}</h3>
         <p className="text-sm text-gray-500 mt-1">{description}</p>
       </div>
       <Button variant="outline" className="flex items-center gap-2">

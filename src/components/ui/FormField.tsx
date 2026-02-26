@@ -36,14 +36,16 @@ const FormField = ({
   className,
 }: FormFieldProps) => {
   return (
-    <div className={cn("mb-4", className)}>
-      <Label htmlFor={name} className="block mb-2 text-sm font-medium">
-        {label} {required && <span className="text-red-500">*</span>}
-      </Label>
+    <div className={cn("space-y-1.5", className)}>
+      {type !== "checkbox" && (
+        <Label htmlFor={name} className="block text-sm font-medium text-foreground">
+          {label} {required && <span className="text-destructive">*</span>}
+        </Label>
+      )}
       
       {type === "select" ? (
         <Select value={value} onValueChange={onSelectChange}>
-          <SelectTrigger className="brand-input w-full">
+          <SelectTrigger className="brand-input w-full h-11">
             <SelectValue placeholder={placeholder || `Select ${label}`} />
           </SelectTrigger>
           <SelectContent>
@@ -55,14 +57,16 @@ const FormField = ({
           </SelectContent>
         </Select>
       ) : type === "checkbox" ? (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-start space-x-3 py-1">
           <Checkbox 
             id={name} 
             checked={checked} 
             onCheckedChange={onCheckboxChange} 
-            className="data-[state=checked]:bg-brand-purple data-[state=checked]:border-brand-purple" 
+            className="mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary" 
           />
-          <label htmlFor={name} className="text-sm text-gray-700">{placeholder}</label>
+          <label htmlFor={name} className="text-sm leading-relaxed text-muted-foreground cursor-pointer">
+            {placeholder}
+          </label>
         </div>
       ) : (
         <Input
@@ -73,7 +77,7 @@ const FormField = ({
           required={required}
           value={value}
           onChange={onChange}
-          className="brand-input w-full"
+          className="brand-input w-full h-11"
         />
       )}
     </div>

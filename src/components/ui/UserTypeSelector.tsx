@@ -50,7 +50,7 @@ const UserTypeSelector = ({ onSelect, selectedType }: UserTypeSelectorProps) => 
             <div className={`rounded-full p-3 mb-4 ${type.color}`}>
               <type.icon className="h-6 w-6" />
             </div>
-            <h3 className="text-xl font-bold mb-2">{type.title}</h3>
+            <h3 className="text-xl font-barlow font-bold mb-2">{type.title}</h3>
             <p className="text-gray-500 text-sm">{type.description}</p>
           </div>
         </Card>

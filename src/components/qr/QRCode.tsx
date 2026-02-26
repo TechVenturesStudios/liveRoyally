@@ -18,7 +18,7 @@ const QRCode = ({ voucherId, eventId, useCaseId, networkId, userId }: QRCodeProp
   return (
     <Card className="p-6 max-w-xs mx-auto">
       <div className="text-center">
-        <h3 className="font-bold text-lg mb-2">Voucher QR Code</h3>
+        <h3 className="font-barlow font-bold text-lg mb-2">Voucher QR Code</h3>
         <p className="text-gray-500 text-sm mb-4">Scan this code at the provider location</p>
         
         {/* Real QR code */}

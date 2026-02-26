@@ -5,6 +5,7 @@ import FormField from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
 import { MemberUser } from "@/types/user";
 import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 const ETHNICITY_OPTIONS = [
   { label: "Black or African American", value: "black" },
@@ -30,7 +31,6 @@ const GENDER_OPTIONS = [
   { label: "Other", value: "other" }
 ];
 
-// Dummy network options for now
 const NETWORK_OPTIONS = [
   { label: "Royal Network", value: "royal" },
   { label: "Premium Network", value: "premium" },
@@ -69,128 +69,141 @@ const MemberForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Generate a unique ID starting with 30001
     const userId = `30001${Math.floor(Math.random() * 10000)}`;
-    
-    // In a real app, we would send the data to an API
     console.log("Submitting member data:", { ...formData, id: userId, userType: "member" });
-    
-    // For now, let's simulate saving to localStorage
     localStorage.setItem("user", JSON.stringify({ 
       ...formData, 
       id: userId, 
       userType: "member" 
     }));
-    
-    // Redirect to the dashboard
     navigate("/dashboard");
   };
 
   return (
-    <Card className="royal-card w-full max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 royal-header">Member Registration</h2>
+    <Card className="royal-card w-full max-w-4xl mx-auto p-8 md:p-10">
+      <h2 className="text-2xl font-barlow font-bold mb-2 royal-header">Member Registration</h2>
+      <p className="text-sm text-muted-foreground mb-8">Fill out the form below to create your member account.</p>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            label="Network Name"
-            name="networkName"
-            type="select"
-            required
-            options={NETWORK_OPTIONS}
-            value={formData.networkName}
-            onSelectChange={handleSelectChange("networkName")}
-          />
-          
-          <FormField
-            label="Network Code"
-            name="networkCode"
-            type="text"
-            placeholder="Network code will be assigned"
-            required
-            value={formData.networkCode}
-            onChange={handleInputChange}
-          />
-          
-          <FormField
-            label="First Name"
-            name="firstName"
-            type="text"
-            placeholder="Enter your first name"
-            required
-            value={formData.firstName}
-            onChange={handleInputChange}
-          />
-          
-          <FormField
-            label="Last Name"
-            name="lastName"
-            type="text"
-            placeholder="Enter your last name"
-            required
-            value={formData.lastName}
-            onChange={handleInputChange}
-          />
-          
-          <FormField
-            label="Zip Code"
-            name="zipCode"
-            type="text"
-            placeholder="Enter your zip code"
-            required
-            value={formData.zipCode}
-            onChange={handleInputChange}
-          />
-          
-          <FormField
-            label="Email Address"
-            name="email"
-            type="email"
-            placeholder="Enter your email address"
-            required
-            value={formData.email}
-            onChange={handleInputChange}
-          />
-          
-          <FormField
-            label="Phone Number"
-            name="phoneNumber"
-            type="tel"
-            placeholder="Enter your phone number"
-            value={formData.phoneNumber}
-            onChange={handleInputChange}
-          />
-          
-          <FormField
-            label="Ethnicity"
-            name="ethnicity"
-            type="select"
-            options={ETHNICITY_OPTIONS}
-            value={formData.ethnicity}
-            onSelectChange={handleSelectChange("ethnicity")}
-          />
-          
-          <FormField
-            label="Age Group"
-            name="ageGroup"
-            type="select"
-            options={AGE_GROUP_OPTIONS}
-            value={formData.ageGroup}
-            onSelectChange={handleSelectChange("ageGroup")}
-          />
-          
-          <FormField
-            label="Gender"
-            name="gender"
-            type="select"
-            options={GENDER_OPTIONS}
-            value={formData.gender}
-            onSelectChange={handleSelectChange("gender")}
-          />
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Network Section */}
+        <div className="space-y-5">
+          <h3 className="text-base font-semibold text-foreground">Network Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <FormField
+              label="Network Name"
+              name="networkName"
+              type="select"
+              required
+              options={NETWORK_OPTIONS}
+              value={formData.networkName}
+              onSelectChange={handleSelectChange("networkName")}
+            />
+            <FormField
+              label="Network Code"
+              name="networkCode"
+              type="text"
+              placeholder="Network code will be assigned"
+              required
+              value={formData.networkCode}
+              onChange={handleInputChange}
+            />
+          </div>
         </div>
-        
+
+        <Separator />
+
+        {/* Personal Info Section */}
+        <div className="space-y-5">
+          <h3 className="text-base font-semibold text-foreground">Personal Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <FormField
+              label="First Name"
+              name="firstName"
+              type="text"
+              placeholder="Enter your first name"
+              required
+              value={formData.firstName}
+              onChange={handleInputChange}
+            />
+            <FormField
+              label="Last Name"
+              name="lastName"
+              type="text"
+              placeholder="Enter your last name"
+              required
+              value={formData.lastName}
+              onChange={handleInputChange}
+            />
+            <FormField
+              label="Email Address"
+              name="email"
+              type="email"
+              placeholder="Enter your email address"
+              required
+              value={formData.email}
+              onChange={handleInputChange}
+            />
+            <FormField
+              label="Phone Number"
+              name="phoneNumber"
+              type="tel"
+              placeholder="Enter your phone number"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+            />
+            <FormField
+              label="Zip Code"
+              name="zipCode"
+              type="text"
+              placeholder="Enter your zip code"
+              required
+              value={formData.zipCode}
+              onChange={handleInputChange}
+            />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Demographics Section */}
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Demographics</h3>
+            <p className="text-xs text-muted-foreground mt-1">Optional — helps us serve you better.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <FormField
+              label="Ethnicity"
+              name="ethnicity"
+              type="select"
+              options={ETHNICITY_OPTIONS}
+              value={formData.ethnicity}
+              onSelectChange={handleSelectChange("ethnicity")}
+            />
+            <FormField
+              label="Age Group"
+              name="ageGroup"
+              type="select"
+              options={AGE_GROUP_OPTIONS}
+              value={formData.ageGroup}
+              onSelectChange={handleSelectChange("ageGroup")}
+            />
+            <FormField
+              label="Gender"
+              name="gender"
+              type="select"
+              options={GENDER_OPTIONS}
+              value={formData.gender}
+              onSelectChange={handleSelectChange("gender")}
+            />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Preferences */}
         <div className="space-y-4">
+          <h3 className="text-base font-semibold text-foreground">Preferences</h3>
           <FormField
             label="Notifications"
             name="notificationEnabled"
@@ -199,7 +212,6 @@ const MemberForm = () => {
             checked={formData.notificationEnabled}
             onCheckboxChange={handleCheckboxChange("notificationEnabled")}
           />
-          
           <FormField
             label="Terms of Agreement"
             name="termsAccepted"
@@ -211,12 +223,12 @@ const MemberForm = () => {
           />
         </div>
         
-        <div className="flex justify-end space-x-4">
-          <Button type="button" variant="outline" onClick={() => navigate("/")} className="border-royal text-royal">
+        <div className="flex justify-end gap-4 pt-4">
+          <Button type="button" variant="outline" onClick={() => navigate("/")} className="border-royal text-royal px-6">
             Cancel
           </Button>
-          <Button type="submit" className="bg-royal hover:bg-royal-dark text-white">
-            Register
+          <Button type="submit" className="bg-royal hover:bg-royal-dark text-white px-8">
+            Create Account
           </Button>
         </div>
       </form>

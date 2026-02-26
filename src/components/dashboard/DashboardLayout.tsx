@@ -1,5 +1,5 @@
 
-import React, { ReactNode } from "react";
+import React, { ReactNode, useState } from "react";
 import DashboardHeader from "./DashboardHeader";
 import DashboardSidebar from "./DashboardSidebar";
 import DashboardMobileNav from "./DashboardMobileNav";
@@ -12,12 +12,20 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, isLoading } = useAuthCheck();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const stored = sessionStorage.getItem("sidebar-collapsed");
+    return stored === "true";
+  });
+
+  const updateCollapsed = (value: boolean) => {
+    setSidebarCollapsed(value);
+    sessionStorage.setItem("sidebar-collapsed", String(value));
+  };
 
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
-  // Only render dashboard if user exists
   if (!user) {
     return null;
   }
@@ -27,10 +35,19 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <DashboardHeader user={user} />
 
       <div className="flex flex-1 overflow-hidden">
-        <DashboardSidebar user={user} />
+        <DashboardSidebar
+          user={user}
+          collapsed={sidebarCollapsed}
+          onToggle={() => updateCollapsed(!sidebarCollapsed)}
+          onCollapse={() => updateCollapsed(true)}
+        />
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6 pb-20 md:pb-6">{children}</main>
+        <main
+          className="flex-1 overflow-y-auto p-3 sm:p-6 pb-20 md:pb-6"
+          onClick={() => { if (!sidebarCollapsed) updateCollapsed(true); }}
+        >
+          {children}
+        </main>
       </div>
 
       <DashboardMobileNav user={user} />

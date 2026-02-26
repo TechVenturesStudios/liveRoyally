@@ -17,9 +17,10 @@ export default {
 				'2xl': '1400px'
 			}
 		},
-		extend: {
+			extend: {
 			fontFamily: {
-				'barlow': ['"Barlow Semi Condensed"', 'sans-serif'],
+				sans: ['"Barlow Semi Condensed"', "ui-sans-serif", "system-ui", "sans-serif"],
+				barlow: ['"Barlow Semi Condensed"', "sans-serif"],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
