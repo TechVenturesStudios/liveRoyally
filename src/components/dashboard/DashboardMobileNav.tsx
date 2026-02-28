@@ -23,7 +23,7 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
             onClick={() => navigate(item.path)}
           >
             <item.icon className="h-4 w-4 mb-0.5" />
-            <span className="whitespace-nowrap">{item.shortName || item.name}</span>
+            <span className="whitespace-nowrap">{item.name}</span>
           </button>
         ))}
       </div>

@@ -101,7 +101,6 @@ const Login = () => {
         setLoading(false);
       },
 
-
       onFailure: (err) => {
         console.error("Login failed:", err);
         setError(err.message || "Authentication failed");
@@ -109,11 +108,22 @@ const Login = () => {
         setLoading(false);
       },
 
-      newPasswordRequired: () => {
-        setError("A new password is required (temporary password detected).");
-        toast.info("Password change required");
-        setLoading(false);
-      },
+      newPasswordRequired: (userAttributes, requiredAttributes) => {
+        delete userAttributes.email_verified;
+        delete userAttributes.phone_number_verified;
+
+        const newPassword = prompt("Please enter a new password:");
+
+        user.completeNewPasswordChallenge(newPassword!, {}, {
+          onSuccess: (session) => {
+            console.log("Password changed successfully");
+            navigate("/dashboard");
+          },
+          onFailure: (err) => {
+            console.error("Failed to change password:", err);
+          }
+        });
+      }
     });
   };
 

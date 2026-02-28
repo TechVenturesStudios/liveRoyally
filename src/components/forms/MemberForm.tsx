@@ -7,6 +7,8 @@ import { MemberUser } from "@/types/user";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
+const API = import.meta.env.VITE_API_BASE_URL;
+
 const ETHNICITY_OPTIONS = [
   { label: "Black or African American", value: "black" },
   { label: "Hispanic or Latino", value: "hispanic" },
@@ -67,15 +69,37 @@ const MemberForm = () => {
     setFormData((prev) => ({ ...prev, [name]: checked }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
-    const userId = `30001${Math.floor(Math.random() * 10000)}`;
-    console.log("Submitting member data:", { ...formData, id: userId, userType: "member" });
-    localStorage.setItem("user", JSON.stringify({ 
-      ...formData, 
-      id: userId, 
-      userType: "member" 
-    }));
+    const res1 = await fetch(`${API}/create-cognito-user`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber,
+        userType: "member",
+      }),
+    });
+
+    const data1 = await res1.json();
+    if (!res1.ok) throw new Error(data1.error || "Failed to create Cognito user");
+
+    const cognitoSub = data1.cognitoSub;
+
+    const res2 = await fetch(`${API}/register-member`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cognitoSub,
+        ...formData,
+        userType: "member",
+      }),
+    });
+
+    const data2 = await res2.json();
+    if (!res2.ok) throw new Error(data2.error || "Failed to create DB user");
     navigate("/dashboard");
   };
 

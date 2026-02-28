@@ -54,7 +54,7 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
           </Tooltip>
           {!collapsed && (
             <div className="overflow-hidden">
-              <p className="text-sm font-semibold truncate">{user?.id || "User ID"}</p>
+              <p className="text-sm font-semibold truncate">{user?.displayId || "User ID"}</p>
               <p className="text-xs text-gray-500 capitalize">
                 {user?.userType || "Member"}
               </p>

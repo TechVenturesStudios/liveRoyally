@@ -1,4 +1,3 @@
-
 export type UserType = "member" | "provider" | "partner" | "admin";
 
 export interface BaseUser {
@@ -24,6 +23,8 @@ export interface MemberUser extends BaseUser {
 
 export interface ProviderUser extends BaseUser {
   userType: "provider";
+  partnerId: string;
+  partnerName: string;
   agentFirstName: string;
   agentLastName: string;
   agentPhone: string;
@@ -39,6 +40,7 @@ export interface ProviderUser extends BaseUser {
 
 export interface PartnerUser extends BaseUser {
   userType: "partner";
+  partnerCode: string;
   agentFirstName: string;
   agentLastName: string;
   agentPhone: string;
