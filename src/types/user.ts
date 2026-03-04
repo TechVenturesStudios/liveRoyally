@@ -6,8 +6,9 @@ export interface BaseUser {
   networkCode: string;
   email: string;
   userType: UserType;
-  notificationEnabled: boolean;
-  termsAccepted: boolean;
+  notificationEnabled?: boolean;
+  termsAccepted?: boolean;
+  displayId: string;
 }
 
 export interface MemberUser extends BaseUser {
@@ -23,7 +24,6 @@ export interface MemberUser extends BaseUser {
 
 export interface ProviderUser extends BaseUser {
   userType: "provider";
-  partnerId: string;
   partnerName: string;
   agentFirstName: string;
   agentLastName: string;
@@ -31,9 +31,6 @@ export interface ProviderUser extends BaseUser {
   businessName: string;
   businessCategory: string;
   businessAddress: string;
-  businessCity: string;
-  businessState: string;
-  businessZip: string;
   businessEmail: string;
   businessPhone: string;
 }
@@ -46,9 +43,6 @@ export interface PartnerUser extends BaseUser {
   agentPhone: string;
   organizationName: string;
   organizationAddress: string;
-  organizationCity: string;
-  organizationState: string;
-  organizationZip: string;
   organizationCategory: string;
   organizationEmail: string;
   organizationPhone: string;

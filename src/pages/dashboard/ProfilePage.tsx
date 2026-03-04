@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { getUserFromStorage, User as StorageUser } from "@/utils/userStorage";
 import type { User as UserType, MemberUser, ProviderUser, PartnerUser, AdminUser } from "@/types/user";
+const API = import.meta.env.VITE_API_BASE_URL;
 
 const ProfilePage = () => {
   const [user, setUser] = useState<UserType | null>(null);
@@ -27,66 +28,59 @@ const ProfilePage = () => {
   useEffect(() => {
     const userData = getUserFromStorage();
     if (userData) {
-      // Create a mock complete user object for display purposes
-      const completeUser: UserType = {
-        id: userData.id || "mock-id",
-        networkName: (userData as any).networkName || "Baton Rouge Network",
-        networkCode: (userData as any).networkCode || "BR-001",
-        email: userData.email || "user@example.com",
-        userType: userData.userType || "member",
-        notificationEnabled: true,
-        termsAccepted: true,
-        // Add type-specific fields based on user type
-        ...(userData.userType === "member" && {
-          firstName: "John",
-          lastName: "Doe",
-          zipCode: "12345",
-          phoneNumber: "(555) 123-4567"
-        }),
-        ...(userData.userType === "provider" && {
-          agentFirstName: "Jane",
-          agentLastName: "Smith", 
-          agentPhone: "(555) 987-6543",
-          partnerId: "PTR001",
-          partnerName: "City Community Foundation",
-          businessName: "Demo Business",
-          businessCategory: "Service Provider",
-          businessAddress: "123 Business St",
-          businessCity: "Demo City",
-          businessState: "CA",
-          businessZip: "12345",
-          businessEmail: "business@example.com",
-          businessPhone: "(555) 111-2222"
-        }),
-        ...(userData.userType === "partner" && {
-          partnerCode: (userData as any).partnerCode || `PTR-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-          agentFirstName: "Bob",
-          agentLastName: "Johnson",
-          agentPhone: "(555) 444-5555",
-          organizationName: "Demo Organization",
-          organizationAddress: "456 Organization Ave",
-          organizationCity: "Demo City",
-          organizationState: "CA",
-          organizationZip: "12345",
-          organizationCategory: "Non-Profit",
-          organizationEmail: "org@example.com",
-          organizationPhone: "(555) 666-7777",
-          membershipPlan: "Standard",
-          membershipPrice: 149,
-          subscriptionStartDate: "2025-06-15",
-          maxProviders: 25,
-          currentProviders: 8,
-        }),
-        ...(userData.userType === "admin" && {
-          firstName: "Admin",
-          lastName: "User",
-          department: "IT"
+      const fetchUser = async () => {
+        const res = await fetch(`${API}/user-by-id?cognitoId=${userData.cognitoId}`,{
+          method: "GET",
+          headers: { "Content-Type": "application/json" }
         })
-      } as UserType;
-      
-      setUser(completeUser);
-      setFormData(completeUser);
+        const data = await res.json();
+        console.log('data',data)
+        const completeUser = {
+          cognitoId: data.cognito_id,
+          id: data.user_id,
+          firstName: data.first_name,
+          lastName: data.last_name,
+          email: data.email,
+          userType: data.user_type,
+          phoneNumber: data.phone_number,
+          networkCode: data.profile.networkCode,
+          networkName: data.profile.networkName,
+          termsAccepted: data.profile.termsAccepted,
+          notificationEnabled: data.profile.notificationEnabled,
+          displayId: data.display_id,
+          ...(data.user_type === "member" && {
+            zipCode: data.profile.zipCode,
+            ethnicity: data.profile.ethnicity,
+            ageGroup: data.profile.ageGroup,
+            gender: data.profile.gender
+          }),
+          ...(data.user_type === "partner" && {
+            agentFirstName: data.profile.partnerAgentFirstName,
+            agentLastName: data.profile.partnerAgentLastName,
+            agentPhone: data.profile.partnerAgentPhone,
+            organizationName: data.profile.organizationName,
+            organizationAddress: data.profile.organizationAddress,
+            organizationEmail: data.profile.organizationEmail,
+            organizationPhone: data.profile.organizationPhone
+          }),
+          ...(data.user_type === "provider" && {
+            agentFirstName: data.profile.agentFirstName,
+            agentLastName: data.profile.agentLastName,
+            agentPhone: data.profile.agentPhone,
+            businessName: data.profile.businessName,
+            businessCategory: data.profile.businessCategory,
+            businessAddress: data.profile.businessAddress,
+            businessEmail: data.profile.businessEmail,
+            businessPhone: data.profile.businessPhone
+          })
+        }
+        setUser(completeUser)
+        setFormData(completeUser)
+        return data;
+      } 
+      fetchUser();
     }
+  
   }, []);
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -170,7 +164,7 @@ const ProfilePage = () => {
       <div className="rounded-lg border bg-primary/5 p-4 mb-2">
         <Label className="text-xs text-muted-foreground uppercase tracking-wide">Assigned Partner</Label>
         <p className="font-semibold text-foreground mt-1">{user.partnerName}</p>
-        <p className="text-xs text-muted-foreground">ID: {user.partnerId}</p>
+        {/* <p className="text-xs text-muted-foreground">ID: {user.partnerId}</p> */}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -224,7 +218,7 @@ const ProfilePage = () => {
           <p className="py-2 px-3 bg-muted rounded-md">{user.businessAddress}</p>
         )}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="businessCity">City</Label>
           {isEditing ? (
@@ -249,7 +243,7 @@ const ProfilePage = () => {
             <p className="py-2 px-3 bg-muted rounded-md">{user.businessZip}</p>
           )}
         </div>
-      </div>
+      </div> */}
     </>
   );
 
@@ -440,9 +434,9 @@ const ProfilePage = () => {
           { label: "Category", value: p.businessCategory, editable: true, field: "businessCategory" },
           { label: "Business Phone", value: p.businessPhone, editable: true, field: "businessPhone" },
           { label: "Address", value: p.businessAddress, editable: true, field: "businessAddress" },
-          { label: "City", value: p.businessCity, editable: true, field: "businessCity" },
-          { label: "State", value: p.businessState, editable: true, field: "businessState" },
-          { label: "Zip Code", value: p.businessZip, editable: true, field: "businessZip" }
+          // { label: "City", value: p.businessCity, editable: true, field: "businessCity" },
+          // { label: "State", value: p.businessState, editable: true, field: "businessState" },
+          // { label: "Zip Code", value: p.businessZip, editable: true, field: "businessZip" }
         );
         break;
       }

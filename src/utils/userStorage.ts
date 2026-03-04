@@ -5,7 +5,7 @@ export interface User {
   id: string;
   email: string;
   userType: UserType;
-
+  cognitoId: string;
   displayId?: string;
   firstName?: string;
   lastName?: string;

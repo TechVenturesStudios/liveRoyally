@@ -57,7 +57,6 @@ const Login = () => {
           );
 
           const data = await res.json();
-          console.log("DB user info:", data);
 
           if (!res.ok || !data.user_type) {
             throw new Error("User does not exist in database");
@@ -78,6 +77,7 @@ const Login = () => {
             "user",
             JSON.stringify({
               id: data.user_id,
+              cognitoId: cognitoSub,
               email: data.email,
               userType: data.user_type,
               displayId: data.display_id,

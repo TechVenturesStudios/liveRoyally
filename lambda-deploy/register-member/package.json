@@ -1,0 +1,9 @@
+{
+  "name": "register-member",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "pg": "^8.11.5",
+    "@aws-sdk/client-cognito-identity-provider": "^3.0.0"
+  }
+}
