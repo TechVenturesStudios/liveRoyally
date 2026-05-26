@@ -12,6 +12,17 @@ export type LoginResult =
     }
   | NewPasswordRequiredChallenge;
 
+async function readJsonOrThrow(response: Response, fallbackMessage: string) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  throw new Error(text || `${fallbackMessage} (${response.status})`);
+}
+
 export async function loginWithCognito(email: string, password: string) {
   const response = await fetch("/api/auth/login", {
     method: "POST",
@@ -19,7 +30,7 @@ export async function loginWithCognito(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   });
 
-  const data = await response.json();
+  const data = await readJsonOrThrow(response, "Authentication failed");
 
   if (!response.ok) {
     throw new Error(data.error || "Authentication failed");
@@ -43,7 +54,7 @@ export async function completeNewPasswordChallenge(
     body: JSON.stringify({ email, session, newPassword }),
   });
 
-  const data = await response.json();
+  const data = await readJsonOrThrow(response, "Failed to set new password");
 
   if (!response.ok) {
     throw new Error(data.error || "Failed to set new password");
@@ -63,7 +74,7 @@ export async function confirmPasswordReset(
     body: JSON.stringify({ email, code, newPassword }),
   });
 
-  const data = await response.json();
+  const data = await readJsonOrThrow(response, "Failed to reset password");
 
   if (!response.ok) {
     throw new Error(data.error || "Failed to reset password");

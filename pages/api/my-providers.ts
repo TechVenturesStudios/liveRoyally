@@ -55,6 +55,12 @@ function parseCookies(cookieHeader = "") {
 }
 
 function getCognitoIdFromRequest(req: NextApiRequest) {
+  const queryCognitoId = String(req.query.cognitoId || req.query.cognito_id || "").trim();
+
+  if (queryCognitoId) {
+    return queryCognitoId;
+  }
+
   const cookies = parseCookies(req.headers.cookie);
   const idToken = cookies.lr_id_token;
 

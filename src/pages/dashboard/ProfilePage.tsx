@@ -27,16 +27,24 @@ const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>({});
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [loadError, setLoadError] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
     const userData = getUserFromStorage();
     if (userData) {
       const fetchUser = async () => {
+        setLoadError("");
         const res = await fetch(`/api/user-by-id?cognitoId=${encodeURIComponent(userData.cognitoId)}`,{
           method: "GET",
-          headers: { "Content-Type": "application/json" }
+          headers: { "Accept": "application/json" },
+          cache: "no-store",
         })
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          throw new Error("Profile API returned a non-JSON response");
+        }
+
         const data = await res.json();
         if (!res.ok) {
           throw new Error(data.error || "Failed to load profile");
@@ -97,12 +105,16 @@ const ProfilePage = () => {
         return data;
       } 
       fetchUser().catch((error) => {
+        const message = error instanceof Error ? error.message : "Failed to load profile";
+        setLoadError(message);
         toast({
           title: "Profile failed to load",
-          description: error instanceof Error ? error.message : "Failed to load profile",
+          description: message,
           variant: "destructive",
         });
       });
+    } else {
+      setLoadError("No signed-in user found");
     }
   
   }, [toast]);
@@ -134,8 +146,17 @@ const ProfilePage = () => {
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading profile...</p>
+            {loadError ? (
+              <>
+                <p className="font-medium text-destructive mb-2">Profile failed to load</p>
+                <p className="text-sm text-muted-foreground">{loadError}</p>
+              </>
+            ) : (
+              <>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading profile...</p>
+              </>
+            )}
           </div>
         </div>
       </DashboardLayout>

@@ -29,8 +29,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import FormField from "@/components/ui/FormField";
-import { Users, Building, Plus, Trash2, Search, UserPlus } from "lucide-react";
+import { Users, Plus, Trash2, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { getUserFromStorage } from "@/utils/userStorage";
 
 interface ProviderEntry {
   id: string;
@@ -136,7 +137,9 @@ const PartnerProvidersPage = () => {
       try {
         setProvidersLoading(true);
         setProvidersError("");
-        const response = await fetch("/api/my-providers");
+        const user = getUserFromStorage();
+        const query = user?.cognitoId ? `?cognitoId=${encodeURIComponent(user.cognitoId)}` : "";
+        const response = await fetch(`/api/my-providers${query}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -223,7 +226,7 @@ const PartnerProvidersPage = () => {
     { label: "Contact Phone", value: p.agentPhone },
     { label: "Business Email", value: p.businessEmail },
     { label: "Business Phone", value: p.businessPhone },
-    { label: "Address", value: `${p.businessAddress}, ${p.businessCity}, ${p.businessState} ${p.businessZip}` },
+    { label: "Address", value: `${p.businessAddress}` },
   ];
 
   return (
