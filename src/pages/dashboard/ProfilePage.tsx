@@ -16,7 +16,11 @@ import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { getUserFromStorage, User as StorageUser } from "@/utils/userStorage";
 import type { User as UserType, MemberUser, ProviderUser, PartnerUser, AdminUser } from "@/types/user";
-const API = import.meta.env.VITE_API_BASE_URL;
+
+const formatPlanName = (plan?: string | null) => {
+  if (!plan) return "No active plan";
+  return plan.charAt(0).toUpperCase() + plan.slice(1);
+};
 
 const ProfilePage = () => {
   const [user, setUser] = useState<UserType | null>(null);
@@ -29,12 +33,15 @@ const ProfilePage = () => {
     const userData = getUserFromStorage();
     if (userData) {
       const fetchUser = async () => {
-        const res = await fetch(`${API}/user-by-id?cognitoId=${userData.cognitoId}`,{
+        const res = await fetch(`/api/user-by-id?cognitoId=${encodeURIComponent(userData.cognitoId)}`,{
           method: "GET",
           headers: { "Content-Type": "application/json" }
         })
         const data = await res.json();
-        console.log('data',data)
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load profile");
+        }
+
         const completeUser = {
           cognitoId: data.cognito_id,
           id: data.user_id,
@@ -55,6 +62,15 @@ const ProfilePage = () => {
             gender: data.profile.gender
           }),
           ...(data.user_type === "partner" && {
+            partnerCode: data.profile.partnerCode,
+            membershipPlan: data.profile.membershipPlan,
+            membershipStatus: data.profile.membershipStatus,
+            membershipPrice: data.profile.membershipPrice,
+            membershipCurrency: data.profile.membershipCurrency,
+            subscriptionStartDate: data.profile.subscriptionStartDate,
+            subscriptionEndDate: data.profile.subscriptionEndDate,
+            maxProviders: data.profile.maxProviders,
+            currentProviders: data.profile.currentProviders,
             agentFirstName: data.profile.partnerAgentFirstName,
             agentLastName: data.profile.partnerAgentLastName,
             agentPhone: data.profile.partnerAgentPhone,
@@ -64,6 +80,8 @@ const ProfilePage = () => {
             organizationPhone: data.profile.organizationPhone
           }),
           ...(data.user_type === "provider" && {
+            partnerId: data.profile.partnerId,
+            partnerName: data.profile.partnerName,
             agentFirstName: data.profile.agentFirstName,
             agentLastName: data.profile.agentLastName,
             agentPhone: data.profile.agentPhone,
@@ -78,10 +96,16 @@ const ProfilePage = () => {
         setFormData(completeUser)
         return data;
       } 
-      fetchUser();
+      fetchUser().catch((error) => {
+        toast({
+          title: "Profile failed to load",
+          description: error instanceof Error ? error.message : "Failed to load profile",
+          variant: "destructive",
+        });
+      });
     }
   
-  }, []);
+  }, [toast]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -248,20 +272,24 @@ const ProfilePage = () => {
   );
 
   const renderPartnerFields = (user: PartnerUser) => {
-    const plan = (user as any).membershipPlan || "Standard";
-    const price = (user as any).membershipPrice || 149;
-    const startDate = (user as any).subscriptionStartDate || "2025-06-15";
-    const maxProviders = (user as any).maxProviders || 25;
-    const currentProviders = (user as any).currentProviders || 8;
-    const remaining = maxProviders - currentProviders;
-    const usagePercent = Math.round((currentProviders / maxProviders) * 100);
-    const formattedStart = new Date(startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    const plan = formatPlanName((user as any).membershipPlan);
+    const status = formatPlanName((user as any).membershipStatus);
+    const price = Number((user as any).membershipPrice ?? 0);
+    const startDate = (user as any).subscriptionStartDate;
+    const maxProviders = (user as any).maxProviders;
+    const currentProviders = Number((user as any).currentProviders ?? 0);
+    const hasProviderLimit = typeof maxProviders === "number";
+    const remaining = hasProviderLimit ? Math.max(maxProviders - currentProviders, 0) : null;
+    const usagePercent = hasProviderLimit && maxProviders > 0 ? Math.round((currentProviders / maxProviders) * 100) : 0;
+    const formattedStart = startDate
+      ? new Date(startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+      : "Not available";
 
     return (
       <>
         <div className="rounded-lg border bg-primary/5 p-4 mb-2">
           <Label className="text-xs text-muted-foreground uppercase tracking-wide">Partner Code</Label>
-          <p className="font-semibold text-foreground mt-1 font-mono">{user.partnerCode}</p>
+          <p className="font-semibold text-foreground mt-1 font-mono">{user.partnerCode || "Not assigned"}</p>
           <p className="text-xs text-muted-foreground">Share this code with providers to join your network</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -315,6 +343,7 @@ const ProfilePage = () => {
             <CardTitle className="font-barlow font-bold flex items-center gap-2 text-base">
               <Crown className="h-5 w-5 text-primary" /> Membership Subscription
             </CardTitle>
+            <CardDescription>Status: {status}</CardDescription>
             <CardDescription>Managed via Square • {plan} Plan</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -323,7 +352,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Current Plan</p>
                 <p className="text-2xl font-bold">{plan}</p>
               </div>
-              <Badge className="text-sm px-3 py-1">${price}/mo</Badge>
+              <Badge className="text-sm px-3 py-1">${price.toFixed(2)}/mo</Badge>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-start gap-3">
@@ -348,10 +377,16 @@ const ProfilePage = () => {
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <p className="text-sm font-medium">Provider Slots</p>
                 </div>
-                <p className="text-sm text-muted-foreground">{currentProviders} of {maxProviders} used</p>
+                <p className="text-sm text-muted-foreground">
+                  {hasProviderLimit ? `${currentProviders} of ${maxProviders} used` : `${currentProviders} used`}
+                </p>
               </div>
               <Progress value={usagePercent} className="h-2" />
-              <p className="text-xs text-muted-foreground mt-1">{remaining} slot{remaining !== 1 ? "s" : ""} remaining</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {hasProviderLimit
+                  ? `${remaining} slot${remaining !== 1 ? "s" : ""} remaining`
+                  : "Unlimited provider slots"}
+              </p>
             </div>
             {isEditing && (
               <Button
@@ -442,16 +477,21 @@ const ProfilePage = () => {
       }
       case "partner": {
         const pt = user as PartnerUser;
-        const plan = (pt as any).membershipPlan || "Standard";
-        const price = (pt as any).membershipPrice || 149;
-        const startDate = (pt as any).subscriptionStartDate || "2025-06-15";
-        const maxProv = (pt as any).maxProviders || 25;
-        const curProv = (pt as any).currentProviders || 8;
+        const plan = formatPlanName((pt as any).membershipPlan);
+        const price = Number((pt as any).membershipPrice ?? 0);
+        const startDate = (pt as any).subscriptionStartDate;
+        const maxProv = (pt as any).maxProviders;
+        const curProv = Number((pt as any).currentProviders ?? 0);
         rows.push(
-          { label: "Partner Code", value: pt.partnerCode },
+          { label: "Partner Code", value: pt.partnerCode || "Not assigned" },
           { label: "Membership Plan", value: `${plan} — $${price}/mo` },
-          { label: "Subscribed Since", value: new Date(startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) },
-          { label: "Provider Slots", value: `${curProv} of ${maxProv} used` },
+          {
+            label: "Subscribed Since",
+            value: startDate
+              ? new Date(startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+              : "Not available",
+          },
+          { label: "Provider Slots", value: typeof maxProv === "number" ? `${curProv} of ${maxProv} used` : `${curProv} used - unlimited` },
           { label: "Payment", value: "Square" },
           { label: "Agent First Name", value: pt.agentFirstName, editable: true, field: "agentFirstName" },
           { label: "Agent Last Name", value: pt.agentLastName, editable: true, field: "agentLastName" },
