@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthenticationDetails, CognitoUser } from "amazon-cognito-identity-js";
-import { userPool } from "@/lib/cognito.client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,122 +7,96 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/ui/logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { completeNewPasswordChallenge, confirmPasswordReset, loginWithCognito } from "@/api/auth";
+import { saveUserToStorage } from "@/utils/userStorage";
 
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [challengeSession, setChallengeSession] = useState("");
+  const [isResetCodeMode, setIsResetCodeMode] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const needsNewPassword = Boolean(challengeSession);
+  const isPasswordUpdateMode = needsNewPassword || isResetCodeMode;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!email || !password) {
+    if (isPasswordUpdateMode) {
+      if (!email) {
+        setError("Email is required");
+        return;
+      }
+
+      if (isResetCodeMode && !resetCode.trim()) {
+        setError("Verification code is required");
+        return;
+      }
+
+      if (!newPassword || !confirmPassword) {
+        setError("New password and confirmation are required");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setError("New passwords do not match");
+        return;
+      }
+    } else if (!email || !password) {
       setError("Email and password are required");
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const user = new CognitoUser({
-      Username: email,
-      Pool: userPool,
-    });
-
-    const authDetails = new AuthenticationDetails({
-      Username: email,
-      Password: password,
-    });
-
-    user.authenticateUser(authDetails, {
-      onSuccess: async (session) => {
-        console.log("Login successful:", session);
-        toast.success("Login successful", { description: "Welcome back!" });
-
-        const idToken = session.getIdToken().getJwtToken();
-        const accessToken = session.getAccessToken().getJwtToken();
-        const cognitoSub = session.getIdToken().payload.sub;
-
-        // Store tokens
-        localStorage.setItem("idToken", idToken);
-        localStorage.setItem("accessToken", accessToken);
-
-        try {
-          const res = await fetch(
-            `https://6dgikqae3grzlgeasd2l3fatku0vsadv.lambda-url.us-east-2.on.aws/?cognitoId=${cognitoSub}`
-          );
-
-          const data = await res.json();
-
-          if (!res.ok || !data.user_type) {
-            throw new Error("User does not exist in database");
-          }
-
-          // Choose the right profile object based on user_type
-          let profile: any = null;
-          if (data.user_type === "member") {
-            profile = data.member_profile;
-          } else if (data.user_type === "provider") {
-            profile = data.provider_profile;
-          } else if (data.user_type === "partner") {
-            profile = data.partner_profile;
-          }
-
-          // Store a richer user object in localStorage
-          localStorage.setItem(
-            "user",
-            JSON.stringify({
-              id: data.user_id,
-              cognitoId: cognitoSub,
-              email: data.email,
-              userType: data.user_type,
-              displayId: data.display_id,
-              firstName: data.first_name,
-              lastName: data.last_name,
-              phoneNumber: data.phone_number,
-              profile:data.profile, // member/provider/partner profile depending on userType
-            })
-          );
-
-          // Go to role router (which will send them to the right dashboard)
-          navigate("/dashboard");
-        } catch (err: any) {
-          console.error("DB lookup error:", err);
-          setError("Could not load user profile.");
-          toast.error("Login error", {
-            description: err.message || "User profile not found in the database",
-          });
-        }
-
-        setLoading(false);
-      },
-
-      onFailure: (err) => {
-        console.error("Login failed:", err);
-        setError(err.message || "Authentication failed");
-        toast.error("Login failed", { description: err.message });
-        setLoading(false);
-      },
-
-      newPasswordRequired: (userAttributes, requiredAttributes) => {
-        delete userAttributes.email_verified;
-        delete userAttributes.phone_number_verified;
-
-        const newPassword = prompt("Please enter a new password:");
-
-        user.completeNewPasswordChallenge(newPassword!, {}, {
-          onSuccess: (session) => {
-            console.log("Password changed successfully");
-            navigate("/dashboard");
-          },
-          onFailure: (err) => {
-            console.error("Failed to change password:", err);
-          }
-        });
+      if (needsNewPassword) {
+        const user = await completeNewPasswordChallenge(email, challengeSession, newPassword);
+        saveUserToStorage(user);
+        toast.success("Password updated", { description: "Welcome to Live Royally!" });
+        navigate("/dashboard");
+        return;
       }
-    });
+
+      if (isResetCodeMode) {
+        await confirmPasswordReset(email, resetCode, newPassword);
+        setIsResetCodeMode(false);
+        setResetCode("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setPassword("");
+        toast.success("Password reset", { description: "Sign in with your new password." });
+        return;
+      }
+
+      const result = await loginWithCognito(email, password);
+
+      if ("challengeName" in result) {
+        setChallengeSession(result.session);
+        setEmail(result.email);
+        setPassword("");
+        toast.info("Create a new password to finish signing in");
+        return;
+      }
+
+      const user = result.user;
+      saveUserToStorage(user);
+      toast.success("Login successful", { description: "Welcome back!" });
+      navigate("/dashboard");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Authentication failed";
+      setError(message);
+      toast.error("Login failed", { description: message });
+    } finally {
+      setLoading(false);
+      setPassword("");
+    }
   };
 
   return (
@@ -144,8 +116,16 @@ const Login = () => {
       <main className="flex-1 flex flex-col items-center justify-center p-6">
         <Card className="royal-card w-full max-w-md">
           <div className="space-y-6 p-6">
-            <h1 className="text-2xl font-bold royal-header text-center">Sign In</h1>
-            <p className="text-gray-600 text-center">Welcome back to Live Royally</p>
+            <h1 className="text-2xl font-bold royal-header text-center">
+              {isPasswordUpdateMode ? "Create New Password" : "Sign In"}
+            </h1>
+            <p className="text-gray-600 text-center">
+              {isResetCodeMode
+                ? "Enter your password reset verification code and choose a new password."
+                : needsNewPassword
+                  ? "Your temporary password was accepted. Choose a permanent password for your account."
+                : "Welcome back to Live Royally"}
+            </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
@@ -154,46 +134,128 @@ const Login = () => {
                 </Alert>
               )}
 
-              <div className="space-y-2">
-                <Label>Email Address</Label>
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
+              {!isPasswordUpdateMode && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Email Address</Label>
+                    <Input
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label>Password</Label>
-                <Input
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label>Password</Label>
+                    <Input
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </>
+              )}
+
+              {isPasswordUpdateMode && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Email Address</Label>
+                    <Input
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={needsNewPassword}
+                      required
+                    />
+                  </div>
+
+                  {isResetCodeMode && (
+                    <div className="space-y-2">
+                      <Label>Verification Code</Label>
+                      <Input
+                        inputMode="numeric"
+                        placeholder="Enter reset code"
+                        value={resetCode}
+                        onChange={(e) => setResetCode(e.target.value)}
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>New Password</Label>
+                    <Input
+                      type="password"
+                      placeholder="Enter a new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Confirm New Password</Label>
+                    <Input
+                      type="password"
+                      placeholder="Confirm your new password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </>
+              )}
 
               <Button
                 type="submit"
                 className="w-full bg-royal hover:bg-royal-dark text-white"
                 disabled={loading}
               >
-                {loading ? "Signing in..." : "Sign In"}
+                {loading
+                  ? isPasswordUpdateMode
+                    ? "Updating password..."
+                    : "Signing in..."
+                  : isPasswordUpdateMode
+                    ? "Set Password & Sign In"
+                    : "Sign In"}
               </Button>
             </form>
 
-            <p className="text-center text-sm text-gray-600 pt-4">
-              Don't have an account?{" "}
-              <span
-                className="text-royal hover:text-royal-dark cursor-pointer"
-                onClick={() => navigate("/register")}
-              >
-                Register
-              </span>
-            </p>
+            {!needsNewPassword && (
+              <div className="space-y-3 pt-4 text-center text-sm text-gray-600">
+                <button
+                  type="button"
+                  className="text-royal hover:text-royal-dark"
+                  onClick={() => {
+                    setError("");
+                    setIsResetCodeMode((current) => !current);
+                    setPassword("");
+                    setResetCode("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                  }}
+                >
+                  {isResetCodeMode ? "Back to sign in" : "Have a password reset code?"}
+                </button>
+
+                {!isResetCodeMode && (
+                  <p>
+                    Don't have an account?{" "}
+                <span
+                  className="text-royal hover:text-royal-dark cursor-pointer"
+                  onClick={() => navigate("/register")}
+                >
+                  Register
+                </span>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </Card>
       </main>

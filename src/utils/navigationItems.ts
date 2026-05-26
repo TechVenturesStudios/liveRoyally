@@ -11,12 +11,16 @@ import {
   Users,
   Building,
   MessageSquare,
-  Link
+  Link,
+  LayoutDashboard,
+  Crown,
+  ScanLine
 } from "lucide-react";
 import { UserType } from "@/types/user";
 
 export interface NavItem {
   name: string;
+  shortName?: string;
   icon: React.ComponentType<any>;
   path: string;
 }
@@ -29,110 +33,147 @@ interface NavItemsByUserType {
   admin: NavItem[];
 }
 
-// Centralized navigation items by user type
 const navigationItemsByType: NavItemsByUserType = {
-  common: [
-    {
-      name: "Profile",
-      icon: User,
-      path: "/dashboard/profile",
-    },
-    {
-      name: "Engagement Score",
-      icon: Medal,
-      path: "/dashboard/score",
-    },
-  ],
+  common: [],
   
   member: [
     {
-      name: "Upcoming Vouchers",
+      name: "Dashboard",
+      icon: LayoutDashboard,
+      path: "/dashboard",
+    },
+    {
+      name: "Vouchers",
       icon: Package,
       path: "/dashboard/vouchers",
     },
     {
       name: "Purchase History",
+      shortName: "History",
       icon: Clock,
       path: "/dashboard/history",
     },
     {
       name: "New Deals",
+      shortName: "Deals",
       icon: PlusCircle,
-      path: "/dashboard/member/deals",
+      path: "/dashboard/deals",
+    },
+    {
+      name: "Engagement Score",
+      shortName: "Score",
+      icon: Medal,
+      path: "/dashboard/score",
     },
   ],
   
   provider: [
     {
-      name: "Pending Events",
+      name: "Provider CRM",
+      shortName: "CRM",
+      icon: Crown,
+      path: "/dashboard/providers",
+    },
+    {
+      name: "Events Management",
+      shortName: "Events",
       icon: Calendar,
+      path: "/dashboard/providers/events",
+    },
+    {
+      name: "Pending Events",
+      shortName: "Pending",
+      icon: Clock,
       path: "/dashboard/pending-events",
     },
     {
-      name: "Participated Events",
-      icon: Clock,
-      path: "/dashboard/participated-events",
+      name: "Representatives",
+      shortName: "Reps",
+      icon: Users,
+      path: "/dashboard/providers/representatives",
     },
     {
-      name: "Upcoming Events",
-      icon: PlusCircle,
-      path: "/dashboard/upcoming-events",
+      name: "Engagement Score",
+      shortName: "Score",
+      icon: Medal,
+      path: "/dashboard/score",
+    },
+    {
+      name: "Scan QR Code",
+      shortName: "Scan",
+      icon: ScanLine,
+      path: "/dashboard/vouchers",
     },
   ],
   
   partner: [
     {
-      name: "Pending Events",
-      icon: Calendar,
-      path: "/dashboard/partner/pending-events",
+      name: "Partner CRM",
+      shortName: "CRM",
+      icon: Crown,
+      path: "/dashboard/crm",
     },
     {
-      name: "Published Events",
-      icon: Clock,
-      path: "/dashboard/partner/published-events",
-    },
-    {
-      name: "Create Event",
-      icon: PlusCircle,
-      path: "/dashboard/partner/create-event",
+      name: "My Providers",
+      shortName: "Providers",
+      icon: Building,
+      path: "/dashboard/my-providers",
     },
     {
       name: "Event Analytics",
+      shortName: "Analytics",
       icon: BarChart3,
       path: "/dashboard/analytics",
     },
     {
-      name: "Provider CRM",
-      icon: MessageSquare,
-      path: "/dashboard/crm",
+      name: "Engagement Score",
+      shortName: "Score",
+      icon: Medal,
+      path: "/dashboard/score",
+    },
+    {
+      name: "Create Event",
+      shortName: "Create",
+      icon: PlusCircle,
+      path: "/dashboard/create-event",
+    },
+    {
+      name: "Representatives",
+      shortName: "Reps",
+      icon: Users,
+      path: "/dashboard/partner/representatives",
     },
   ],
   
   admin: [
     {
-      name: "Pending Events",
-      icon: Calendar,
-      path: "/dashboard/admin/pending",
+      name: "Home",
+      icon: Crown,
+      path: "/dashboard/admin/profile",
     },
     {
-      name: "Historical Events",
-      icon: Clock,
-      path: "/dashboard/admin/history",
+      name: "Pending Partners",
+      shortName: "Pending",
+      icon: Building,
+      path: "/dashboard/admin/pending-partners",
     },
     {
       name: "Network Analytics",
+      shortName: "Analytics",
       icon: BarChart3,
       path: "/dashboard/admin/analytics",
     },
     {
-      name: "Approve Events",
-      icon: PlusCircle,
-      path: "/dashboard/admin/approve",
+      name: "Historical Events",
+      shortName: "History",
+      icon: Clock,
+      path: "/dashboard/admin/history",
     },
     {
-      name: "Profile",
-      icon: User,
-      path: "/dashboard/admin/profile",
+      name: "Representatives",
+      shortName: "Reps",
+      icon: Users,
+      path: "/dashboard/admin/representatives",
     }
   ]
 };

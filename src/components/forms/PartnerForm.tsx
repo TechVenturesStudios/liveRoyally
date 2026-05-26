@@ -3,40 +3,16 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import FormField from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
-import { PartnerUser } from "@/types/user";
+import { PartnerUser, USER_TYPES } from "@/types/user";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Check, ArrowLeft, CreditCard, Shield } from "lucide-react";
+import { Check, ArrowLeft, CreditCard, Loader2, Shield } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { getNetworkFromZip, getNetworkFromZipWithFallback } from "@/utils/networkMapping";
-
-const MEMBERSHIP_PLANS = [
-  {
-    value: "spotlight",
-    label: "Spotlight",
-    price: "$49/mo",
-    monthlyPrice: 49,
-    description: "Basic visibility with network listing and up to 5 providers.",
-    features: ["Network listing", "Up to 5 providers", "Basic analytics", "Email support"],
-  },
-  {
-    value: "standard",
-    label: "Standard",
-    price: "$99/mo",
-    monthlyPrice: 99,
-    description: "Enhanced tools with campaigns, events, and up to 25 providers.",
-    features: ["Everything in Spotlight", "Up to 25 providers", "Campaign management", "Event creation", "Priority support"],
-  },
-  {
-    value: "premium",
-    label: "Premium",
-    price: "$199/mo",
-    monthlyPrice: 199,
-    description: "Full platform access with unlimited providers and advanced CRM.",
-    features: ["Everything in Standard", "Unlimited providers", "Advanced CRM & analytics", "Custom branding", "Dedicated account manager"],
-  },
-];
+import { createCognitoUser } from "@/api/cognito";
+import { registerPartner } from "@/api/registration";
+import { PARTNER_SUBSCRIPTION_PLAN_LIST } from "@/config/subscriptionPlans";
+import { getNetworkFromZipWithFallback } from "@/utils/networkMapping";
 
 const ORGANIZATION_CATEGORIES = [
   { label: "Educational", value: "education" },
@@ -59,6 +35,8 @@ const PartnerForm = () => {
   const navigate = useNavigate();
   const [membershipPlan, setMembershipPlan] = useState("");
   const [showCheckout, setShowCheckout] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [formData, setFormData] = useState<Partial<PartnerUser>>({
     networkName: "",
     networkCode: "",
@@ -106,22 +84,35 @@ const PartnerForm = () => {
     setShowCheckout(true);
   };
 
-  const handlePay = () => {
-    const userId = `10001${Math.floor(Math.random() * 10000)}`;
-    const partnerCode = `PTR-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    console.log("Submitting partner data:", { ...formData, id: userId, userType: "partner", partnerCode, membershipPlan });
-    localStorage.setItem("user", JSON.stringify({ 
-      ...formData, 
-      id: userId, 
-      userType: "partner",
-      partnerCode,
-      membershipPlan,
-      email: formData.organizationEmail
-    }));
-    navigate("/dashboard");
+  const handlePay = async () => {
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const cognitoUser = await createCognitoUser({
+        email: formData.organizationEmail,
+        firstName: formData.agentFirstName,
+        lastName: formData.agentLastName,
+        phoneNumber: formData.agentPhone,
+        userType: USER_TYPES.partner,
+      });
+
+      await registerPartner({
+        cognitoSub: cognitoUser.cognitoSub,
+        ...formData,
+        userType: USER_TYPES.partner,
+        membershipPlan,
+      });
+
+      navigate("/dashboard");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Failed to create partner account");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const selectedPlan = MEMBERSHIP_PLANS.find((p) => p.value === membershipPlan);
+  const selectedPlan = PARTNER_SUBSCRIPTION_PLAN_LIST.find((p) => p.value === membershipPlan);
 
   // ── Checkout / Summary View ──
   if (showCheckout && selectedPlan) {
@@ -201,11 +192,15 @@ const PartnerForm = () => {
         <div className="space-y-4">
           <Button
             onClick={handlePay}
+            disabled={isSubmitting}
             className="w-full bg-royal hover:bg-royal-dark text-white h-12 text-base font-semibold gap-2"
           >
-            <CreditCard className="h-5 w-5" />
-            Pay ${total.toFixed(2)} &amp; Create Account
+            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
+            {isSubmitting ? "Creating account..." : `Pay $${total.toFixed(2)} & Create Account`}
           </Button>
+          {submitError && (
+            <p className="text-sm text-destructive text-center">{submitError}</p>
+          )}
           <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <Shield className="h-3.5 w-3.5" />
             Secure payment — your information is encrypted
@@ -229,7 +224,7 @@ const PartnerForm = () => {
             <p className="text-xs text-muted-foreground mt-1">Select the plan that best fits your organization's needs.</p>
           </div>
           <RadioGroup value={membershipPlan} onValueChange={setMembershipPlan} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {MEMBERSHIP_PLANS.map((plan) => (
+            {PARTNER_SUBSCRIPTION_PLAN_LIST.map((plan) => (
               <Label
                 key={plan.value}
                 htmlFor={`plan-${plan.value}`}

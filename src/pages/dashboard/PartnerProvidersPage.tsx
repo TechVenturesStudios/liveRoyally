@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useAuthCheck } from "@/hooks/useAuthCheck";
@@ -47,12 +47,50 @@ interface ProviderEntry {
   businessZip: string;
 }
 
-// Mock: providers belonging to the currently logged-in partner
-const initialProviders: ProviderEntry[] = [
-  { id: "PRV001", businessName: "Smith's Merchandise", businessCategory: "Retail", agentFirstName: "John", agentLastName: "Smith", agentPhone: "555-123-4567", businessEmail: "info@smithmerch.com", businessPhone: "555-987-6543", businessAddress: "123 Commerce St", businessCity: "Metropolis", businessState: "NY", businessZip: "10001" },
-  { id: "PRV003", businessName: "Williams Fitness", businessCategory: "Health & Wellness", agentFirstName: "Michael", agentLastName: "Williams", agentPhone: "555-345-6789", businessEmail: "info@williamsfitness.com", businessPhone: "555-765-4321", businessAddress: "789 Gym Ave", businessCity: "Fitsville", businessState: "CA", businessZip: "90210" },
-  { id: "PRV008", businessName: "Turner Hardware", businessCategory: "Home & Garden", agentFirstName: "Alex", agentLastName: "Turner", agentPhone: "555-890-1234", businessEmail: "info@turnerhw.com", businessPhone: "555-210-9876", businessAddress: "99 Fix-It Rd", businessCity: "Metropolis", businessState: "NY", businessZip: "10003" },
-];
+type MyProvidersApiProvider = {
+  id: string;
+  businessName: string | null;
+  businessCategory: string | null;
+  agentFirstName: string | null;
+  agentLastName: string | null;
+  agentPhone: string | null;
+  businessEmail: string | null;
+  businessPhone: string | null;
+  businessAddress: string | null;
+};
+
+const parseAddressParts = (address: string | null) => {
+  if (!address) {
+    return { businessAddress: "", businessCity: "", businessState: "", businessZip: "" };
+  }
+
+  const parts = address.split(",").map((part) => part.trim());
+  const [street = "", city = "", stateZip = ""] = parts;
+  const stateZipParts = stateZip.split(/\s+/).filter(Boolean);
+
+  return {
+    businessAddress: street,
+    businessCity: city,
+    businessState: stateZipParts[0] || "",
+    businessZip: stateZipParts.slice(1).join(" "),
+  };
+};
+
+const mapApiProvider = (provider: MyProvidersApiProvider): ProviderEntry => {
+  const addressParts = parseAddressParts(provider.businessAddress);
+
+  return {
+    id: provider.id,
+    businessName: provider.businessName || "Unnamed Provider",
+    businessCategory: provider.businessCategory || "Other",
+    agentFirstName: provider.agentFirstName || "",
+    agentLastName: provider.agentLastName || "",
+    agentPhone: provider.agentPhone || "",
+    businessEmail: provider.businessEmail || "",
+    businessPhone: provider.businessPhone || "",
+    ...addressParts,
+  };
+};
 
 const BUSINESS_CATEGORIES = [
   { label: "Retail", value: "Retail" },
@@ -67,7 +105,9 @@ const BUSINESS_CATEGORIES = [
 const PartnerProvidersPage = () => {
   const navigate = useNavigate();
   const { isLoading } = useAuthCheck();
-  const [providers, setProviders] = useState<ProviderEntry[]>(initialProviders);
+  const [providers, setProviders] = useState<ProviderEntry[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
+  const [providersError, setProvidersError] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry | null>(null);
@@ -86,6 +126,45 @@ const PartnerProvidersPage = () => {
     businessState: "",
     businessZip: "",
   });
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    let isMounted = true;
+
+    const loadProviders = async () => {
+      try {
+        setProvidersLoading(true);
+        setProvidersError("");
+        const response = await fetch("/api/my-providers");
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load providers");
+        }
+
+        if (isMounted) {
+          setProviders(Array.isArray(data.providers) ? data.providers.map(mapApiProvider) : []);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load providers";
+        if (isMounted) {
+          setProvidersError(message);
+          toast.error("Could not load providers", { description: message });
+        }
+      } finally {
+        if (isMounted) {
+          setProvidersLoading(false);
+        }
+      }
+    };
+
+    loadProviders();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoading]);
 
   const filteredProviders = useMemo(() => {
     if (!searchQuery.trim()) return providers;
@@ -135,7 +214,7 @@ const PartnerProvidersPage = () => {
     setNewProvider((prev) => ({ ...prev, [name]: value }));
   };
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading || providersLoading) return <LoadingSpinner />;
 
   const getDetailRows = (p: ProviderEntry) => [
     { label: "Business Name", value: p.businessName },
@@ -172,6 +251,12 @@ const PartnerProvidersPage = () => {
         </div>
 
         {/* Search */}
+        {providersError && (
+          <Card className="border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+            {providersError}
+          </Card>
+        )}
+
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -226,7 +311,7 @@ const PartnerProvidersPage = () => {
                     </div>
                     <div>
                       <span className="block text-xs font-medium text-foreground/60 uppercase tracking-wide">Location</span>
-                      <span className="text-foreground text-xs">{p.businessCity}, {p.businessState}</span>
+                      <span className="text-foreground text-xs">{p.businessAddress}</span>
                     </div>
                     <div>
                       <span className="block text-xs font-medium text-foreground/60 uppercase tracking-wide">Email</span>
@@ -269,7 +354,7 @@ const PartnerProvidersPage = () => {
                         {p.agentFirstName} {p.agentLastName}
                       </TableCell>
                       <TableCell className="text-xs py-2" onClick={() => setSelectedProvider(p)}>
-                        {p.businessCity}, {p.businessState}
+                        {p.businessAddress}
                       </TableCell>
                       <TableCell className="text-xs py-2" onClick={() => setSelectedProvider(p)}>
                         {p.businessPhone}

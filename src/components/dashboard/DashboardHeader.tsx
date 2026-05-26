@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { User } from "@/utils/userStorage";
 import { removeUserFromStorage } from "@/utils/userStorage";
+import { logout } from "@/api/auth";
 
 interface DashboardHeaderProps {
   user: User;
@@ -14,7 +15,8 @@ interface DashboardHeaderProps {
 const DashboardHeader = ({ user }: DashboardHeaderProps) => {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logout();
     removeUserFromStorage();
     navigate("/login");
   };

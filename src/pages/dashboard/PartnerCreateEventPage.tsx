@@ -12,6 +12,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { mockProviders } from "@/data/providerMockData";
 import { Progress } from "@/components/ui/progress";
+import { createEvent } from "@/api/events";
+import { getUserFromStorage } from "@/utils/userStorage";
 
 const PartnerCreateEventPage = () => {
   const navigate = useNavigate();
@@ -36,6 +38,7 @@ const PartnerCreateEventPage = () => {
   const [sortKey, setSortKey] = useState<string>("businessName");
   const [sortAsc, setSortAsc] = useState(true);
   const [providerSearch, setProviderSearch] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -75,17 +78,42 @@ const PartnerCreateEventPage = () => {
     });
   }, [sortKey, sortAsc, providerSearch]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.date || !formData.location || selectedProviders.length === 0) {
       toast({ title: "Missing Fields", description: "Please fill all required fields and select at least one provider.", variant: "destructive" });
       return;
     }
-    toast({
-      title: "Event Created & Sent",
-      description: `"${formData.title}" has been sent to ${selectedProviders.length} provider(s) for approval.`,
-    });
-    navigate("/dashboard/pending-events");
+
+    const user = getUserFromStorage();
+    const partnerId = user?.id;
+
+    if (!partnerId) {
+      toast({ title: "Event creation failed", description: "Could not find the current partner.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const result = await createEvent({
+        partnerId,
+        title: formData.title,
+        description: formData.description,
+        startDate: formData.date,
+        endDate: formData.deadline,
+      });
+
+      toast({
+        title: "Event Created & Sent",
+        description: `"${formData.title}" (${result.eventId}) has been sent to ${selectedProviders.length} provider(s) for approval.`,
+      });
+      navigate("/dashboard/pending-events");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create event";
+      toast({ title: "Event creation failed", description: message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Progress calculation
@@ -449,9 +477,9 @@ const PartnerCreateEventPage = () => {
                 </div>
                 <div className="flex gap-3 w-full sm:w-auto">
                   <Button type="button" variant="outline" onClick={() => navigate(-1)} className="flex-1 sm:flex-none">Cancel</Button>
-                  <Button type="submit" disabled={!formData.title || !formData.date || !formData.location || selectedProviders.length === 0} className="flex-1 sm:flex-none">
+                  <Button type="submit" disabled={submitting || !formData.title || !formData.date || !formData.location || selectedProviders.length === 0} className="flex-1 sm:flex-none">
                     <Send className="h-4 w-4 mr-2" />
-                    Create & Send
+                    {submitting ? "Creating..." : "Create & Send"}
                   </Button>
                 </div>
               </div>

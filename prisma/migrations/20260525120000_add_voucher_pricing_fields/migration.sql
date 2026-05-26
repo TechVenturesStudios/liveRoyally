@@ -1,0 +1,3 @@
+ALTER TABLE "vouchers"
+ADD COLUMN IF NOT EXISTS "member_price" DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS "max_redemptions" INTEGER;

@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  member
+  provider
+  partner
+  admin
+}
+
+enum PartnerSubscriptionPlan {
+  spotlight
+  standard
+  premium
+}
+
+enum PartnerSubscriptionStatus {
+  pending
+  active
+  past_due
+  canceled
+  expired
+}
+
+enum BillingProvider {
+  square
+}
+
+model events {
+  event_id    String     @id @db.VarChar(50)
+  partner_id  String?    @db.Uuid
+  title       String?    @db.VarChar(150)
+  description String?
+  start_date  DateTime?  @db.Date
+  end_date    DateTime?  @db.Date
+  status      String?    @db.VarChar(50)
+  created_at  DateTime?  @default(now()) @db.Timestamp(6)
+  users       users?     @relation(fields: [partner_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  vouchers    vouchers[]
+
+  @@index([partner_id], map: "idx_events_partner")
+}
+
+model member_profiles {
+  user_id              String    @id @db.Uuid
+  network_name         String?   @db.VarChar(100)
+  network_code         String?   @db.VarChar(50)
+  zip_code             String?   @db.VarChar(20)
+  ethnicity            String?   @db.VarChar(50)
+  age_group            String?   @db.VarChar(20)
+  gender               String?   @db.VarChar(20)
+  notification_enabled Boolean?
+  terms_accepted       Boolean?
+  created_at           DateTime? @default(now()) @db.Timestamp(6)
+  users                users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model member_vouchers {
+  member_id  String    @db.Uuid
+  voucher_id String    @db.VarChar(50)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  users      users     @relation(fields: [member_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_member")
+  vouchers   vouchers  @relation(fields: [voucher_id], references: [voucher_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_voucher")
+
+  @@id([member_id, voucher_id])
+}
+
+model partner_profiles {
+  user_id              String    @id @db.Uuid
+  network_name         String?   @db.VarChar(100)
+  network_code         String?   @db.VarChar(50)
+  partner_code         String?   @unique @db.VarChar(20)
+  agent_first_name     String?   @db.VarChar(100)
+  agent_last_name      String?   @db.VarChar(100)
+  agent_phone          String?   @db.VarChar(20)
+  org_name             String?   @db.VarChar(150)
+  org_address          String?
+  org_email            String?   @db.VarChar(150)
+  org_phone            String?   @db.VarChar(20)
+  notification_enabled Boolean?
+  terms_accepted       Boolean?
+  created_at           DateTime? @default(now()) @db.Timestamp(6)
+  users                users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model partner_subscriptions {
+  subscription_id                   String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  partner_id                        String                    @db.Uuid
+  plan                              PartnerSubscriptionPlan
+  status                            PartnerSubscriptionStatus @default(pending)
+  billing_provider                  BillingProvider           @default(square)
+  billing_provider_customer_id      String?                   @db.VarChar(100)
+  billing_provider_subscription_id  String?                   @unique @db.VarChar(100)
+  monthly_price_cents               Int
+  currency                          String                    @default("usd") @db.VarChar(3)
+  max_providers                     Int?
+  current_period_start              DateTime?                 @db.Timestamp(6)
+  current_period_end                DateTime?                 @db.Timestamp(6)
+  trial_ends_at                     DateTime?                 @db.Timestamp(6)
+  canceled_at                       DateTime?                 @db.Timestamp(6)
+  created_at                        DateTime?                 @default(now()) @db.Timestamp(6)
+  updated_at                        DateTime?                 @default(now()) @db.Timestamp(6)
+  users                             users                     @relation(fields: [partner_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([partner_id], map: "idx_partner_subscriptions_partner")
+  @@index([status], map: "idx_partner_subscriptions_status")
+}
+
+model provider_profiles {
+  user_id              String    @id @db.Uuid
+  partner_id           String?   @db.Uuid
+  network_name         String?   @db.VarChar(100)
+  network_code         String?   @db.VarChar(50)
+  agent_first_name     String?   @db.VarChar(100)
+  agent_last_name      String?   @db.VarChar(100)
+  agent_phone          String?   @db.VarChar(20)
+  business_name        String?   @db.VarChar(150)
+  business_category    String?   @db.VarChar(100)
+  business_address     String?
+  business_email       String?   @db.VarChar(150)
+  business_phone       String?   @db.VarChar(20)
+  notification_enabled Boolean?
+  terms_accepted       Boolean?
+  created_at           DateTime? @default(now()) @db.Timestamp(6)
+  partner              users?    @relation("ProviderPartner", fields: [partner_id], references: [user_id], onDelete: SetNull, onUpdate: NoAction)
+  users                users     @relation("ProviderUser", fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([partner_id], map: "idx_provider_profiles_partner")
+}
+
+model purchases {
+  purchase_id   Int       @id @default(autoincrement())
+  member_id     String?   @db.Uuid
+  voucher_id    String?   @db.VarChar(50)
+  purchase_date DateTime? @default(now()) @db.Timestamp(6)
+  status        String?   @db.VarChar(50)
+  users         users?    @relation(fields: [member_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  vouchers      vouchers? @relation(fields: [voucher_id], references: [voucher_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([member_id, voucher_id], map: "purchases_member_voucher_unique")
+  @@index([member_id], map: "idx_purchases_member")
+  @@index([voucher_id], map: "idx_purchases_voucher")
+}
+
+model roles {
+  role_id    Int          @id @default(autoincrement())
+  role_name  String       @unique @db.VarChar(50)
+  user_roles user_roles[]
+}
+
+model user_roles {
+  user_id     String    @db.Uuid
+  role_id     Int
+  assigned_at DateTime? @default(now()) @db.Timestamp(6)
+  roles       roles     @relation(fields: [role_id], references: [role_id], onDelete: Cascade, onUpdate: NoAction)
+  users       users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, role_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  user_id           String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cognito_id        String             @unique @db.Uuid
+  email             String             @unique @db.VarChar(150)
+  first_name        String?            @db.VarChar(100)
+  last_name         String?            @db.VarChar(100)
+  phone_number      String?            @db.VarChar(20)
+  user_type         UserType?
+  display_id        String?            @unique @db.VarChar(20)
+  created_at        DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?          @default(now()) @db.Timestamp(6)
+  events            events[]
+  member_profiles   member_profiles?
+  member_vouchers   member_vouchers[]
+  partner_profiles  partner_profiles?
+  partner_subscriptions partner_subscriptions[]
+  provider_profiles provider_profiles? @relation("ProviderUser")
+  partner_providers provider_profiles[] @relation("ProviderPartner")
+  purchases         purchases[]
+  user_roles        user_roles[]
+  vouchers          vouchers[]
+
+  @@index([cognito_id], map: "idx_users_cognito")
+  @@index([email], map: "idx_users_email")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vouchers {
+  voucher_id      String            @id @db.VarChar(50)
+  event_id        String?           @db.VarChar(50)
+  provider_id     String?           @db.Uuid
+  type            String?           @db.Char(1)
+  value           Decimal?          @db.Decimal(10, 2)
+  expiration_date DateTime?         @db.Date
+  status          String?           @db.VarChar(50)
+  created_at      DateTime?         @default(now()) @db.Timestamp(6)
+  promo_item      String?
+  member_price    Float?
+  max_redemptions Int?
+  member_vouchers member_vouchers[]
+  purchases       purchases[]
+  events          events?           @relation(fields: [event_id], references: [event_id], onDelete: Cascade, onUpdate: NoAction)
+  users           users?            @relation(fields: [provider_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([event_id], map: "idx_vouchers_event")
+  @@index([provider_id], map: "idx_vouchers_provider")
+}

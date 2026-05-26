@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import FormField from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
-import { ProviderUser } from "@/types/user";
+import { ProviderUser, USER_TYPES } from "@/types/user";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Check, AlertCircle, Loader2 } from "lucide-react";
+import { createCognitoUser } from "@/api/cognito";
+import { registerProvider } from "@/api/registration";
 
 const STATE_OPTIONS = [
   { label: "Alabama", value: "AL" }, { label: "Alaska", value: "AK" },
@@ -46,19 +48,6 @@ const BUSINESS_CATEGORIES = [
   { label: "Other", value: "other" }
 ];
 
-// Mock partner lookup by code
-const MOCK_PARTNERS: Record<string, { id: string; name: string; networkName: string; networkCode: string }> = {
-  "PTR-001": { id: "PTR001", name: "City Community Foundation", networkName: "Baton Rouge Network", networkCode: "BR-001" },
-  "PTR-002": { id: "PTR002", name: "Downtown Business Alliance", networkName: "Lafayette Network", networkCode: "LAF-002" },
-  "PTR-003": { id: "PTR003", name: "Metro Chamber of Commerce", networkName: "New Orleans Network", networkCode: "NOLA-003" },
-  "PTR-DEMO": { id: "PTR999", name: "Live Royally Demo Partner", networkName: "Houston Network", networkCode: "HOU-009" },
-};
-
-const lookupPartner = (code: string) => {
-  const normalized = code.trim().toUpperCase();
-  return MOCK_PARTNERS[normalized] || null;
-};
-
 const ProviderForm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -71,7 +60,6 @@ const ProviderForm = () => {
   const [formData, setFormData] = useState<Partial<ProviderUser>>({
     networkName: "",
     networkCode: "",
-    partnerId: "",
     partnerName: "",
     agentFirstName: "",
     agentLastName: "",
@@ -98,36 +86,49 @@ const ProviderForm = () => {
     }
   }, []);
 
-  const handleLookup = (code?: string) => {
+  const handleLookup = async (code?: string) => {
     const codeToLookup = code || partnerCode;
     if (!codeToLookup.trim()) return;
 
     setPartnerLookupStatus("loading");
-    // Simulate API call
-    setTimeout(() => {
-      const result = lookupPartner(codeToLookup);
-      if (result) {
-        setPartnerInfo(result);
-        setPartnerLookupStatus("found");
-        setFormData((prev) => ({
-          ...prev,
-          partnerId: result.id,
-          partnerName: result.name,
-          networkName: result.networkName,
-          networkCode: result.networkCode,
-        }));
-      } else {
-        setPartnerInfo(null);
-        setPartnerLookupStatus("not_found");
-        setFormData((prev) => ({
-          ...prev,
-          partnerId: "",
-          partnerName: "",
-          networkName: "",
-          networkCode: "",
-        }));
+
+    try {
+      const response = await fetch(
+        `/api/validate-partner-code?partnerCode=${encodeURIComponent(codeToLookup.trim().toUpperCase())}`
+      );
+      const data = await response.json();
+
+      if (!response.ok || !data.partner) {
+        throw new Error(data.error || "Partner code not found");
       }
-    }, 800);
+
+      const result = data.partner;
+      const normalizedPartner = {
+        id: result.id,
+        name: result.name || "",
+        networkName: result.networkName || "",
+        networkCode: result.networkCode || "",
+      };
+      setPartnerInfo(normalizedPartner);
+      setPartnerLookupStatus("found");
+      setFormData((prev) => ({
+        ...prev,
+        partnerId: normalizedPartner.id,
+        partnerName: normalizedPartner.name,
+        networkName: normalizedPartner.networkName,
+        networkCode: normalizedPartner.networkCode,
+      }));
+    } catch {
+      setPartnerInfo(null);
+      setPartnerLookupStatus("not_found");
+      setFormData((prev) => ({
+        ...prev,
+        partnerId: "",
+        partnerName: "",
+        networkName: "",
+        networkCode: "",
+      }));
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,17 +144,23 @@ const ProviderForm = () => {
     setFormData((prev) => ({ ...prev, [name]: checked }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
-    if (!partnerInfo) return;
-    const userId = `20001${Math.floor(Math.random() * 10000)}`;
-    console.log("Submitting provider data:", { ...formData, id: userId, userType: "provider" });
-    localStorage.setItem("user", JSON.stringify({ 
-      ...formData, 
-      id: userId, 
-      userType: "provider",
-      email: formData.businessEmail
-    }));
+    const data1 = await createCognitoUser({
+      email: formData.businessEmail,
+      firstName: formData.agentFirstName,
+      lastName: formData.agentLastName,
+      phoneNumber: formData.businessPhone,
+      userType: USER_TYPES.provider,
+    });
+
+    const cognitoSub = data1.cognitoSub;
+    await registerProvider({
+      cognitoSub,
+      partnerCode: partnerCode.trim().toUpperCase(),
+      ...formData,
+      userType: USER_TYPES.provider,
+    });
     navigate("/dashboard");
   };
 

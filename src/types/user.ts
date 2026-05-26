@@ -1,4 +1,11 @@
-export type UserType = "member" | "provider" | "partner" | "admin";
+export const USER_TYPES = {
+  member: "member",
+  provider: "provider",
+  partner: "partner",
+  admin: "admin",
+} as const;
+
+export type UserType = (typeof USER_TYPES)[keyof typeof USER_TYPES];
 
 export interface BaseUser {
   id: string;
@@ -8,7 +15,7 @@ export interface BaseUser {
   userType: UserType;
   notificationEnabled?: boolean;
   termsAccepted?: boolean;
-  displayId: string;
+  displayId?: string;
 }
 
 export interface MemberUser extends BaseUser {
@@ -24,11 +31,16 @@ export interface MemberUser extends BaseUser {
 
 export interface ProviderUser extends BaseUser {
   userType: "provider";
-  partnerName: string;
+  partnerId?: string;
+  partnerName?: string;
   agentFirstName: string;
   agentLastName: string;
   agentPhone: string;
+  agentEmail?: string;
   businessName: string;
+  businessCity: string;
+  businessState: string;
+  businessZip: string;
   businessCategory: string;
   businessAddress: string;
   businessEmail: string;
@@ -43,6 +55,9 @@ export interface PartnerUser extends BaseUser {
   agentPhone: string;
   organizationName: string;
   organizationAddress: string;
+  organizationCity: string;
+  organizationState: string;
+  organizationZip: string;
   organizationCategory: string;
   organizationEmail: string;
   organizationPhone: string;

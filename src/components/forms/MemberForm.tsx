@@ -3,11 +3,11 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FormField from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
-import { MemberUser } from "@/types/user";
+import { MemberUser, USER_TYPES } from "@/types/user";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-
-const API = import.meta.env.VITE_API_BASE_URL;
+import { createCognitoUser } from "@/api/cognito";
+import { registerMember } from "@/api/registration";
 
 const ETHNICITY_OPTIONS = [
   { label: "Black or African American", value: "black" },
@@ -71,35 +71,21 @@ const MemberForm = () => {
 
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
-    const res1 = await fetch(`${API}/create-cognito-user`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phoneNumber: formData.phoneNumber,
-        userType: "member",
-      }),
+    const data1 = await createCognitoUser({
+      email: formData.email,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      phoneNumber: formData.phoneNumber,
+      userType: USER_TYPES.member,
     });
-
-    const data1 = await res1.json();
-    if (!res1.ok) throw new Error(data1.error || "Failed to create Cognito user");
 
     const cognitoSub = data1.cognitoSub;
 
-    const res2 = await fetch(`${API}/register-member`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        cognitoSub,
-        ...formData,
-        userType: "member",
-      }),
+    await registerMember({
+      cognitoSub,
+      ...formData,
+      userType: USER_TYPES.member,
     });
-
-    const data2 = await res2.json();
-    if (!res2.ok) throw new Error(data2.error || "Failed to create DB user");
     navigate("/dashboard");
   };
 

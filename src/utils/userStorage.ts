@@ -55,7 +55,7 @@ export interface User {
 
 export const getUserFromStorage = (): User | null => {
   if (typeof window === "undefined") return null;
-  const userJson = localStorage.getItem("user");
+  const userJson = sessionStorage.getItem("user");
   if (!userJson) return null;
 
   try {
@@ -67,10 +67,16 @@ export const getUserFromStorage = (): User | null => {
 
 export const saveUserToStorage = (user: User) => {
   if (typeof window === "undefined") return;
-  localStorage.setItem("user", JSON.stringify(user));
+  localStorage.removeItem("idToken");
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("user");
+  sessionStorage.setItem("user", JSON.stringify(user));
 };
 
 export const removeUserFromStorage = () => {
   if (typeof window === "undefined") return;
+  sessionStorage.removeItem("user");
+  localStorage.removeItem("idToken");
+  localStorage.removeItem("accessToken");
   localStorage.removeItem("user");
 };
