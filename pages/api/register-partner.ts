@@ -28,18 +28,6 @@ const addOneMonth = (date: Date) => {
   return next;
 };
 
-const buildOrganizationAddress = (body: Record<string, unknown>) => {
-  return [
-    body.organizationAddress,
-    body.organizationCity,
-    body.organizationState,
-    body.organizationZip,
-  ]
-    .filter(Boolean)
-    .map(String)
-    .join(", ");
-};
-
 const optionalString = (value: unknown) => {
   if (value === undefined || value === null || value === "") {
     return null;
@@ -47,6 +35,8 @@ const optionalString = (value: unknown) => {
 
   return String(value);
 };
+
+const normalizeZip = (value: unknown) => String(value || "").replace(/\D/g, "").slice(0, 5);
 
 export default async function handler(
   req: NextApiRequest,
@@ -82,16 +72,28 @@ export default async function handler(
     const periodEnd = addOneMonth(periodStart);
 
     const email = String(body.organizationEmail || "").toLowerCase().trim();
+    const organizationZip = normalizeZip(body.organizationZip);
+    const network =
+      organizationZip.length === 5
+        ? await prisma.network_codes.findUnique({
+            where: { zip_code: organizationZip },
+            select: { network_name: true, network_code: true },
+          })
+        : null;
     const profileData = {
-      network_name: optionalString(body.networkName),
-      network_code: optionalString(body.networkCode),
+      network_name: network?.network_name ?? optionalString(body.networkName),
+      network_code: network?.network_code ?? optionalString(body.networkCode),
       agent_first_name: optionalString(body.agentFirstName),
       agent_last_name: optionalString(body.agentLastName),
       agent_phone: optionalString(body.agentPhone),
       org_name: optionalString(body.organizationName),
-      org_address: buildOrganizationAddress(body),
+      org_address: body.organizationAddress,
+      org_city: optionalString(body.organizationCity),
+      org_state: optionalString(body.organizationState),
+      org_zip: organizationZip || null,
       org_email: optionalString(body.organizationEmail),
       org_phone: optionalString(body.organizationPhone),
+      org_category: optionalString(body.organizationCategory),
       notification_enabled: Boolean(body.notificationEnabled),
       terms_accepted: Boolean(body.termsAccepted),
     };

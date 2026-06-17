@@ -1,18 +1,17 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table";
-import { Send, ArrowLeft, DollarSign, Percent, Gift, ArrowUpDown, CalendarDays, MapPin, Tag, Users, CheckCircle2, Search } from "lucide-react";
+import { Send, ArrowLeft, ArrowUpDown, CalendarDays, MapPin, Tag, Users, CheckCircle2, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { mockProviders } from "@/data/providerMockData";
 import { Progress } from "@/components/ui/progress";
 import { createEvent } from "@/api/events";
+import { fetchPartnerProviders, PartnerProvider } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
 
 const PartnerCreateEventPage = () => {
@@ -27,18 +26,50 @@ const PartnerCreateEventPage = () => {
     location: "",
     networkPoints: "",
     deadline: "",
-    memberPrice: "",
-    maxRedemptions: "",
-    discountType: "none" as "none" | "percent" | "dollar" | "free_item",
-    discountValue: "",
-    freeItemDescription: "",
   });
 
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<string>("businessName");
   const [sortAsc, setSortAsc] = useState(true);
   const [providerSearch, setProviderSearch] = useState("");
+  const [providers, setProviders] = useState<PartnerProvider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
+  const [providersError, setProvidersError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProviders = async () => {
+      try {
+        setProvidersLoading(true);
+        setProvidersError("");
+        const user = getUserFromStorage();
+        const loadedProviders = await fetchPartnerProviders(user?.cognitoId);
+
+        if (isMounted) {
+          setProviders(loadedProviders);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load providers";
+
+        if (isMounted) {
+          setProvidersError(message);
+          toast({ title: "Could not load providers", description: message, variant: "destructive" });
+        }
+      } finally {
+        if (isMounted) {
+          setProvidersLoading(false);
+        }
+      }
+    };
+
+    loadProviders();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [toast]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -60,7 +91,7 @@ const PartnerCreateEventPage = () => {
   };
 
   const sortedProviders = useMemo(() => {
-    let filtered = [...mockProviders];
+    let filtered = [...providers];
     if (providerSearch.trim()) {
       const q = providerSearch.toLowerCase();
       filtered = filtered.filter(p =>
@@ -76,7 +107,7 @@ const PartnerCreateEventPage = () => {
       const cmp = String(aVal).localeCompare(String(bVal));
       return sortAsc ? cmp : -cmp;
     });
-  }, [sortKey, sortAsc, providerSearch]);
+  }, [providers, sortKey, sortAsc, providerSearch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,13 +132,18 @@ const PartnerCreateEventPage = () => {
         description: formData.description,
         startDate: formData.date,
         endDate: formData.deadline,
+        location: formData.location,
+        eventTime: formData.time,
+        networkPoints: formData.networkPoints,
+        responseDeadline: formData.deadline,
+        providerIds: selectedProviders,
       });
 
       toast({
         title: "Event Created & Sent",
         description: `"${formData.title}" (${result.eventId}) has been sent to ${selectedProviders.length} provider(s) for approval.`,
       });
-      navigate("/dashboard/pending-events");
+      navigate("/dashboard/partner-pending-events");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to create event";
       toast({ title: "Event creation failed", description: message, variant: "destructive" });
@@ -169,7 +205,7 @@ const PartnerCreateEventPage = () => {
             <span className={formData.title && formData.date && formData.location ? "text-primary font-medium" : ""}>
               ① Event Details
             </span>
-            <span>② Pricing</span>
+            <span className="text-muted-foreground/50">② Pricing (Provider)</span>
             <span className={selectedProviders.length > 0 ? "text-primary font-medium" : ""}>
               ③ Providers
             </span>
@@ -225,103 +261,41 @@ const PartnerCreateEventPage = () => {
             </CardContent>
           </Card>
 
-          {/* Step 2: Pricing & Offers */}
-          <Card>
-            <StepHeader step={2} icon={Tag} title="Pricing & Offers" description="Set member pricing and optional discounts" />
-            <CardContent className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="memberPrice">Member Price ($)</Label>
-                  <Input
-                    id="memberPrice"
-                    name="memberPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.memberPrice}
-                    onChange={handleChange}
-                    placeholder="0.00"
-                  />
-                  <p className="text-xs text-muted-foreground">Enter 0 or leave blank for a free event</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxRedemptions">Max Redemptions</Label>
-                  <Input
-                    id="maxRedemptions"
-                    name="maxRedemptions"
-                    type="number"
-                    min="1"
-                    value={formData.maxRedemptions}
-                    onChange={handleChange}
-                    placeholder="Unlimited"
-                  />
-                  <p className="text-xs text-muted-foreground">Leave blank for unlimited</p>
-                </div>
+          {/* Step 2: Pricing & Offers (Greyed out for partners) */}
+          <Card className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center p-4">
+              <div className="bg-muted border rounded-lg px-4 py-3 text-center max-w-[280px]">
+                <Tag className="h-5 w-5 text-muted-foreground mx-auto mb-1.5" />
+                <p className="text-sm font-medium text-foreground">Provider Responsibility</p>
+                <p className="text-xs text-muted-foreground mt-1">Pricing & offers will be filled in by providers after they receive the event invitation.</p>
               </div>
-
-              <div className="space-y-3">
-                <Label>Discount / Offer Type</Label>
-                <RadioGroup
-                  value={formData.discountType}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      discountType: value as typeof prev.discountType,
-                      discountValue: "",
-                      freeItemDescription: "",
-                    }))
-                  }
-                  className="grid grid-cols-2 md:grid-cols-4 gap-3"
-                >
-                  {[
-                    { value: "none", label: "No Discount", icon: null },
-                    { value: "percent", label: "% Off", icon: Percent },
-                    { value: "dollar", label: "$ Amount Off", icon: DollarSign },
-                    { value: "free_item", label: "Free Item", icon: Gift },
-                  ].map((opt) => (
-                    <label
-                      key={opt.value}
-                      className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                        formData.discountType === opt.value
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:bg-muted/50"
-                      }`}
-                    >
-                      <RadioGroupItem value={opt.value} />
-                      {opt.icon && <opt.icon className="h-4 w-4 text-muted-foreground" />}
-                      <span className="text-sm font-medium">{opt.label}</span>
-                    </label>
-                  ))}
-                </RadioGroup>
-              </div>
-
-              {formData.discountType === "percent" && (
-                <div className="space-y-2">
-                  <Label htmlFor="discountValue">Percentage Off (%)</Label>
-                  <Input id="discountValue" name="discountValue" type="number" min="1" max="100" value={formData.discountValue} onChange={handleChange} placeholder="e.g. 20" />
+            </div>
+            <div className="opacity-40 pointer-events-none">
+              <StepHeader step={2} icon={Tag} title="Pricing & Offers" description="Providers add member pricing and optional discounts" />
+              <CardContent className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Member Price ($)</Label>
+                    <Input disabled placeholder="0.00" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Max Redemptions</Label>
+                    <Input disabled placeholder="Unlimited" />
+                  </div>
                 </div>
-              )}
 
-              {formData.discountType === "dollar" && (
-                <div className="space-y-2">
-                  <Label htmlFor="discountValue">Amount Off ($)</Label>
-                  <Input id="discountValue" name="discountValue" type="number" min="0.01" step="0.01" value={formData.discountValue} onChange={handleChange} placeholder="e.g. 10.00" />
+                <div className="space-y-3">
+                  <Label>Discount / Offer Type</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {["No Discount", "% Off", "$ Amount Off", "Free Item"].map((label) => (
+                      <div key={label} className="flex items-center gap-2 p-3 rounded-lg border border-border text-sm font-medium text-muted-foreground">
+                        {label}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
-
-              {formData.discountType === "free_item" && (
-                <div className="space-y-2">
-                  <Label htmlFor="freeItemDescription">Free Item Description</Label>
-                  <Input
-                    id="freeItemDescription"
-                    name="freeItemDescription"
-                    value={formData.freeItemDescription}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, freeItemDescription: e.target.value }))}
-                    placeholder="e.g. Free appetizer, Free tote bag"
-                  />
-                </div>
-              )}
-            </CardContent>
+              </CardContent>
+            </div>
           </Card>
 
           {/* Step 3: Select Providers */}
@@ -374,10 +348,22 @@ const PartnerCreateEventPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedProviders.length === 0 ? (
+                    {providersLoading ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          No providers found matching your search.
+                          Loading providers...
+                        </TableCell>
+                      </TableRow>
+                    ) : providersError ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-destructive">
+                          {providersError}
+                        </TableCell>
+                      </TableRow>
+                    ) : sortedProviders.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          {providerSearch ? "No providers found matching your search." : "No providers in your network yet."}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -418,8 +404,12 @@ const PartnerCreateEventPage = () => {
 
               {/* Mobile: Card view */}
               <div className="md:hidden space-y-3">
-                {sortedProviders.length === 0 ? (
-                  <p className="text-center py-8 text-muted-foreground text-sm">No providers found matching your search.</p>
+                {providersLoading ? (
+                  <p className="text-center py-8 text-muted-foreground text-sm">Loading providers...</p>
+                ) : providersError ? (
+                  <p className="text-center py-8 text-destructive text-sm">{providersError}</p>
+                ) : sortedProviders.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground text-sm">{providerSearch ? "No providers found matching your search." : "No providers in your network yet."}</p>
                 ) : (
                   sortedProviders.map((provider) => {
                     const isSelected = selectedProviders.includes(provider.id);

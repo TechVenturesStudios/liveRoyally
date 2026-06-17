@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,35 +9,65 @@ import ViewToggle from "@/components/ui/ViewToggle";
 import PointsCircle from "@/components/ui/PointsCircle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { mockEvents } from "@/data/providerMockData";
+import { useToast } from "@/hooks/use-toast";
+import { fetchProviderDashboardEvents, ProviderDashboardEvent } from "@/api/providerDashboardEvents";
+import { getUserFromStorage } from "@/utils/userStorage";
 
 const ProviderEventsPage = () => {
   const isMobile = useIsMobile();
-  const [events, setEvents] = useState(mockEvents);
+  const { toast } = useToast();
+  const [events, setEvents] = useState<ProviderDashboardEvent[]>([]);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [activeFilter, setActiveFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">(isMobile ? "grid" : "list");
-  const [selectedEvent, setSelectedEvent] = useState<typeof mockEvents[0] | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<ProviderDashboardEvent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadEvents = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const loadedEvents = await fetchProviderDashboardEvents(getUserFromStorage()?.cognitoId);
+
+        if (isMounted) {
+          setEvents(loadedEvents);
+        }
+      } catch (loadError) {
+        const message = loadError instanceof Error ? loadError.message : "Failed to load provider events";
+        if (isMounted) {
+          setError(message);
+          toast({ title: "Could not load provider events", description: message, variant: "destructive" });
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadEvents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [toast]);
 
   const toggleSortOrder = () => {
-    const newOrder = sortOrder === "asc" ? "desc" : "asc";
-    setSortOrder(newOrder);
-    setEvents(prev =>
-      [...prev].sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-        return newOrder === "asc" ? dateA - dateB : dateB - dateA;
-      })
-    );
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
-  const getFilteredEvents = () => {
-    if (activeFilter === "all") return events;
-    if (activeFilter === "pending") return events.filter(e => e.status === "pending");
-    if (activeFilter === "active") return events.filter(e => e.status === "active");
-    if (activeFilter === "completed") return events.filter(e => e.status === "completed");
-    return events;
-  };
+  const filteredEvents = useMemo(() => {
+    const selected = activeFilter === "all" ? events : events.filter((event) => event.status === activeFilter);
+    return [...selected].sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+    });
+  }, [activeFilter, events, sortOrder]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -51,8 +81,6 @@ const ProviderEventsPage = () => {
         return <Badge variant="outline">{status}</Badge>;
     }
   };
-
-  const filteredEvents = getFilteredEvents();
 
   return (
     <DashboardLayout>
@@ -90,7 +118,17 @@ const ProviderEventsPage = () => {
           ))}
         </div>
 
-        {filteredEvents.length > 0 ? (
+        {error && (
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="py-4 text-sm text-destructive">{error}</CardContent>
+          </Card>
+        )}
+
+        {loading ? (
+          <Card>
+            <CardContent className="py-10 text-center text-muted-foreground">Loading provider events...</CardContent>
+          </Card>
+        ) : filteredEvents.length > 0 ? (
           viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredEvents.map((event) => (
@@ -132,6 +170,10 @@ const ProviderEventsPage = () => {
                         <CheckCircle className="h-3.5 w-3.5" /> Participated
                       </div>
                     )}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <div>Approved: {event.approvedDate || "TBD"}</div>
+                      <div>Go Live: {event.goLiveDate || "TBD"}</div>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -196,6 +238,9 @@ const ProviderEventsPage = () => {
             { label: "Organizer", value: selectedEvent.organizer },
             { label: "Status", value: getStatusBadge(selectedEvent.status) },
             { label: "Participated", value: selectedEvent.participated ? "Yes" : "No" },
+            { label: "Approved", value: selectedEvent.approvedDate || "TBD" },
+            { label: "Go Live", value: selectedEvent.goLiveDate || "TBD" },
+            { label: "Redemptions", value: String(selectedEvent.redemptions) },
           ]}
         />
       )}

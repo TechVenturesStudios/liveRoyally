@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { User as UserType } from "@/utils/userStorage";
 import { UserType as UserTypeEnum } from "@/types/user";
 import { getNavItems } from "@/utils/navigationItems";
+import { getEffectiveDashboardType } from "@/utils/dashboardContext";
 
 interface DashboardMobileNavProps {
   user: UserType;
@@ -11,7 +12,7 @@ interface DashboardMobileNavProps {
 
 const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
   const navigate = useNavigate();
-  const navItems = getNavItems(user?.userType as UserTypeEnum);
+  const navItems = getNavItems((getEffectiveDashboardType(user?.userType as any) || user?.userType) as UserTypeEnum);
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">

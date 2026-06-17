@@ -35,7 +35,7 @@ const EventDetailDialog = ({
 }: EventDetailDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-md h-[85vh] max-h-[85vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-0 shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -48,7 +48,7 @@ const EventDetailDialog = ({
           </div>
         </DialogHeader>
         <ScrollArea className="flex-1 min-h-0 px-6 pb-6">
-          <div className="space-y-3 pt-4">
+          <div className="flex min-h-0 flex-col gap-4 pt-4">
             {rows.map((row, i) => (
               <div key={i} className="flex flex-col gap-0.5">
                 <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
@@ -57,8 +57,8 @@ const EventDetailDialog = ({
                 <div className="text-sm text-foreground">{row.value}</div>
               </div>
             ))}
+            {actions && <div className="pt-4 mt-4 border-t">{actions}</div>}
           </div>
-          {actions && <div className="pt-4 mt-4 border-t">{actions}</div>}
         </ScrollArea>
       </DialogContent>
     </Dialog>

@@ -58,28 +58,13 @@ type MyProvidersApiProvider = {
   businessEmail: string | null;
   businessPhone: string | null;
   businessAddress: string | null;
+  businessCity: string | null;
+  businessState: string | null;
+  businessZip: string | null;
 };
 
-const parseAddressParts = (address: string | null) => {
-  if (!address) {
-    return { businessAddress: "", businessCity: "", businessState: "", businessZip: "" };
-  }
-
-  const parts = address.split(",").map((part) => part.trim());
-  const [street = "", city = "", stateZip = ""] = parts;
-  const stateZipParts = stateZip.split(/\s+/).filter(Boolean);
-
-  return {
-    businessAddress: street,
-    businessCity: city,
-    businessState: stateZipParts[0] || "",
-    businessZip: stateZipParts.slice(1).join(" "),
-  };
-};
 
 const mapApiProvider = (provider: MyProvidersApiProvider): ProviderEntry => {
-  const addressParts = parseAddressParts(provider.businessAddress);
-
   return {
     id: provider.id,
     businessName: provider.businessName || "Unnamed Provider",
@@ -89,7 +74,10 @@ const mapApiProvider = (provider: MyProvidersApiProvider): ProviderEntry => {
     agentPhone: provider.agentPhone || "",
     businessEmail: provider.businessEmail || "",
     businessPhone: provider.businessPhone || "",
-    ...addressParts,
+    businessAddress: provider.businessAddress || "",
+    businessCity: provider.businessCity || "",
+    businessState: provider.businessState || "",
+    businessZip: provider.businessZip || ""
   };
 };
 
@@ -226,7 +214,7 @@ const PartnerProvidersPage = () => {
     { label: "Contact Phone", value: p.agentPhone },
     { label: "Business Email", value: p.businessEmail },
     { label: "Business Phone", value: p.businessPhone },
-    { label: "Address", value: `${p.businessAddress}` },
+    { label: "Address", value: `${p.businessAddress}, ${p.businessCity}, ${p.businessState} ${p.businessZip}` },
   ];
 
   return (
@@ -314,7 +302,7 @@ const PartnerProvidersPage = () => {
                     </div>
                     <div>
                       <span className="block text-xs font-medium text-foreground/60 uppercase tracking-wide">Location</span>
-                      <span className="text-foreground text-xs">{p.businessAddress}</span>
+                      <span className="text-foreground text-xs">{p.businessCity}, {p.businessState}</span>
                     </div>
                     <div>
                       <span className="block text-xs font-medium text-foreground/60 uppercase tracking-wide">Email</span>
@@ -357,7 +345,7 @@ const PartnerProvidersPage = () => {
                         {p.agentFirstName} {p.agentLastName}
                       </TableCell>
                       <TableCell className="text-xs py-2" onClick={() => setSelectedProvider(p)}>
-                        {p.businessAddress}
+                        {p.businessCity}, {p.businessState}
                       </TableCell>
                       <TableCell className="text-xs py-2" onClick={() => setSelectedProvider(p)}>
                         {p.businessPhone}

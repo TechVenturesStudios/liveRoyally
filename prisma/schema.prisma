@@ -32,17 +32,29 @@ enum BillingProvider {
   square
 }
 
+enum EventProviderInviteStatus {
+  pending
+  accepted
+  declined
+  expired
+}
+
 model events {
-  event_id    String     @id @db.VarChar(50)
-  partner_id  String?    @db.Uuid
-  title       String?    @db.VarChar(150)
-  description String?
-  start_date  DateTime?  @db.Date
-  end_date    DateTime?  @db.Date
-  status      String?    @db.VarChar(50)
-  created_at  DateTime?  @default(now()) @db.Timestamp(6)
-  users       users?     @relation(fields: [partner_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
-  vouchers    vouchers[]
+  event_id           String                    @id @db.VarChar(50)
+  partner_id         String?                   @db.Uuid
+  title              String?                   @db.VarChar(150)
+  description        String?
+  location           String?                   @db.VarChar(255)
+  event_time         String?                   @db.VarChar(50)
+  network_points     Int?
+  response_deadline  DateTime?                 @db.Date
+  start_date         DateTime?                 @db.Date
+  end_date           DateTime?                 @db.Date
+  status             String?                   @db.VarChar(50)
+  created_at         DateTime?                 @default(now()) @db.Timestamp(6)
+  users              users?                    @relation(fields: [partner_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  vouchers           vouchers[]
+  event_provider_invites event_provider_invites[]
 
   @@index([partner_id], map: "idx_events_partner")
 }
@@ -71,6 +83,19 @@ model member_vouchers {
   @@id([member_id, voucher_id])
 }
 
+model network_codes {
+  zip_code     String    @id @db.VarChar(10)
+  parish       String?   @db.VarChar(100)
+  network_name String    @db.VarChar(100)
+  network_code String    @db.VarChar(50)
+  state        String?   @db.VarChar(50)
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([network_code], map: "idx_network_codes_network_code")
+  @@index([state], map: "idx_network_codes_state")
+}
+
 model partner_profiles {
   user_id              String    @id @db.Uuid
   network_name         String?   @db.VarChar(100)
@@ -81,8 +106,12 @@ model partner_profiles {
   agent_phone          String?   @db.VarChar(20)
   org_name             String?   @db.VarChar(150)
   org_address          String?
+  org_city             String?
+  org_state            String?
+  org_zip              String?
   org_email            String?   @db.VarChar(150)
   org_phone            String?   @db.VarChar(20)
+  org_category         String? 
   notification_enabled Boolean?
   terms_accepted       Boolean?
   created_at           DateTime? @default(now()) @db.Timestamp(6)
@@ -112,6 +141,43 @@ model partner_subscriptions {
   @@index([status], map: "idx_partner_subscriptions_status")
 }
 
+model authorized_representative_assignments {
+  assignment_id      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  principal_user_id   String    @db.Uuid
+  represented_user_id String    @db.Uuid
+  is_active          Boolean   @default(true)
+  created_at         DateTime? @default(now()) @db.Timestamp(6)
+  updated_at         DateTime? @default(now()) @db.Timestamp(6)
+  principal          users     @relation("AuthorizedRepPrincipal", fields: [principal_user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  represented       users     @relation("AuthorizedRepRepresented", fields: [represented_user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([principal_user_id, represented_user_id], map: "uq_authorized_rep_principal_represented")
+  @@index([principal_user_id], map: "idx_authorized_rep_principal")
+  @@index([represented_user_id], map: "idx_authorized_rep_represented")
+  @@index([is_active], map: "idx_authorized_rep_active")
+}
+
+model event_provider_invites {
+  invite_id     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_id      String                  @db.VarChar(50)
+  provider_id   String                  @db.Uuid
+  partner_id    String                  @db.Uuid
+  status        EventProviderInviteStatus @default(pending)
+  invited_at    DateTime?               @default(now()) @db.Timestamp(6)
+  responded_at  DateTime?               @db.Timestamp(6)
+  voucher_id    String?                 @unique @db.VarChar(50)
+  invite_message String?
+  events        events                  @relation(fields: [event_id], references: [event_id], onDelete: Cascade, onUpdate: NoAction)
+  provider      users                   @relation("ProviderEventInvites", fields: [provider_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  partner       users                   @relation("PartnerEventInvites", fields: [partner_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([event_id, provider_id], map: "uq_event_provider_invite")
+  @@index([event_id], map: "idx_event_provider_invites_event")
+  @@index([partner_id], map: "idx_event_provider_invites_partner")
+  @@index([provider_id], map: "idx_event_provider_invites_provider")
+  @@index([status], map: "idx_event_provider_invites_status")
+}
+
 model provider_profiles {
   user_id              String    @id @db.Uuid
   partner_id           String?   @db.Uuid
@@ -123,6 +189,9 @@ model provider_profiles {
   business_name        String?   @db.VarChar(150)
   business_category    String?   @db.VarChar(100)
   business_address     String?
+  business_city        String?
+  business_state       String?
+  business_zip         String?
   business_email       String?   @db.VarChar(150)
   business_phone       String?   @db.VarChar(20)
   notification_enabled Boolean?
@@ -183,6 +252,8 @@ model users {
   partner_subscriptions partner_subscriptions[]
   provider_profiles provider_profiles? @relation("ProviderUser")
   partner_providers provider_profiles[] @relation("ProviderPartner")
+  provider_event_invites event_provider_invites[] @relation("ProviderEventInvites")
+  partner_event_invites event_provider_invites[] @relation("PartnerEventInvites")
   purchases         purchases[]
   user_roles        user_roles[]
   vouchers          vouchers[]

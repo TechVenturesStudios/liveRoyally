@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FormField from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
@@ -33,12 +33,6 @@ const GENDER_OPTIONS = [
   { label: "Other", value: "other" }
 ];
 
-const NETWORK_OPTIONS = [
-  { label: "Royal Network", value: "royal" },
-  { label: "Premium Network", value: "premium" },
-  { label: "Elite Network", value: "elite" }
-];
-
 const MemberForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<Partial<MemberUser>>({
@@ -55,6 +49,46 @@ const MemberForm = () => {
     notificationEnabled: false,
     termsAccepted: false
   });
+
+  useEffect(() => {
+    const zip = formData.zipCode || "";
+    const normalizedZip = zip.replace(/\D/g, "").slice(0, 5);
+
+    if (normalizedZip.length !== 5) {
+      setFormData((prev) => ({ ...prev, networkName: "", networkCode: "" }));
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetch(`/api/network-by-zip?zip=${encodeURIComponent(normalizedZip)}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then((network) => {
+        if (!network) {
+          setFormData((prev) => ({ ...prev, networkName: "", networkCode: "" }));
+          return;
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          networkName: network.networkName || "",
+          networkCode: network.networkCode || "",
+        }));
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setFormData((prev) => ({ ...prev, networkName: "", networkCode: "" }));
+      });
+
+    return () => controller.abort();
+  }, [formData.zipCode]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -95,33 +129,6 @@ const MemberForm = () => {
       <p className="text-sm text-muted-foreground mb-8">Fill out the form below to create your member account.</p>
       
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Network Section */}
-        <div className="space-y-5">
-          <h3 className="text-base font-semibold text-foreground">Network Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <FormField
-              label="Network Name"
-              name="networkName"
-              type="select"
-              required
-              options={NETWORK_OPTIONS}
-              value={formData.networkName}
-              onSelectChange={handleSelectChange("networkName")}
-            />
-            <FormField
-              label="Network Code"
-              name="networkCode"
-              type="text"
-              placeholder="Network code will be assigned"
-              required
-              value={formData.networkCode}
-              onChange={handleInputChange}
-            />
-          </div>
-        </div>
-
-        <Separator />
-
         {/* Personal Info Section */}
         <div className="space-y-5">
           <h3 className="text-base font-semibold text-foreground">Personal Information</h3>
@@ -170,6 +177,30 @@ const MemberForm = () => {
               value={formData.zipCode}
               onChange={handleInputChange}
             />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Network (auto-assigned) */}
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Network Assignment</h3>
+            <p className="text-xs text-muted-foreground mt-1">Automatically determined by your zip code.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Network Name</label>
+              <div className="h-11 px-3 flex items-center rounded-md border bg-muted text-sm text-muted-foreground">
+                {formData.networkName || "Enter zip code above"}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Network Code</label>
+              <div className="h-11 px-3 flex items-center rounded-md border bg-muted text-sm text-muted-foreground">
+                {formData.networkCode || "Enter zip code above"}
+              </div>
+            </div>
           </div>
         </div>
 

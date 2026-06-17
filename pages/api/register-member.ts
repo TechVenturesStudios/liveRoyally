@@ -14,6 +14,8 @@ type RegisterMemberResponse =
       error: string;
     };
 
+const normalizeZip = (value: unknown) => String(value || "").replace(/\D/g, "").slice(0, 5);
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<RegisterMemberResponse>
@@ -37,8 +39,17 @@ export default async function handler(
     }
 
     const displayId = `M-${randomInt(100000000, 999999999)}`;
+    const zipCode = normalizeZip(body.zipCode);
 
     const result = await prisma.$transaction(async (tx) => {
+      const network =
+        zipCode.length === 5
+          ? await tx.network_codes.findUnique({
+              where: { zip_code: zipCode },
+              select: { network_name: true, network_code: true },
+            })
+          : null;
+
       const user = await tx.users.create({
         data: {
           cognito_id: String(body.cognitoSub),
@@ -64,9 +75,9 @@ export default async function handler(
       await tx.member_profiles.create({
         data: {
           user_id: user.user_id,
-          network_name: body.networkName || null,
-          network_code: body.networkCode || null,
-          zip_code: body.zipCode || null,
+          network_name: network?.network_name ?? body.networkName ?? null,
+          network_code: network?.network_code ?? body.networkCode ?? null,
+          zip_code: zipCode || null,
           ethnicity: body.ethnicity || null,
           age_group: body.ageGroup || null,
           gender: body.gender || null,

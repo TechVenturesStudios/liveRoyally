@@ -1,12 +1,14 @@
-
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Crown, ChevronLeft, ChevronRight, User } from "lucide-react";
+import { Crown, ChevronLeft, ChevronRight, User, SwitchCamera } from "lucide-react";
 import { User as UserType } from "@/utils/userStorage";
 import { UserType as UserTypeEnum } from "@/types/user";
 import { getNavItems } from "@/utils/navigationItems";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fetchRepresentativeAssignments, type RepresentativeAssignment } from "@/api/authorizedRepresentatives";
+import { getDashboardContext, getEffectiveDashboardType, setDashboardContext } from "@/utils/dashboardContext";
 
 interface DashboardSidebarProps {
   user: UserType;
@@ -18,7 +20,80 @@ interface DashboardSidebarProps {
 const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const navItems = getNavItems(user?.userType as UserTypeEnum);
+  const [assignments, setAssignments] = useState<RepresentativeAssignment[]>([]);
+  const currentContext = getDashboardContext();
+  const effectiveType = getEffectiveDashboardType(user?.userType as any) || user?.userType;
+  const navItems = getNavItems(effectiveType as UserTypeEnum);
+
+  useEffect(() => {
+    if (user?.userType !== "member") {
+      setAssignments([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadAssignments = async () => {
+      try {
+        const data = await fetchRepresentativeAssignments();
+        if (isMounted) {
+          setAssignments(data.assignments);
+          if (
+            currentContext?.mode === "rep" &&
+            currentContext.assignmentId &&
+            !data.assignments.some((assignment) => assignment.assignmentId === currentContext.assignmentId)
+          ) {
+            setDashboardContext({ mode: "member" });
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setAssignments([]);
+        }
+      }
+    };
+
+    void loadAssignments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.userType]);
+
+  const selectionOptions = useMemo(() => {
+    if (user?.userType !== "member") {
+      return [];
+    }
+
+    return [
+      { value: "member", label: "Member View", description: "Your personal dashboard" },
+      ...assignments.map((assignment) => ({
+        value: assignment.assignmentId,
+        label: `${assignment.representedUserType === "partner" ? "Partner" : "Provider"} View`,
+        description: assignment.representedName,
+      })),
+    ];
+  }, [assignments, user?.userType]);
+
+  const handleViewChange = (value: string) => {
+    if (value === "member") {
+      setDashboardContext({ mode: "member" });
+      navigate("/dashboard");
+      return;
+    }
+
+    const assignment = assignments.find((item) => item.assignmentId === value);
+    if (!assignment) return;
+
+    setDashboardContext({
+      mode: "rep",
+      assignmentId: assignment.assignmentId,
+      targetType: assignment.representedUserType,
+      targetLabel: assignment.representedName,
+    });
+
+    navigate(assignment.representedUserType === "partner" ? "/dashboard/crm" : "/dashboard/providers");
+  };
 
   return (
     <aside
@@ -56,11 +131,39 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
             <div className="overflow-hidden">
               <p className="text-sm font-semibold truncate">{user?.displayId || "User ID"}</p>
               <p className="text-xs text-gray-500 capitalize">
-                {user?.userType || "Member"}
+                {effectiveType || "Member"}
               </p>
             </div>
           )}
         </div>
+
+        {!collapsed && user?.userType === "member" && selectionOptions.length > 1 && (
+          <div className="px-2 pb-2">
+            <div className="rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm">
+              <div className="flex items-center gap-2 text-[11px] font-medium text-gray-500 mb-2">
+                <SwitchCamera className="h-3.5 w-3.5" />
+                Switch View
+              </div>
+              <Select value={currentContext?.mode === "rep" ? currentContext.assignmentId : "member"} onValueChange={handleViewChange}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Member View" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectionOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex flex-col items-start">
+                        <span>{option.label}</span>
+                        {option.value !== "member" && (
+                          <span className="text-[10px] text-muted-foreground">{option.description}</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
 
         {/* Nav items */}
         <div className="space-y-1">

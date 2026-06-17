@@ -4,6 +4,11 @@ type CreateEventInput = {
   description?: string;
   startDate: string;
   endDate?: string;
+  location?: string;
+  eventTime?: string;
+  networkPoints?: string | number;
+  responseDeadline?: string;
+  providerIds?: string[];
 };
 
 export async function createEvent(input: CreateEventInput) {

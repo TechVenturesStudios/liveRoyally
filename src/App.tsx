@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { getUserFromStorage } from "@/utils/userStorage";
+import { getEffectiveDashboardType } from "@/utils/dashboardContext";
 import { UserType } from "@/types/user";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -35,6 +36,7 @@ import ProviderNetworkFinder from "./pages/ProviderNetworkFinder";
 import Waitlist from "./pages/Waitlist";
 import ProviderPendingEventsPage from "./pages/dashboard/ProviderPendingEventsPage";
 import ProviderUpcomingEventsPage from "./pages/dashboard/ProviderUpcomingEventsPage";
+import ProviderCRMDashboard from "./pages/dashboard/ProviderCRMDashboard";
 import PartnerPendingEventsPage from "./pages/dashboard/PartnerPendingEventsPage";
 import PartnerPublishedEventsPage from "./pages/dashboard/PartnerPublishedEventsPage";
 import PartnerCreateEventPage from "./pages/dashboard/PartnerCreateEventPage";
@@ -57,7 +59,8 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 const RoleRoute = ({ children, allowed }: { children: JSX.Element; allowed: UserType[] }) => {
   const user = getUserFromStorage();
   if (!user) return <Navigate to="/login" replace />;
-  if (!allowed.includes(user.userType)) {
+  const effectiveType = getEffectiveDashboardType(user.userType as any) || user.userType;
+  if (!allowed.includes(effectiveType as UserType)) {
     return <Navigate to="/dashboard" replace />;
   }
   return children;
@@ -94,6 +97,7 @@ const App = () => (
 
           {/* ── Provider-only routes ── */}
           <Route path="/dashboard/providers" element={<RoleRoute allowed={["provider"]}><ProvidersDashboard /></RoleRoute>} />
+          <Route path="/dashboard/providers/crm" element={<RoleRoute allowed={["provider"]}><ProviderCRMDashboard /></RoleRoute>} />
           <Route path="/dashboard/providers/events" element={<RoleRoute allowed={["provider"]}><ProviderEventsPage /></RoleRoute>} />
           <Route path="/dashboard/pending-events" element={<RoleRoute allowed={["provider"]}><ProviderPendingEventsPage /></RoleRoute>} />
           <Route path="/dashboard/upcoming-events" element={<RoleRoute allowed={["provider"]}><ProviderUpcomingEventsPage /></RoleRoute>} />
@@ -102,6 +106,7 @@ const App = () => (
           {/* ── Partner-only routes ── */}
           <Route path="/dashboard/crm" element={<RoleRoute allowed={["partner"]}><PartnerCRMDashboard /></RoleRoute>} />
           <Route path="/dashboard/my-providers" element={<RoleRoute allowed={["partner"]}><PartnerProvidersPage /></RoleRoute>} />
+          <Route path="/dashboard/partner/representatives" element={<RoleRoute allowed={["partner"]}><ProviderRepresentativesPage ownerType="partner" /></RoleRoute>} />
           <Route path="/dashboard/analytics" element={<RoleRoute allowed={["partner"]}><EventAnalyticsDashboard /></RoleRoute>} />
           <Route path="/dashboard/partners" element={<RoleRoute allowed={["partner"]}><PartnersDashboard /></RoleRoute>} />
           <Route path="/dashboard/partner-pending-events" element={<RoleRoute allowed={["partner"]}><PartnerPendingEventsPage /></RoleRoute>} />

@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,13 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, BarChart3, Users, MapPin, Phone, Edit, UserMinus, AlertTriangle, Crown, Calendar, CalendarCheck } from "lucide-react";
+import { MessageSquare, BarChart3, Users, Edit, UserMinus, AlertTriangle, Crown, CalendarCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MessagingTab from "@/components/crm/MessagingTab";
 import CampaignManagementTab from "@/components/crm/CampaignManagementTab";
 import AccountManagementTab from "@/components/crm/AccountManagementTab";
 import EventAnalyticsTab from "@/components/crm/EventAnalyticsTab";
-import { mockProviders } from "@/data/providerMockData";
+import { fetchPartnerDashboardEvents, type PartnerDashboardEvent } from "@/api/partnerEvents";
+import { fetchPartnerProviders, PartnerProvider } from "@/api/myProviders";
+import { getUserFromStorage } from "@/utils/userStorage";
 import MobileFolderTabs from "@/components/ui/MobileFolderTabs";
 
 const partnerPlans = [
@@ -30,6 +31,18 @@ const currentPlan = partnerPlans[1];
 
 interface ManagedProvider {
   id: string;
+  displayId: string | null;
+  name: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  address: string;
+  status: string;
+  category: string;
+  joinDate: string;
+  rating: number;
+  engagementScore: number;
+  lastActivity: string;
   businessName: string;
   businessCategory: string;
   businessCity: string;
@@ -39,42 +52,111 @@ interface ManagedProvider {
   hasActiveCampaign: boolean;
 }
 
-const initialManagedProviders: ManagedProvider[] = mockProviders.map((p, i) => ({
-  id: p.id,
-  businessName: p.businessName,
-  businessCategory: p.businessCategory,
-  businessCity: p.businessCity,
-  businessState: p.businessState,
-  businessPhone: p.businessPhone,
-  addedDate: i === 0 ? "2026-02-20" : i === 1 ? "2026-01-10" : "2025-12-01",
-  hasActiveCampaign: i < 2,
-}));
-
-// Open campaigns from CampaignManagementTab mock data
-const openCampaigns = [
-  { id: 1, name: "Summer Wellness Program", type: "Email", status: "active", startDate: "2025-06-01", endDate: "2025-08-31", providers: 18, engagement: 72, budget: 1500, spent: 850 },
-  { id: 2, name: "Fall Membership Drive", type: "Multi-channel", status: "planned", startDate: "2025-09-15", endDate: "2025-10-31", providers: 24, engagement: 0, budget: 2000, spent: 0 },
-  { id: 3, name: "Holiday Special Promotions", type: "Social Media", status: "active", startDate: "2025-11-01", endDate: "2025-12-31", providers: 15, engagement: 65, budget: 1200, spent: 600 },
-  { id: 4, name: "New Provider Onboarding", type: "Email", status: "active", startDate: "2025-05-01", endDate: "2025-07-31", providers: 8, engagement: 85, budget: 800, spent: 650 },
-];
-
-
 const PartnerCRMDashboard = () => {
   const [activeTab, setActiveTab] = useState("campaigns");
   const [showOpenCampaigns, setShowOpenCampaigns] = useState(false);
   const [showProviders, setShowProviders] = useState(false);
-  const [showRevenue, setShowRevenue] = useState(false);
+  const [showEventActivity, setShowEventActivity] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [providers, setProviders] = useState<ManagedProvider[]>(initialManagedProviders);
+  const [providers, setProviders] = useState<ManagedProvider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
+  const [partnerEvents, setPartnerEvents] = useState<PartnerDashboardEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [confirmAction, setConfirmAction] = useState<{ type: "remove"; provider: ManagedProvider } | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProviders = async () => {
+      try {
+        setProvidersLoading(true);
+        const user = getUserFromStorage();
+        const loadedProviders = await fetchPartnerProviders(user?.cognitoId);
+        const mappedProviders = loadedProviders.map((provider, index) => ({
+          id: provider.id,
+          displayId: provider.displayId ?? null,
+          name: provider.businessName,
+          contactName: `${provider.agentFirstName || ""} ${provider.agentLastName || ""}`.trim() || provider.businessEmail,
+          email: provider.businessEmail,
+          phone: provider.businessPhone,
+          address: [provider.businessAddress, provider.businessCity, provider.businessState].filter(Boolean).join(", "),
+          status: "active",
+          category: provider.businessCategory,
+          joinDate: provider.createdAt ? provider.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+          rating: 4,
+          engagementScore: Math.max(35, 90 - index * 7),
+          lastActivity: provider.createdAt ? provider.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+          businessName: provider.businessName,
+          businessCategory: provider.businessCategory,
+          businessCity: provider.businessCity,
+          businessState: provider.businessState,
+          businessPhone: provider.businessPhone,
+          addedDate: provider.createdAt ? provider.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+          hasActiveCampaign: index < 2,
+        }));
+
+        if (isMounted) {
+          setProviders(mappedProviders);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load providers";
+        if (isMounted) {
+          toast({ title: "Could not load providers", description: message, variant: "destructive" });
+        }
+      } finally {
+        if (isMounted) {
+          setProvidersLoading(false);
+        }
+      }
+    };
+
+    void loadProviders();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [toast]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPartnerEvents = async () => {
+      try {
+        setEventsLoading(true);
+        const user = getUserFromStorage();
+        const loadedEvents = await fetchPartnerDashboardEvents(user?.cognitoId);
+        if (isMounted) {
+          setPartnerEvents(loadedEvents);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load partner events";
+        if (isMounted) {
+          toast({ title: "Could not load events", description: message, variant: "destructive" });
+        }
+      } finally {
+        if (isMounted) {
+          setEventsLoading(false);
+        }
+      }
+    };
+
+    void loadPartnerEvents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [toast]);
 
   const maxProviders = currentPlan.maxProviders;
   const usagePercent = maxProviders === -1 ? 0 : (providers.length / maxProviders) * 100;
   const remainingSlots = maxProviders === -1 ? Infinity : maxProviders - providers.length;
-  const totalBudget = openCampaigns.reduce((sum, c) => sum + c.budget, 0);
-  const totalSpent = openCampaigns.reduce((sum, c) => sum + c.spent, 0);
-  const revenuePercent = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+
+  const activeEvents = useMemo(
+    () => partnerEvents.filter((event) => event.stage !== "past"),
+    [partnerEvents]
+  );
+  const eventActivityPercent = partnerEvents.length > 0 ? Math.round((activeEvents.length / partnerEvents.length) * 100) : 0;
 
   const getDaysSinceAdded = (addedDate: string) => {
     const added = new Date(addedDate);
@@ -112,8 +194,7 @@ const PartnerCRMDashboard = () => {
           Manage your relationships with providers and track engagement
         </p>
       </div>
-      
-      {/* Mobile: compact horizontal buttons */}
+
       <div className="flex sm:hidden gap-1.5 mb-4">
         <button
           className="flex-1 flex items-center gap-1 px-2 py-1.5 rounded-md bg-blue-50 hover:bg-blue-100 transition-colors text-left"
@@ -132,27 +213,23 @@ const PartnerCRMDashboard = () => {
           <BarChart3 className="h-3 w-3 text-green-600 shrink-0" />
           <div className="min-w-0">
             <p className="text-[9px] font-medium text-green-800 truncate">Campaigns</p>
-            <p className="text-xs font-bold text-green-900">{openCampaigns.length}</p>
+            <p className="text-xs font-bold text-green-900">{eventsLoading ? "..." : activeEvents.length}</p>
           </div>
         </button>
         <button
           className="flex-1 flex items-center gap-1 px-2 py-1.5 rounded-md bg-amber-50 hover:bg-amber-100 transition-colors text-left"
-          onClick={() => setShowRevenue(true)}
+          onClick={() => setShowEventActivity(true)}
         >
           <CalendarCheck className="h-3 w-3 text-amber-600 shrink-0" />
           <div className="min-w-0">
-            <p className="text-[9px] font-medium text-amber-800 truncate">Event Analytics</p>
-            <p className="text-xs font-bold text-amber-900">{revenuePercent}% revenue earned</p>
+            <p className="text-[9px] font-medium text-amber-800 truncate">Event Activity</p>
+            <p className="text-xs font-bold text-amber-900">{eventsLoading ? "..." : `${eventActivityPercent}%`}</p>
           </div>
         </button>
       </div>
 
-      {/* Desktop: full KPI cards */}
       <div className="hidden sm:grid grid-cols-3 gap-3 mb-6">
-        <Card
-          className="bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
-          onClick={() => setShowProviders(true)}
-        >
+        <Card className="bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => setShowProviders(true)}>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center justify-between">
               <div>
@@ -165,16 +242,13 @@ const PartnerCRMDashboard = () => {
             </div>
           </CardContent>
         </Card>
-        
-        <Card
-          className="bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
-          onClick={() => setShowOpenCampaigns(true)}
-        >
+
+        <Card className="bg-green-50 cursor-pointer hover:bg-green-100 transition-colors" onClick={() => setShowOpenCampaigns(true)}>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-green-800">Open Campaigns</p>
-                <p className="text-xl font-bold text-green-900">{openCampaigns.length}</p>
+                <p className="text-xl font-bold text-green-900">{eventsLoading ? "..." : activeEvents.length}</p>
               </div>
               <div className="rounded-full p-2 bg-green-100">
                 <BarChart3 className="h-4 w-4 text-green-600" />
@@ -182,17 +256,14 @@ const PartnerCRMDashboard = () => {
             </div>
           </CardContent>
         </Card>
-        
-        <Card
-          className="bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors"
-          onClick={() => setShowRevenue(true)}
-        >
+
+        <Card className="bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors" onClick={() => setShowEventActivity(true)}>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-amber-800">Event Analytics</p>
-                <p className="text-xl font-bold text-amber-900">{revenuePercent}%</p>
-                <p className="text-[11px] text-amber-700">Revenue Earned</p>
+                <p className="text-xs font-medium text-amber-800">Event Activity</p>
+                <p className="text-xl font-bold text-amber-900">{eventsLoading ? "..." : `${eventActivityPercent}%`}</p>
+                <p className="text-[11px] text-amber-700">Active events</p>
               </div>
               <div className="rounded-full p-2 bg-amber-100">
                 <CalendarCheck className="h-4 w-4 text-amber-600" />
@@ -201,13 +272,8 @@ const PartnerCRMDashboard = () => {
           </CardContent>
         </Card>
       </div>
-      
-      <Tabs 
-        value={activeTab}
-        className="w-full"
-        onValueChange={(value) => setActiveTab(value)}
-      >
-        {/* Desktop tabs */}
+
+      <Tabs value={activeTab} className="w-full" onValueChange={(value) => setActiveTab(value)}>
         <TabsList className="hidden sm:grid grid-cols-4 mb-6 h-auto">
           <TabsTrigger value="campaigns" className="flex items-center gap-1.5 text-sm">
             <BarChart3 className="h-4 w-4" />
@@ -227,7 +293,6 @@ const PartnerCRMDashboard = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Mobile folder tabs */}
         <MobileFolderTabs
           tabs={[
             { value: "campaigns", label: "Events", icon: BarChart3 },
@@ -238,7 +303,7 @@ const PartnerCRMDashboard = () => {
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
-        
+
         <TabsContent value="campaigns">
           <CampaignManagementTab />
         </TabsContent>
@@ -246,9 +311,9 @@ const PartnerCRMDashboard = () => {
         <TabsContent value="event-analytics">
           <EventAnalyticsTab />
         </TabsContent>
-        
+
         <TabsContent value="accounts">
-          <AccountManagementTab />
+          <AccountManagementTab providers={providers} loading={providersLoading} />
         </TabsContent>
 
         <TabsContent value="messaging">
@@ -256,49 +321,94 @@ const PartnerCRMDashboard = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Open Campaigns Dialog */}
       <Dialog open={showOpenCampaigns} onOpenChange={setShowOpenCampaigns}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Open Campaigns ({openCampaigns.length})</DialogTitle>
-            <DialogDescription>Active and planned campaigns</DialogDescription>
+            <DialogTitle>Open Campaigns ({eventsLoading ? "..." : activeEvents.length})</DialogTitle>
+            <DialogDescription>Active and upcoming events for this partner</DialogDescription>
           </DialogHeader>
           <ScrollArea className="h-[400px]">
             <div className="space-y-3 pr-3">
-              {openCampaigns.map(campaign => (
-                <div key={campaign.id} className="border rounded-lg p-3 space-y-2">
-                  <div className="flex justify-between items-center gap-2">
-                    <h4 className="font-medium text-sm">{campaign.name}</h4>
-                    <Badge className={campaign.status === "active" ? "bg-green-100 text-green-800 text-xs" : "bg-blue-100 text-blue-800 text-xs"}>
-                      {campaign.status === "active" ? "Active" : "Planned"}
-                    </Badge>
+              {activeEvents.length > 0 ? (
+                activeEvents.map((event) => (
+                  <div key={event.id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between items-center gap-2">
+                      <h4 className="font-medium text-sm">{event.title}</h4>
+                      <Badge className={event.stage === "needs_approval" ? "bg-amber-100 text-amber-800 text-xs" : "bg-green-100 text-green-800 text-xs"}>
+                        {event.stage === "needs_approval" ? "Needs Approval" : "Active"}
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {event.date ? new Date(event.date).toLocaleDateString() : "TBD"} - {event.location || "No location"}
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <span className="text-muted-foreground block">Invites</span>
+                        <span className="font-medium">{event.providerCount}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block">Approved</span>
+                        <span className="font-medium">{event.acceptedProviderCount}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block">Pending</span>
+                        <span className="font-medium">{event.pendingProviderCount}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(campaign.startDate).toLocaleDateString()} - {new Date(campaign.endDate).toLocaleDateString()} · {campaign.type}
+                ))
+              ) : (
+                <p className="text-center py-8 text-sm text-muted-foreground">No active events right now.</p>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEventActivity} onOpenChange={setShowEventActivity}>
+        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Event Activity ({eventActivityPercent}%)</DialogTitle>
+            <DialogDescription>Active events compared with total events for this partner</DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Active Events</span>
+              <span className="text-lg font-bold text-foreground">{activeEvents.length}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Total Events</span>
+              <span>{partnerEvents.length}</span>
+            </div>
+            <Progress value={eventActivityPercent} className="h-2" />
+            <p className="text-xs text-muted-foreground">{eventActivityPercent}% of this partner's events are active</p>
+          </div>
+
+          <ScrollArea className="h-[300px]">
+            <div className="space-y-3 pr-3">
+              {activeEvents.map((event) => (
+                <div key={event.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between items-center gap-2">
+                    <h4 className="font-medium text-sm">{event.title}</h4>
+                    <Badge variant="outline" className="text-xs">
+                      {event.stage === "needs_approval" ? "Needs Approval" : "Upcoming"}
+                    </Badge>
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-xs">
                     <div>
-                      <span className="text-muted-foreground block">Providers</span>
-                      <span className="font-medium">{campaign.providers}</span>
+                      <span className="text-muted-foreground block">Invites</span>
+                      <span className="font-medium">{event.providerCount}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block">Budget</span>
-                      <span className="font-medium">${campaign.budget.toLocaleString()}</span>
+                      <span className="text-muted-foreground block">Approved</span>
+                      <span className="font-medium">{event.acceptedProviderCount}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block">Spent</span>
-                      <span className="font-medium">${campaign.spent.toLocaleString()}</span>
+                      <span className="text-muted-foreground block">Pending</span>
+                      <span className="font-medium">{event.pendingProviderCount}</span>
                     </div>
                   </div>
-                  {campaign.status === "active" && (
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">Engagement</span>
-                        <span className="font-medium">{campaign.engagement}%</span>
-                      </div>
-                      <Progress value={campaign.engagement} className="h-1.5" />
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -306,7 +416,6 @@ const PartnerCRMDashboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Provider List Dialog */}
       <Dialog open={showProviders} onOpenChange={(open) => { setShowProviders(open); if (!open) setIsEditMode(false); }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -315,19 +424,13 @@ const PartnerCRMDashboard = () => {
                 <DialogTitle className="text-base">Your Providers ({providers.length})</DialogTitle>
                 <DialogDescription className="text-xs">Manage providers in your network</DialogDescription>
               </div>
-              <Button
-                variant={isEditMode ? "default" : "outline"}
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setIsEditMode(!isEditMode)}
-              >
+              <Button variant={isEditMode ? "default" : "outline"} size="sm" className="h-7 text-xs" onClick={() => setIsEditMode(!isEditMode)}>
                 <Edit className="h-3.5 w-3.5 mr-1" />
                 {isEditMode ? "Done" : "Edit"}
               </Button>
             </div>
           </DialogHeader>
 
-          {/* Plan usage bar */}
           <div className="space-y-1.5 px-1">
             <div className="flex items-center justify-between text-xs">
               <span className="flex items-center gap-1 text-muted-foreground">
@@ -365,161 +468,70 @@ const PartnerCRMDashboard = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs">Business</TableHead>
-                  <TableHead className="text-xs">Category</TableHead>
-                  <TableHead className="text-xs">Location</TableHead>
-                  {isEditMode ? <TableHead className="text-xs">Status</TableHead> : <TableHead className="text-xs">Contact</TableHead>}
-                  {isEditMode && <TableHead className="text-xs w-[60px]">Action</TableHead>}
+                  <TableHead className="text-xs">Contact</TableHead>
+                  <TableHead className="text-xs hidden sm:table-cell">Status</TableHead>
+                  <TableHead className="text-xs text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {providers.map((provider) => {
-                  const removeCheck = canRemove(provider);
-                  const daysSinceAdded = getDaysSinceAdded(provider.addedDate);
-                  return (
-                    <TableRow key={provider.id}>
-                      <TableCell className="font-medium text-xs py-2">{provider.businessName}</TableCell>
-                      <TableCell className="text-xs py-2">{provider.businessCategory}</TableCell>
-                      <TableCell className="py-2">
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          {provider.businessCity}, {provider.businessState}
-                        </span>
-                      </TableCell>
-                      {isEditMode ? (
-                        <TableCell className="py-2">
-                          <div className="space-y-0.5">
-                            {provider.hasActiveCampaign && (
-                              <p className="text-[10px] font-medium text-green-700">Active Campaign</p>
-                            )}
-                            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {daysSinceAdded}d ago
-                            </p>
-                          </div>
-                        </TableCell>
-                      ) : (
-                        <TableCell className="py-2">
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Phone className="h-3 w-3" />
-                            {provider.businessPhone}
-                          </span>
-                        </TableCell>
-                      )}
-                      {isEditMode && (
-                        <TableCell className="py-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            disabled={!removeCheck.allowed}
-                            title={removeCheck.allowed ? "Remove provider" : removeCheck.reason}
-                            onClick={() => handleRemoveClick(provider)}
-                          >
-                            <UserMinus className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
+                {providers.map((provider) => (
+                  <TableRow key={provider.id}>
+                    <TableCell>
+                      <div className="space-y-0.5">
+                        <p className="font-medium text-sm">{provider.businessName}</p>
+                        <p className="text-[11px] text-muted-foreground">{provider.displayId || provider.id}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-0.5">
+                        <p className="text-sm">{provider.contactName}</p>
+                        <p className="text-[11px] text-muted-foreground">{provider.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <Badge variant="outline" className="text-[11px]">Active</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => handleRemoveClick(provider)}
+                        disabled={!isEditMode}
+                      >
+                        <UserMinus className="h-3.5 w-3.5 mr-1" />
+                        Remove
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {providers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">
+                      No providers found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </ScrollArea>
         </DialogContent>
       </Dialog>
 
-      {/* Confirm Remove Dialog */}
-      <AlertDialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Remove Provider?
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>
-                  You are about to remove <strong>{confirmAction?.provider.businessName}</strong> from your network.
-                </p>
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 space-y-1">
-                  <p className="font-medium">Please confirm you understand:</p>
-                  <ul className="list-disc list-inside space-y-0.5 text-xs">
-                    <li>This provider <strong>cannot be re-added for 30 days</strong> after removal.</li>
-                    <li>Any pending event invitations for this provider will be cancelled.</li>
-                    <li>This action cannot be undone immediately.</li>
-                  </ul>
-                </div>
-              </div>
+            <AlertDialogTitle>Remove provider?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction ? `${confirmAction.provider.businessName} will be removed from your network.` : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmRemove}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Yes, Remove Provider
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirmRemove}>Remove</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Revenue Earned Dialog */}
-      <Dialog open={showRevenue} onOpenChange={setShowRevenue}>
-        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Revenue Earned ({revenuePercent}%)</DialogTitle>
-            <DialogDescription>Campaign revenue breakdown — ${totalSpent.toLocaleString()} earned of ${totalBudget.toLocaleString()} target</DialogDescription>
-          </DialogHeader>
-
-          <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Total Revenue Earned</span>
-              <span className="text-lg font-bold text-foreground">${totalSpent.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Target Revenue</span>
-              <span>${totalBudget.toLocaleString()}</span>
-            </div>
-            <Progress value={revenuePercent} className="h-2" />
-            <p className="text-xs text-muted-foreground">{revenuePercent}% of target achieved</p>
-          </div>
-
-          <ScrollArea className="h-[300px]">
-            <div className="space-y-3 pr-3">
-              {openCampaigns.map(campaign => {
-                const campPercent = campaign.budget > 0 ? Math.round((campaign.spent / campaign.budget) * 100) : 0;
-                return (
-                  <div key={campaign.id} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between items-center gap-2">
-                      <h4 className="font-medium text-sm">{campaign.name}</h4>
-                      <Badge variant="outline" className="text-xs">
-                        {campaign.status === "active" ? "Active" : "Planned"}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3 text-xs">
-                      <div>
-                        <span className="text-muted-foreground block">Earned</span>
-                        <span className="font-medium">${campaign.spent.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground block">Target</span>
-                        <span className="font-medium">${campaign.budget.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground block">% Earned</span>
-                        <span className="font-medium">{campPercent}%</span>
-                      </div>
-                    </div>
-                    <Progress value={campPercent} className="h-1.5" />
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-
     </DashboardLayout>
   );
 };

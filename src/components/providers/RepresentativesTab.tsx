@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Representative {
   id: string;
+  memberId?: string;
   name: string;
   email: string;
   phone: string;
@@ -30,13 +31,15 @@ interface RepresentativesTabProps {
   networkMembers: NetworkMember[];
   onAddRepresentative: (memberId: string) => void;
   onRemoveRepresentative?: (repId: string) => void;
+  loading?: boolean;
 }
 
 const RepresentativesTab = ({ 
   representatives, 
   networkMembers, 
   onAddRepresentative,
-  onRemoveRepresentative
+  onRemoveRepresentative,
+  loading = false,
 }: RepresentativesTabProps) => {
   const [addMode, setAddMode] = useState<"search" | "email">("search");
   const [memberSearch, setMemberSearch] = useState("");
@@ -55,7 +58,6 @@ const RepresentativesTab = ({
   const handleSelectMember = (memberId: string) => {
     onAddRepresentative(memberId);
     setMemberSearch("");
-    toast({ title: "Representative Added", description: "Member has been added as a representative." });
   };
 
   const handleInviteByEmail = () => {
@@ -92,7 +94,13 @@ const RepresentativesTab = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {representatives.map((rep) => (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                      Loading representatives...
+                    </TableCell>
+                  </TableRow>
+                ) : representatives.length > 0 ? representatives.map((rep) => (
                   <TableRow key={rep.id}>
                     <TableCell className="font-medium">{rep.name}</TableCell>
                     <TableCell>{rep.email}</TableCell>
@@ -111,7 +119,6 @@ const RepresentativesTab = ({
                           className="text-destructive hover:text-destructive"
                           onClick={() => {
                             onRemoveRepresentative(rep.id);
-                            toast({ title: "Representative Removed", description: `${rep.name} has been removed.` });
                           }}
                         >
                           <UserMinus className="h-3.5 w-3.5 mr-1" /> Remove
@@ -119,7 +126,13 @@ const RepresentativesTab = ({
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                      No representatives added yet.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -151,7 +164,9 @@ const RepresentativesTab = ({
                 className="mb-3"
               />
               <div className="border rounded-md max-h-[240px] overflow-y-auto">
-                {filteredMembers.length > 0 ? (
+                {loading ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">Loading network members...</p>
+                ) : filteredMembers.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -163,7 +178,7 @@ const RepresentativesTab = ({
                     </TableHeader>
                     <TableBody>
                       {filteredMembers.map((member) => {
-                        const alreadyAdded = representatives.some((r) => r.id === member.id);
+                        const alreadyAdded = representatives.some((r) => r.memberId === member.id || r.id === member.id);
                         return (
                           <TableRow key={member.id}>
                             <TableCell className="text-sm font-medium">{member.name}</TableCell>
@@ -171,7 +186,9 @@ const RepresentativesTab = ({
                             <TableCell className="text-sm">{member.memberSince}</TableCell>
                             <TableCell className="text-right">
                               {alreadyAdded ? (
-                                <Badge variant="outline" className="text-[10px]">Added</Badge>
+                                <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                  Added
+                                </Badge>
                               ) : (
                                 <Button size="sm" variant="outline" onClick={() => handleSelectMember(member.id)}>
                                   <UserPlus className="h-3.5 w-3.5 mr-1" /> Add

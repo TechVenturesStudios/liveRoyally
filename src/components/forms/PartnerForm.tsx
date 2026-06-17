@@ -12,7 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { createCognitoUser } from "@/api/cognito";
 import { registerPartner } from "@/api/registration";
 import { PARTNER_SUBSCRIPTION_PLAN_LIST } from "@/config/subscriptionPlans";
-import { getNetworkFromZipWithFallback } from "@/utils/networkMapping";
 
 const ORGANIZATION_CATEGORIES = [
   { label: "Educational", value: "education" },
@@ -57,12 +56,42 @@ const PartnerForm = () => {
 
   useEffect(() => {
     const zip = formData.organizationZip || "";
-    if (zip.length >= 5) {
-      const network = getNetworkFromZipWithFallback(zip);
-      setFormData((prev) => ({ ...prev, networkName: network.name, networkCode: network.code }));
-    } else {
+    const normalizedZip = zip.replace(/\D/g, "").slice(0, 5);
+
+    if (normalizedZip.length !== 5) {
       setFormData((prev) => ({ ...prev, networkName: "", networkCode: "" }));
+      return;
     }
+
+    const controller = new AbortController();
+
+    fetch(`/api/network-by-zip?zip=${encodeURIComponent(normalizedZip)}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then((network) => {
+        if (!network) {
+          setFormData((prev) => ({ ...prev, networkName: "", networkCode: "" }));
+          return;
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          networkName: network.networkName || "",
+          networkCode: network.networkCode || "",
+        }));
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setFormData((prev) => ({ ...prev, networkName: "", networkCode: "" }));
+      });
+
+    return () => controller.abort();
   }, [formData.organizationZip]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

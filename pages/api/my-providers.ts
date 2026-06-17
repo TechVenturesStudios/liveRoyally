@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
+import { resolveDashboardAccount } from "../../lib/dashboard-account";
 
 type ProviderEntry = {
   id: string;
@@ -90,36 +91,26 @@ export default async function handler(
   }
 
   try {
-    const cognitoId = getCognitoIdFromRequest(req);
-
-    if (!cognitoId) {
-      return res.status(401).json({ error: "Not authenticated" });
+    const account = await resolveDashboardAccount(req, ["partner"]);
+    if (!account) {
+      return res.status(500).json({ error: "Failed to resolve account" });
+    }
+    if ("error" in account) {
+      return res.status(account.status).json({ error: account.error });
     }
 
-    const partner = await prisma.users.findUnique({
-      where: { cognito_id: cognitoId },
+    const partnerProfile = await prisma.partner_profiles.findUnique({
+      where: { user_id: account.actingUserId },
       select: {
-        user_id: true,
-        user_type: true,
-        partner_profiles: {
-          select: {
-            partner_code: true,
-            network_name: true,
-            network_code: true,
-          },
-        },
+        partner_code: true,
+        network_name: true,
+        network_code: true,
       },
     });
 
-    if (!partner || partner.user_type !== "partner" || !partner.partner_profiles) {
-      return res.status(403).json({ error: "Current user is not a partner" });
-    }
-
-    const partnerProfile = partner.partner_profiles;
-
     const providers = await prisma.provider_profiles.findMany({
       where: {
-        partner_id: partner.user_id,
+        partner_id: account.actingUserId,
         users: {
           user_type: "provider",
         },
@@ -132,6 +123,9 @@ export default async function handler(
         business_name: true,
         business_category: true,
         business_address: true,
+        business_city: true,
+        business_state: true,
+        business_zip: true,
         business_email: true,
         business_phone: true,
         agent_first_name: true,
@@ -153,10 +147,10 @@ export default async function handler(
 
     return res.status(200).json({
       partner: {
-        id: partner.user_id,
-        partnerCode: partnerProfile.partner_code,
-        networkName: partnerProfile.network_name,
-        networkCode: partnerProfile.network_code,
+        id: account.actingUserId,
+        partnerCode: partnerProfile?.partner_code ?? null,
+        networkName: partnerProfile?.network_name ?? null,
+        networkCode: partnerProfile?.network_code ?? null,
       },
       providers: providers.map((provider) => ({
         id: provider.users.user_id,
@@ -170,6 +164,9 @@ export default async function handler(
         businessName: provider.business_name,
         businessCategory: provider.business_category,
         businessAddress: provider.business_address,
+        businessCity: provider.business_city,
+        businessState: provider.business_state,
+        businessZip: provider.business_zip,
         businessEmail: provider.business_email,
         businessPhone: provider.business_phone,
         agentFirstName: provider.agent_first_name,

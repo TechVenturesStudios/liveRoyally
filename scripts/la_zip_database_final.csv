@@ -1,0 +1,788 @@
+ZIP_Code,State,Parish,Network_Name,Network_Code
+70001,LA,Jefferson Parish,Jefferson Network,JE-026
+70002,LA,Jefferson Parish,Jefferson Network,JE-026
+70003,LA,Jefferson Parish,Jefferson Network,JE-026
+70004,LA,Jefferson Parish,Jefferson Network,JE-026
+70005,LA,Jefferson Parish,Jefferson Network,JE-026
+70006,LA,Jefferson Parish,Jefferson Network,JE-026
+70009,LA,Jefferson Parish,Jefferson Network,JE-026
+70010,LA,Jefferson Parish,Jefferson Network,JE-026
+70011,LA,Jefferson Parish,Jefferson Network,JE-026
+70030,LA,St. Charles Parish,St. Charles Network,SC-045
+70031,LA,St. Charles Parish,St. Charles Network,SC-045
+70032,LA,St. Bernard Parish,St. Bernard Network,SB-044
+70033,LA,Jefferson Parish,Jefferson Network,JE-026
+70036,LA,Jefferson Parish,Jefferson Network,JE-026
+70037,LA,Plaquemines Parish,Plaquemines Network,PL-038
+70038,LA,Plaquemines Parish,Plaquemines Network,PL-038
+70039,LA,St. Charles Parish,St. Charles Network,SC-045
+70040,LA,Plaquemines Parish,Plaquemines Network,PL-038
+70041,LA,Plaquemines Parish,Plaquemines Network,PL-038
+70043,LA,St. Bernard Parish,St. Bernard Network,SB-044
+70044,LA,St Bernard Parish,St. Bernard Network,SB-044
+70047,LA,St. Charles Parish,St. Charles Network,SC-045
+70048,LA,St. Charles Parish,St. Charles Network,SC-045
+70049,LA,St. John the Baptist Parish,St. John the Baptist Network,SK-048
+70050,LA,Plaquemines Parish,Plaquemines Network,PL-038
+70051,LA,St. John the Baptist Parish,St. John the Baptist Network,SK-048
+70052,LA,St. James Parish,St. James Network,SJ-047
+70053,LA,Jefferson Parish,Jefferson Network,JE-026
+70054,LA,Jefferson Parish,Jefferson Network,JE-026
+70055,LA,Jefferson Parish,Jefferson Network,JE-026
+70056,LA,Jefferson Parish,Jefferson Network,JE-026
+70057,LA,St. Charles Parish,St. Charles Network,SC-045
+70058,LA,Jefferson Parish,Jefferson Network,JE-026
+70059,LA,Jefferson Parish,Jefferson Network,JE-026
+70060,LA,Jefferson Parish,Jefferson Network,JE-026
+70062,LA,Jefferson Parish,Jefferson Network,JE-026
+70063,LA,Jefferson Parish,Jefferson Network,JE-026
+70064,LA,Jefferson Parish,Jefferson Network,JE-026
+70065,LA,Jefferson Parish,Jefferson Network,JE-026
+70067,LA,Jefferson Parish,Jefferson Network,JE-026
+70068,LA,St. John the Baptist Parish,St. John the Baptist Network,SK-048
+70069,LA,St. John the Baptist Parish,St. John the Baptist Network,SK-048
+70070,LA,St. Charles Parish,St. Charles Network,SC-045
+70071,LA,St. James Parish,St. James Network,SJ-047
+70072,LA,Jefferson Parish,Jefferson Network,JE-026
+70073,LA,Jefferson Parish,Jefferson Network,JE-026
+70075,LA,St. Bernard Parish,St. Bernard Network,SB-044
+70076,LA,St. John the Baptist Parish,St. John the Baptist Network,SK-048
+70078,LA,St. Charles Parish,St. Charles Network,SC-045
+70079,LA,St. Charles Parish,St. Charles Network,SC-045
+70080,LA,St. Charles Parish,St. Charles Network,SC-045
+70081,LA,Plaquemines Parish,Plaquemines Network,PL-038
+70082,LA,Plaquemines Parish,Plaquemines Network,PL-038
+70083,LA,Plaquemines Parish,Plaquemines Network,PL-038
+70084,LA,St. John the Baptist Parish,St. John the Baptist Network,SK-048
+70085,LA,St. Bernard Parish,St. Bernard Network,SB-044
+70086,LA,St. James Parish,St. James Network,SJ-047
+70087,LA,St. Charles Parish,St. Charles Network,SC-045
+70090,LA,St. James Parish,St. James Network,SJ-047
+70091,LA,Plaquemines Parish,Plaquemines Network,PL-038
+70092,LA,St. Bernard Parish,St. Bernard Network,SB-044
+70093,LA,Plaquemines Parish,Plaquemines Network,PL-038
+70094,LA,Jefferson Parish,Jefferson Network,JE-026
+70096,LA,Jefferson Parish,Jefferson Network,JE-026
+70097,LA,Jefferson Parish,Jefferson Network,JE-026
+70112,LA,Orleans Parish,Orleans Network,OR-036
+70113,LA,Orleans Parish,Orleans Network,OR-036
+70114,LA,Orleans Parish,Orleans Network,OR-036
+70115,LA,Orleans Parish,Orleans Network,OR-036
+70116,LA,Orleans Parish,Orleans Network,OR-036
+70117,LA,Orleans Parish,Orleans Network,OR-036
+70118,LA,Orleans Parish,Orleans Network,OR-036
+70119,LA,Orleans Parish,Orleans Network,OR-036
+70121,LA,Jefferson Parish,Jefferson Network,JE-026
+70122,LA,Orleans Parish,Orleans Network,OR-036
+70123,LA,Jefferson Parish,Jefferson Network,JE-026
+70124,LA,Orleans Parish,Orleans Network,OR-036
+70125,LA,Orleans Parish,Orleans Network,OR-036
+70126,LA,Orleans Parish,Orleans Network,OR-036
+70127,LA,Orleans Parish,Orleans Network,OR-036
+70128,LA,Orleans Parish,Orleans Network,OR-036
+70129,LA,Orleans Parish,Orleans Network,OR-036
+70130,LA,Orleans Parish,Orleans Network,OR-036
+70131,LA,Orleans Parish,Orleans Network,OR-036
+70139,LA,Orleans Parish,Orleans Network,OR-036
+70140,LA,Orleans Parish,Orleans Network,OR-036
+70141,LA,Orleans Parish,Orleans Network,OR-036
+70142,LA,Orleans Parish,Orleans Network,OR-036
+70143,LA,Orleans Parish,Orleans Network,OR-036
+70145,LA,Orleans Parish,Orleans Network,OR-036
+70146,LA,Orleans Parish,Orleans Network,OR-036
+70148,LA,Orleans Parish,Orleans Network,OR-036
+70149,LA,Orleans Parish,Orleans Network,OR-036
+70150,LA,Orleans Parish,Orleans Network,OR-036
+70151,LA,Orleans Parish,Orleans Network,OR-036
+70152,LA,Orleans Parish,Orleans Network,OR-036
+70153,LA,Orleans Parish,Orleans Network,OR-036
+70154,LA,Orleans Parish,Orleans Network,OR-036
+70156,LA,Orleans Parish,Orleans Network,OR-036
+70157,LA,Orleans Parish,Orleans Network,OR-036
+70158,LA,Orleans Parish,Orleans Network,OR-036
+70159,LA,Orleans Parish,Orleans Network,OR-036
+70160,LA,Orleans Parish,Orleans Network,OR-036
+70161,LA,Orleans Parish,Orleans Network,OR-036
+70162,LA,Orleans Parish,Orleans Network,OR-036
+70163,LA,Orleans Parish,Orleans Network,OR-036
+70164,LA,Orleans Parish,Orleans Network,OR-036
+70165,LA,Orleans Parish,Orleans Network,OR-036
+70166,LA,Orleans Parish,Orleans Network,OR-036
+70167,LA,Orleans Parish,Orleans Network,OR-036
+70170,LA,Orleans Parish,Orleans Network,OR-036
+70172,LA,Orleans Parish,Orleans Network,OR-036
+70174,LA,Orleans Parish,Orleans Network,OR-036
+70175,LA,Orleans Parish,Orleans Network,OR-036
+70176,LA,Orleans Parish,Orleans Network,OR-036
+70177,LA,Orleans Parish,Orleans Network,OR-036
+70178,LA,Orleans Parish,Orleans Network,OR-036
+70179,LA,Orleans Parish,Orleans Network,OR-036
+70181,LA,Orleans Parish,Orleans Network,OR-036
+70182,LA,Orleans Parish,Orleans Network,OR-036
+70183,LA,Orleans Parish,Orleans Network,OR-036
+70184,LA,Orleans Parish,Orleans Network,OR-036
+70185,LA,Orleans Parish,Orleans Network,OR-036
+70186,LA,Orleans Parish,Orleans Network,OR-036
+70187,LA,Orleans Parish,Orleans Network,OR-036
+70189,LA,Orleans Parish,Orleans Network,OR-036
+70190,LA,Orleans Parish,Orleans Network,OR-036
+70195,LA,Orleans Parish,Orleans Network,OR-036
+70301,LA,Lafourche Parish,Lafourche Network,LF-029
+70302,LA,Lafourche Parish,Lafourche Network,LF-029
+70310,LA,Lafourche Parish,Lafourche Network,LF-029
+70339,LA,Assumption Parish,Assumption Network,AU-004
+70340,LA,St. Mary Parish,St. Mary Network,SR-051
+70341,LA,Assumption Parish,Assumption Network,AU-004
+70342,LA,St. Mary Parish,St. Mary Network,SR-051
+70343,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70344,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70345,LA,Lafourche Parish,Lafourche Network,LF-029
+70346,LA,Ascension Parish,Ascension Network,AS-003
+70352,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70353,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70354,LA,Lafourche Parish,Lafourche Network,LF-029
+70355,LA,Lafourche Parish,Lafourche Network,LF-029
+70356,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70357,LA,Lafourche Parish,Lafourche Network,LF-029
+70358,LA,Jefferson Parish,Jefferson Network,JE-026
+70359,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70360,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70361,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70363,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70364,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70371,LA,Lafourche Parish,Lafourche Network,LF-029
+70372,LA,Assumption Parish,Assumption Network,AU-004
+70373,LA,Lafourche Parish,Lafourche Network,LF-029
+70374,LA,Lafourche Parish,Lafourche Network,LF-029
+70375,LA,Lafourche Parish,Lafourche Network,LF-029
+70377,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70380,LA,St. Mary Parish,St. Mary Network,SR-051
+70381,LA,St. Mary Parish,St. Mary Network,SR-051
+70390,LA,Assumption Parish,Assumption Network,AU-004
+70391,LA,Assumption Parish,Assumption Network,AU-004
+70392,LA,St. Mary Parish,St. Mary Network,SR-051
+70393,LA,Assumption Parish,Assumption Network,AU-004
+70394,LA,Lafourche Parish,Lafourche Network,LF-029
+70395,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70396,LA,St. Mary Parish,St. Mary Network,SR-051
+70397,LA,Terrebonne Parish,Terrebonne Network,TR-055
+70401,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70402,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70403,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70404,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70420,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70421,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70422,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70426,LA,Washington Parish,Washington Network,WA-059
+70427,LA,Washington Parish,Washington Network,WA-059
+70429,LA,Washington Parish,Washington Network,WA-059
+70431,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70432,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70433,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70434,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70435,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70436,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70437,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70438,LA,Washington Parish,Washington Network,WA-059
+70439,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70440,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70441,LA,St. Helena Parish,St. Helena Network,SH-046
+70442,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70443,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70444,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70445,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70446,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70447,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70448,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70449,LA,Livingston Parish,Livingston Network,LV-032
+70450,LA,Washington Parish,Washington Network,WA-059
+70451,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70452,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70453,LA,St. Helena Parish,St. Helena Network,SH-046
+70454,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70455,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70456,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70457,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70458,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70459,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70460,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70461,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70462,LA,Livingston Parish,Livingston Network,LV-032
+70463,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70464,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70465,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70466,LA,Tangipahoa Parish,Tangipahoa Network,TA-053
+70467,LA,Washington Parish,Washington Network,WA-059
+70469,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70470,LA,St Tammany Parish,St. Tammany Network,ST-052
+70471,LA,St. Tammany Parish,St. Tammany Network,ST-052
+70500,LA,Lafayette Parish,Lafayette Network,LA-028
+70501,LA,Lafayette Parish,Lafayette Network,LA-028
+70502,LA,Lafayette Parish,Lafayette Network,LA-028
+70503,LA,Lafayette Parish,Lafayette Network,LA-028
+70504,LA,Lafayette Parish,Lafayette Network,LA-028
+70505,LA,Lafayette Parish,Lafayette Network,LA-028
+70506,LA,Lafayette Parish,Lafayette Network,LA-028
+70507,LA,Lafayette Parish,Lafayette Network,LA-028
+70508,LA,Lafayette Parish,Lafayette Network,LA-028
+70509,LA,Lafayette Parish,Lafayette Network,LA-028
+70510,LA,Vermilion Parish,Vermilion Network,VE-057
+70511,LA,Vermilion Parish,Vermilion Network,VE-057
+70512,LA,St. Landry Parish,St. Landry Network,SL-049
+70513,LA,Iberia Parish,Iberia Network,IB-023
+70514,LA,St. Mary Parish,St. Mary Network,SR-051
+70515,LA,Evangeline Parish,Evangeline Network,EV-020
+70516,LA,Acadia Parish,Acadia Network,AC-001
+70517,LA,St. Martin Parish,St. Martin Network,SM-050
+70518,LA,Lafayette Parish,Lafayette Network,LA-028
+70519,LA,St. Martin Parish,St. Martin Network,SM-050
+70520,LA,Lafayette Parish,Lafayette Network,LA-028
+70521,LA,St Martin Parish,St. Martin Network,SM-050
+70522,LA,St. Mary Parish,St. Mary Network,SR-051
+70523,LA,St. Mary Parish,St. Mary Network,SR-051
+70524,LA,Evangeline Parish,Evangeline Network,EV-020
+70525,LA,Acadia Parish,Acadia Network,AC-001
+70526,LA,Acadia Parish,Acadia Network,AC-001
+70527,LA,Acadia Parish,Acadia Network,AC-001
+70528,LA,Vermilion Parish,Vermilion Network,VE-057
+70529,LA,Lafayette Parish,Lafayette Network,LA-028
+70530,LA,St. Martin Parish,St. Martin Network,SM-050
+70531,LA,Acadia Parish,Acadia Network,AC-001
+70532,LA,Jefferson Davis Parish,Jefferson Davis Network,JD-027
+70533,LA,Vermilion Parish,Vermilion Network,VE-057
+70534,LA,Acadia Parish,Acadia Network,AC-001
+70535,LA,St. Landry Parish,St. Landry Network,SL-049
+70536,LA,Jefferson Davis Parish,Jefferson Davis Network,JD-027
+70537,LA,Acadia Parish,Acadia Network,AC-001
+70538,LA,St. Mary Parish,St. Mary Network,SR-051
+70539,LA,Vermilion Parish,Vermilion Network,VE-057
+70540,LA,St Mary Parish,St. Mary Network,SR-051
+70541,LA,St. Landry Parish,St. Landry Network,SL-049
+70542,LA,Vermilion Parish,Vermilion Network,VE-057
+70543,LA,Acadia Parish,Acadia Network,AC-001
+70544,LA,Iberia Parish,Iberia Network,IB-023
+70545,LA,St. Landry Parish,St. Landry Network,SL-049
+70546,LA,Jefferson Davis Parish,Jefferson Davis Network,JD-027
+70547,LA,Vermilion Parish,Vermilion Network,VE-057
+70548,LA,Vermilion Parish,Vermilion Network,VE-057
+70549,LA,Jefferson Davis Parish,Jefferson Davis Network,JD-027
+70550,LA,St. Landry Parish,St. Landry Network,SL-049
+70551,LA,St. Landry Parish,St. Landry Network,SL-049
+70552,LA,Iberia Parish,Iberia Network,IB-023
+70553,LA,St. Landry Parish,St. Landry Network,SL-049
+70554,LA,Evangeline Parish,Evangeline Network,EV-020
+70555,LA,Vermilion Parish,Vermilion Network,VE-057
+70556,LA,Acadia Parish,Acadia Network,AC-001
+70557,LA,Iberia Parish,Iberia Network,IB-023
+70558,LA,Lafayette Parish,Lafayette Network,LA-028
+70559,LA,Acadia Parish,Acadia Network,AC-001
+70560,LA,Iberia Parish,Iberia Network,IB-023
+70561,LA,St. Landry Parish,St. Landry Network,SL-049
+70562,LA,Iberia Parish,Iberia Network,IB-023
+70563,LA,Iberia Parish,Iberia Network,IB-023
+70564,LA,St. Landry Parish,St. Landry Network,SL-049
+70565,LA,St. Landry Parish,St. Landry Network,SL-049
+70566,LA,St. Landry Parish,St. Landry Network,SL-049
+70567,LA,St. Landry Parish,St. Landry Network,SL-049
+70568,LA,St. Landry Parish,St. Landry Network,SL-049
+70569,LA,Iberia Parish,Iberia Network,IB-023
+70570,LA,St. Landry Parish,St. Landry Network,SL-049
+70571,LA,St. Landry Parish,St. Landry Network,SL-049
+70575,LA,Vermilion Parish,Vermilion Network,VE-057
+70576,LA,Evangeline Parish,Evangeline Network,EV-020
+70577,LA,St. Landry Parish,St. Landry Network,SL-049
+70578,LA,Acadia Parish,Acadia Network,AC-001
+70580,LA,Evangeline Parish,Evangeline Network,EV-020
+70581,LA,Jefferson Davis Parish,Jefferson Davis Network,JD-027
+70582,LA,St. Martin Parish,St. Martin Network,SM-050
+70583,LA,Lafayette Parish,Lafayette Network,LA-028
+70584,LA,St. Landry Parish,St. Landry Network,SL-049
+70585,LA,Evangeline Parish,Evangeline Network,EV-020
+70586,LA,Evangeline Parish,Evangeline Network,EV-020
+70589,LA,St. Landry Parish,St. Landry Network,SL-049
+70590,LA,St. Landry Parish,St. Landry Network,SL-049
+70591,LA,Jefferson Davis Parish,Jefferson Davis Network,JD-027
+70592,LA,Lafayette Parish,Lafayette Network,LA-028
+70593,LA,Lafayette Parish,Lafayette Network,LA-028
+70595,LA,Lafayette Parish,Lafayette Network,LA-028
+70596,LA,Lafayette Parish,Lafayette Network,LA-028
+70598,LA,Lafayette Parish,Lafayette Network,LA-028
+70601,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70602,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70603,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70604,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70605,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70606,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70607,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70609,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70611,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70612,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70615,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70616,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70629,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70630,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70631,LA,Cameron Parish,Cameron Network,CM-012
+70632,LA,Cameron Parish,Cameron Network,CM-012
+70633,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70634,LA,Beauregard Parish,Beauregard Network,BE-006
+70637,LA,Allen Parish,Allen Network,AL-002
+70638,LA,Allen Parish,Allen Network,AL-002
+70639,LA,Vernon Parish,Vernon Network,VN-058
+70640,LA,Jefferson Davis Parish,Jefferson Davis Network,JD-027
+70643,LA,Cameron Parish,Cameron Network,CM-012
+70644,LA,Allen Parish,Allen Network,AL-002
+70645,LA,Cameron Parish,Cameron Network,CM-012
+70646,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70647,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70648,LA,Allen Parish,Allen Network,AL-002
+70650,LA,Jefferson Davis Parish,Jefferson Davis Network,JD-027
+70651,LA,Allen Parish,Allen Network,AL-002
+70652,LA,Beauregard Parish,Beauregard Network,BE-006
+70653,LA,Beauregard Parish,Beauregard Network,BE-006
+70654,LA,Allen Parish,Allen Network,AL-002
+70655,LA,Allen Parish,Allen Network,AL-002
+70656,LA,Vernon Parish,Vernon Network,VN-058
+70657,LA,Beauregard Parish,Beauregard Network,BE-006
+70658,LA,Allen Parish,Allen Network,AL-002
+70659,LA,Vernon Parish,Vernon Network,VN-058
+70660,LA,Beauregard Parish,Beauregard Network,BE-006
+70661,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70662,LA,Beauregard Parish,Beauregard Network,BE-006
+70663,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70664,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70665,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70668,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70669,LA,Calcasieu Parish,Calcasieu Network,CC-010
+70704,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70706,LA,Livingston Parish,Livingston Network,LV-032
+70707,LA,Ascension Parish,Ascension Network,AS-003
+70710,LA,West Baton Rouge Parish,West Baton Rouge Network,WB-061
+70711,LA,Livingston Parish,Livingston Network,LV-032
+70712,LA,West Feliciana Parish,West Feliciana Network,WF-063
+70714,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70715,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70718,LA,Ascension Parish,Ascension Network,AS-003
+70719,LA,West Baton Rouge Parish,West Baton Rouge Network,WB-061
+70721,LA,Iberville Parish,Iberville Network,IV-024
+70722,LA,East Feliciana Parish,East Feliciana Network,EF-019
+70723,LA,St. James Parish,St. James Network,SJ-047
+70725,LA,Ascension Parish,Ascension Network,AS-003
+70726,LA,Livingston Parish,Livingston Network,LV-032
+70727,LA,Livingston Parish,Livingston Network,LV-032
+70728,LA,Ascension Parish,Ascension Network,AS-003
+70729,LA,West Baton Rouge Parish,West Baton Rouge Network,WB-061
+70730,LA,East Feliciana Parish,East Feliciana Network,EF-019
+70732,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70733,LA,Livingston Parish,Livingston Network,LV-032
+70734,LA,Ascension Parish,Ascension Network,AS-003
+70736,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70737,LA,Ascension Parish,Ascension Network,AS-003
+70738,LA,Ascension Parish,Ascension Network,AS-003
+70739,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70740,LA,Iberville Parish,Iberville Network,IV-024
+70742,LA,Iberville Parish,Iberville Network,IV-024
+70743,LA,St. James Parish,St. James Network,SJ-047
+70744,LA,Livingston Parish,Livingston Network,LV-032
+70747,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70748,LA,East Feliciana Parish,East Feliciana Network,EF-019
+70749,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70750,LA,St. Landry Parish,St. Landry Network,SL-049
+70752,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70753,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70754,LA,Livingston Parish,Livingston Network,LV-032
+70755,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70756,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70757,LA,Iberville Parish,Iberville Network,IV-024
+70759,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70760,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70761,LA,East Feliciana Parish,East Feliciana Network,EF-019
+70762,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70763,LA,St. James Parish,St. James Network,SJ-047
+70764,LA,Iberville Parish,Iberville Network,IV-024
+70765,LA,Iberville Parish,Iberville Network,IV-024
+70767,LA,West Baton Rouge Parish,West Baton Rouge Network,WB-061
+70769,LA,Ascension Parish,Ascension Network,AS-003
+70770,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70772,LA,Iberville Parish,Iberville Network,IV-024
+70773,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70774,LA,Ascension Parish,Ascension Network,AS-003
+70775,LA,West Feliciana Parish,West Feliciana Network,WF-063
+70776,LA,Iberville Parish,Iberville Network,IV-024
+70777,LA,East Feliciana Parish,East Feliciana Network,EF-019
+70778,LA,Ascension Parish,Ascension Network,AS-003
+70780,LA,Iberville Parish,Iberville Network,IV-024
+70782,LA,West Feliciana Parish,West Feliciana Network,WF-063
+70783,LA,Pointe Coupee Parish,Pointe Coupee Network,PC-039
+70784,LA,West Feliciana Parish,West Feliciana Network,WF-063
+70785,LA,Livingston Parish,Livingston Network,LV-032
+70786,LA,Livingston Parish,Livingston Network,LV-032
+70787,LA,West Feliciana Parish,West Feliciana Network,WF-063
+70788,LA,Iberville Parish,Iberville Network,IV-024
+70789,LA,East Feliciana Parish,East Feliciana Network,EF-019
+70791,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70792,LA,St James Parish,St. James Network,SJ-047
+70801,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70802,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70803,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70804,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70805,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70806,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70807,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70808,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70809,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70810,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70811,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70812,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70813,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70814,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70815,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70816,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70817,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70818,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70819,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70820,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70821,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70822,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70823,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70825,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70826,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70827,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70831,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70833,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70835,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70836,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70837,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70873,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70874,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70879,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70883,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70884,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70891,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70892,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70893,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70894,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70895,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70896,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+70898,LA,East Baton Rouge Parish,East Baton Rouge Network,EB-017
+71001,LA,Bienville Parish,Bienville Network,BI-007
+71002,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71003,LA,Claiborne Parish,Claiborne Network,CL-014
+71004,LA,Caddo Parish,Caddo Network,CA-009
+71006,LA,Bossier Parish,Bossier Network,BO-008
+71007,LA,Caddo Parish,Caddo Network,CA-009
+71008,LA,Bienville Parish,Bienville Network,BI-007
+71009,LA,Caddo Parish,Caddo Network,CA-009
+71010,LA,Caddo Parish,Caddo Network,CA-009
+71011,LA,Caddo Parish,Caddo Network,CA-009
+71013,LA,Caddo Parish,Caddo Network,CA-009
+71014,LA,Caddo Parish,Caddo Network,CA-009
+71015,LA,Caddo Parish,Caddo Network,CA-009
+71016,LA,Bienville Parish,Bienville Network,BI-007
+71018,LA,Webster Parish,Webster Network,WE-060
+71019,LA,Red River Parish,Red River Network,RR-041
+71021,LA,Webster Parish,Webster Network,WE-060
+71023,LA,Webster Parish,Webster Network,WE-060
+71024,LA,Webster Parish,Webster Network,WE-060
+71026,LA,De Soto Parish,De Soto Network,DS-016
+71027,LA,De Soto Parish,De Soto Network,DS-016
+71028,LA,Bienville Parish,Bienville Network,BI-007
+71029,LA,Caddo Parish,Caddo Network,CA-009
+71030,LA,De Soto Parish,De Soto Network,DS-016
+71031,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71032,LA,De Soto Parish,De Soto Network,DS-016
+71033,LA,Caddo Parish,Caddo Network,CA-009
+71034,LA,Red River Parish,Red River Network,RR-041
+71037,LA,Bossier Parish,Bossier Network,BO-008
+71038,LA,Claiborne Parish,Claiborne Network,CL-014
+71039,LA,Webster Parish,Webster Network,WE-060
+71040,LA,Claiborne Parish,Claiborne Network,CL-014
+71041,LA,Claiborne Parish,Claiborne Network,CL-014
+71042,LA,Red River Parish,Red River Network,RR-041
+71043,LA,Caddo Parish,Caddo Network,CA-009
+71044,LA,Caddo Parish,Caddo Network,CA-009
+71045,LA,Bienville Parish,Bienville Network,BI-007
+71046,LA,De Soto Parish,De Soto Network,DS-016
+71047,LA,Caddo Parish,Caddo Network,CA-009
+71048,LA,Claiborne Parish,Claiborne Network,CL-014
+71049,LA,De Soto Parish,De Soto Network,DS-016
+71050,LA,De Soto Parish,De Soto Network,DS-016
+71051,LA,Bossier Parish,Bossier Network,BO-008
+71052,LA,De Soto Parish,De Soto Network,DS-016
+71053,LA,Bossier Parish,Bossier Network,BO-008
+71054,LA,Caddo Parish,Caddo Network,CA-009
+71055,LA,Webster Parish,Webster Network,WE-060
+71056,LA,Caddo Parish,Caddo Network,CA-009
+71057,LA,Red River Parish,Red River Network,RR-041
+71058,LA,Webster Parish,Webster Network,WE-060
+71060,LA,Caddo Parish,Caddo Network,CA-009
+71061,LA,Caddo Parish,Caddo Network,CA-009
+71062,LA,Red River Parish,Red River Network,RR-041
+71063,LA,De Soto Parish,De Soto Network,DS-016
+71064,LA,Bossier Parish,Bossier Network,BO-008
+71065,LA,Sabine Parish,Sabine Network,SA-043
+71066,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71067,LA,Bossier Parish,Bossier Network,BO-008
+71068,LA,Bienville Parish,Bienville Network,BI-007
+71069,LA,Caddo Parish,Caddo Network,CA-009
+71070,LA,Bienville Parish,Bienville Network,BI-007
+71071,LA,Webster Parish,Webster Network,WE-060
+71072,LA,Webster Parish,Webster Network,WE-060
+71073,LA,Webster Parish,Webster Network,WE-060
+71074,LA,De Soto Parish,De Soto Network,DS-016
+71075,LA,Webster Parish,Webster Network,WE-060
+71076,LA,De Soto Parish,De Soto Network,DS-016
+71077,LA,Red River Parish,Red River Network,RR-041
+71078,LA,De Soto Parish,De Soto Network,DS-016
+71079,LA,Claiborne Parish,Claiborne Network,CL-014
+71080,LA,Bienville Parish,Bienville Network,BI-007
+71082,LA,Caddo Parish,Caddo Network,CA-009
+71083,LA,Red River Parish,Red River Network,RR-041
+71101,LA,Caddo Parish,Caddo Network,CA-009
+71102,LA,Caddo Parish,Caddo Network,CA-009
+71103,LA,Caddo Parish,Caddo Network,CA-009
+71104,LA,Caddo Parish,Caddo Network,CA-009
+71105,LA,Caddo Parish,Caddo Network,CA-009
+71106,LA,Caddo Parish,Caddo Network,CA-009
+71107,LA,Caddo Parish,Caddo Network,CA-009
+71108,LA,Caddo Parish,Caddo Network,CA-009
+71109,LA,Caddo Parish,Caddo Network,CA-009
+71110,LA,Bossier Parish,Bossier Network,BO-008
+71111,LA,Bossier Parish,Bossier Network,BO-008
+71112,LA,Bossier Parish,Bossier Network,BO-008
+71113,LA,Bossier Parish,Bossier Network,BO-008
+71115,LA,Caddo Parish,Caddo Network,CA-009
+71118,LA,Caddo Parish,Caddo Network,CA-009
+71119,LA,Caddo Parish,Caddo Network,CA-009
+71120,LA,Caddo Parish,Caddo Network,CA-009
+71129,LA,Caddo Parish,Caddo Network,CA-009
+71130,LA,Caddo Parish,Caddo Network,CA-009
+71133,LA,Caddo Parish,Caddo Network,CA-009
+71134,LA,Caddo Parish,Caddo Network,CA-009
+71135,LA,Caddo Parish,Caddo Network,CA-009
+71136,LA,Caddo Parish,Caddo Network,CA-009
+71137,LA,Caddo Parish,Caddo Network,CA-009
+71138,LA,Caddo Parish,Caddo Network,CA-009
+71148,LA,Caddo Parish,Caddo Network,CA-009
+71149,LA,Caddo Parish,Caddo Network,CA-009
+71150,LA,Caddo Parish,Caddo Network,CA-009
+71151,LA,Caddo Parish,Caddo Network,CA-009
+71152,LA,Caddo Parish,Caddo Network,CA-009
+71153,LA,Caddo Parish,Caddo Network,CA-009
+71154,LA,Caddo Parish,Caddo Network,CA-009
+71156,LA,Caddo Parish,Caddo Network,CA-009
+71161,LA,Caddo Parish,Caddo Network,CA-009
+71162,LA,Caddo Parish,Caddo Network,CA-009
+71163,LA,Caddo Parish,Caddo Network,CA-009
+71164,LA,Caddo Parish,Caddo Network,CA-009
+71165,LA,Caddo Parish,Caddo Network,CA-009
+71166,LA,Caddo Parish,Caddo Network,CA-009
+71171,LA,Bossier Parish,Bossier Network,BO-008
+71172,LA,Bossier Parish,Bossier Network,BO-008
+71201,LA,Ouachita Parish,Ouachita Network,OU-037
+71202,LA,Ouachita Parish,Ouachita Network,OU-037
+71203,LA,Ouachita Parish,Ouachita Network,OU-037
+71204,LA,Ouachita Parish,Ouachita Network,OU-037
+71205,LA,Ouachita Parish,Ouachita Network,OU-037
+71206,LA,Ouachita Parish,Ouachita Network,OU-037
+71207,LA,Ouachita Parish,Ouachita Network,OU-037
+71208,LA,Ouachita Parish,Ouachita Network,OU-037
+71209,LA,Ouachita Parish,Ouachita Network,OU-037
+71210,LA,Ouachita Parish,Ouachita Network,OU-037
+71211,LA,Ouachita Parish,Ouachita Network,OU-037
+71212,LA,Ouachita Parish,Ouachita Network,OU-037
+71213,LA,Ouachita Parish,Ouachita Network,OU-037
+71214,LA,Jackson Parish,Jackson Network,JA-025
+71217,LA,Ouachita Parish,Ouachita Network,OU-037
+71218,LA,Richland Parish,Richland Network,RI-042
+71219,LA,Franklin Parish,Franklin Network,FR-021
+71220,LA,Morehouse Parish,Morehouse Network,MO-034
+71221,LA,Morehouse Parish,Morehouse Network,MO-034
+71222,LA,Union Parish,Union Network,UN-056
+71223,LA,Morehouse Parish,Morehouse Network,MO-034
+71225,LA,Ouachita Parish,Ouachita Network,OU-037
+71226,LA,Jackson Parish,Jackson Network,JA-025
+71227,LA,Lincoln Parish,Lincoln Network,LI-031
+71228,LA,Franklin Parish,Franklin Network,FR-021
+71229,LA,Morehouse Parish,Morehouse Network,MO-034
+71230,LA,Franklin Parish,Franklin Network,FR-021
+71232,LA,Richland Parish,Richland Network,RI-042
+71233,LA,Madison Parish,Madison Network,MA-033
+71234,LA,Union Parish,Union Network,UN-056
+71235,LA,Lincoln Parish,Lincoln Network,LI-031
+71237,LA,West Carroll Parish,West Carroll Network,WC-062
+71238,LA,Ouachita Parish,Ouachita Network,OU-037
+71239,LA,West Carroll Parish,West Carroll Network,WC-062
+71240,LA,Ouachita Parish,Ouachita Network,OU-037
+71241,LA,Union Parish,Union Network,UN-056
+71242,LA,West Carroll Parish,West Carroll Network,WC-062
+71243,LA,Franklin Parish,Franklin Network,FR-021
+71245,LA,Lincoln Parish,Lincoln Network,LI-031
+71247,LA,Jackson Parish,Jackson Network,JA-025
+71249,LA,Franklin Parish,Franklin Network,FR-021
+71250,LA,Morehouse Parish,Morehouse Network,MO-034
+71251,LA,Jackson Parish,Jackson Network,JA-025
+71253,LA,West Carroll Parish,West Carroll Network,WC-062
+71254,LA,East Carroll Parish,East Carroll Network,EC-018
+71256,LA,Union Parish,Union Network,UN-056
+71259,LA,Richland Parish,Richland Network,RI-042
+71260,LA,Union Parish,Union Network,UN-056
+71261,LA,Morehouse Parish,Morehouse Network,MO-034
+71263,LA,West Carroll Parish,West Carroll Network,WC-062
+71264,LA,Richland Parish,Richland Network,RI-042
+71266,LA,West Carroll Parish,West Carroll Network,WC-062
+71268,LA,Jackson Parish,Jackson Network,JA-025
+71269,LA,Richland Parish,Richland Network,RI-042
+71270,LA,Lincoln Parish,Lincoln Network,LI-031
+71272,LA,Lincoln Parish,Lincoln Network,LI-031
+71273,LA,Lincoln Parish,Lincoln Network,LI-031
+71275,LA,Lincoln Parish,Lincoln Network,LI-031
+71276,LA,East Carroll Parish,East Carroll Network,EC-018
+71277,LA,Union Parish,Union Network,UN-056
+71279,LA,Richland Parish,Richland Network,RI-042
+71280,LA,Ouachita Parish,Ouachita Network,OU-037
+71281,LA,Ouachita Parish,Ouachita Network,OU-037
+71282,LA,Madison Parish,Madison Network,MA-033
+71284,LA,Madison Parish,Madison Network,MA-033
+71286,LA,East Carroll Parish,East Carroll Network,EC-018
+71291,LA,Ouachita Parish,Ouachita Network,OU-037
+71292,LA,Ouachita Parish,Ouachita Network,OU-037
+71294,LA,Ouachita Parish,Ouachita Network,OU-037
+71295,LA,Franklin Parish,Franklin Network,FR-021
+71301,LA,Rapides Parish,Rapides Network,RA-040
+71302,LA,Rapides Parish,Rapides Network,RA-040
+71303,LA,Rapides Parish,Rapides Network,RA-040
+71306,LA,Rapides Parish,Rapides Network,RA-040
+71307,LA,Rapides Parish,Rapides Network,RA-040
+71309,LA,Rapides Parish,Rapides Network,RA-040
+71315,LA,Rapides Parish,Rapides Network,RA-040
+71316,LA,Concordia Parish,Concordia Network,CO-015
+71320,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71322,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71323,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71324,LA,Franklin Parish,Franklin Network,FR-021
+71325,LA,Rapides Parish,Rapides Network,RA-040
+71326,LA,Concordia Parish,Concordia Network,CO-015
+71327,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71328,LA,Rapides Parish,Rapides Network,RA-040
+71329,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71330,LA,Rapides Parish,Rapides Network,RA-040
+71331,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71333,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71334,LA,Concordia Parish,Concordia Network,CO-015
+71336,LA,Franklin Parish,Franklin Network,FR-021
+71339,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71340,LA,Catahoula Parish,Catahoula Network,CT-013
+71341,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71342,LA,LaSalle Parish,La Salle Network,LS-030
+71343,LA,Catahoula Parish,Catahoula Network,CT-013
+71345,LA,St. Landry Parish,St. Landry Network,SL-049
+71346,LA,Rapides Parish,Rapides Network,RA-040
+71348,LA,Rapides Parish,Rapides Network,RA-040
+71350,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71351,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71352,LA,Concordia Parish,Concordia Network,CO-015
+71353,LA,St. Landry Parish,St. Landry Network,SL-049
+71354,LA,Concordia Parish,Concordia Network,CO-015
+71355,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71356,LA,St. Landry Parish,St. Landry Network,SL-049
+71357,LA,Tensas Parish,Tensas Network,TE-054
+71358,LA,St. Landry Parish,St. Landry Network,SL-049
+71359,LA,Rapides Parish,Rapides Network,RA-040
+71360,LA,Rapides Parish,Rapides Network,RA-040
+71361,LA,Rapides Parish,Rapides Network,RA-040
+71362,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71363,LA,Catahoula Parish,Catahoula Network,CT-013
+71365,LA,Rapides Parish,Rapides Network,RA-040
+71366,LA,Tensas Parish,Tensas Network,TE-054
+71367,LA,Evangeline Parish,Evangeline Network,EV-020
+71368,LA,Catahoula Parish,Catahoula Network,CT-013
+71369,LA,Avoyelles Parish,Avoyelles Network,AV-005
+71371,LA,LaSalle Parish,La Salle Network,LS-030
+71373,LA,Concordia Parish,Concordia Network,CO-015
+71375,LA,Tensas Parish,Tensas Network,TE-054
+71377,LA,Concordia Parish,Concordia Network,CO-015
+71378,LA,Franklin Parish,Franklin Network,FR-021
+71401,LA,Catahoula Parish,Catahoula Network,CT-013
+71402,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71403,LA,Vernon Parish,Vernon Network,VN-058
+71404,LA,Winn Parish,Winn Network,WI-064
+71405,LA,Rapides Parish,Rapides Network,RA-040
+71406,LA,Sabine Parish,Sabine Network,SA-043
+71407,LA,Grant Parish,Grant Network,GR-022
+71408,LA,Sabine Parish,Sabine Network,SA-043
+71409,LA,Rapides Parish,Rapides Network,RA-040
+71410,LA,Winn Parish,Winn Network,WI-064
+71411,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71412,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71413,LA,Sabine Parish,Sabine Network,SA-043
+71414,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71415,LA,Caldwell Parish,Caldwell Network,CD-011
+71416,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71417,LA,Grant Parish,Grant Network,GR-022
+71418,LA,Caldwell Parish,Caldwell Network,CD-011
+71419,LA,Sabine Parish,Sabine Network,SA-043
+71420,LA,Sabine Parish,Sabine Network,SA-043
+71421,LA,Sabine Parish,Sabine Network,SA-043
+71422,LA,Winn Parish,Winn Network,WI-064
+71423,LA,Grant Parish,Grant Network,GR-022
+71424,LA,Rapides Parish,Rapides Network,RA-040
+71425,LA,Catahoula Parish,Catahoula Network,CT-013
+71426,LA,Sabine Parish,Sabine Network,SA-043
+71427,LA,Rapides Parish,Rapides Network,RA-040
+71428,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71429,LA,Sabine Parish,Sabine Network,SA-043
+71430,LA,Rapides Parish,Rapides Network,RA-040
+71431,LA,Rapides Parish,Rapides Network,RA-040
+71432,LA,Grant Parish,Grant Network,GR-022
+71433,LA,Rapides Parish,Rapides Network,RA-040
+71434,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71435,LA,Caldwell Parish,Caldwell Network,CD-011
+71436,LA,Sabine Parish,Sabine Network,SA-043
+71437,LA,Sabine Parish,Sabine Network,SA-043
+71438,LA,Rapides Parish,Rapides Network,RA-040
+71439,LA,Vernon Parish,Vernon Network,VN-058
+71440,LA,Winn Parish,Winn Network,WI-064
+71441,LA,Caldwell Parish,Caldwell Network,CD-011
+71442,LA,Sabine Parish,Sabine Network,SA-043
+71443,LA,Vernon Parish,Vernon Network,VN-058
+71444,LA,Sabine Parish,Sabine Network,SA-043
+71446,LA,Vernon Parish,Vernon Network,VN-058
+71447,LA,Rapides Parish,Rapides Network,RA-040
+71448,LA,Rapides Parish,Rapides Network,RA-040
+71449,LA,Sabine Parish,Sabine Network,SA-043
+71450,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71451,LA,Sabine Parish,Sabine Network,SA-043
+71452,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71453,LA,Sabine Parish,Sabine Network,SA-043
+71454,LA,Grant Parish,Grant Network,GR-022
+71455,LA,Rapides Parish,Rapides Network,RA-040
+71456,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71457,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71458,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71459,LA,Vernon Parish,Vernon Network,VN-058
+71460,LA,Sabine Parish,Sabine Network,SA-043
+71461,LA,Vernon Parish,Vernon Network,VN-058
+71462,LA,Sabine Parish,Sabine Network,SA-043
+71463,LA,Allen Parish,Allen Network,AL-002
+71465,LA,LaSalle Parish,La Salle Network,LS-030
+71466,LA,Rapides Parish,Rapides Network,RA-040
+71467,LA,Grant Parish,Grant Network,GR-022
+71468,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71469,LA,Natchitoches Parish,Natchitoches Network,NA-035
+71471,LA,Winn Parish,Winn Network,WI-064
+71472,LA,Rapides Parish,Rapides Network,RA-040
+71473,LA,Winn Parish,Winn Network,WI-064
+71474,LA,Vernon Parish,Vernon Network,VN-058
+71475,LA,Vernon Parish,Vernon Network,VN-058
+71476,LA,Sabine Parish,Sabine Network,SA-043
+71477,LA,Rapides Parish,Rapides Network,RA-040
+71478,LA,Sabine Parish,Sabine Network,SA-043
+71479,LA,LaSalle Parish,La Salle Network,LS-030
+71480,LA,LaSalle Parish,La Salle Network,LS-030
+71481,LA,Sabine Parish,Sabine Network,SA-043
+71483,LA,Winn Parish,Winn Network,WI-064
+71484,LA,Sabine Parish,Sabine Network,SA-043
+71485,LA,Rapides Parish,Rapides Network,RA-040
+71486,LA,Sabine Parish,Sabine Network,SA-043
+71496,LA,Vernon Parish,Vernon Network,VN-058
+71497,LA,Natchitoches Parish,Natchitoches Network,NA-035

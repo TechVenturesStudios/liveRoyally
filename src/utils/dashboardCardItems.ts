@@ -37,7 +37,6 @@ export const dashboardCardItems: CardItemsByUserType = {
       icon: Package,
       path: "/dashboard/vouchers",
       color: "bg-blue-100 text-blue-600",
-      stats: "..."
     },
     {
       title: "Purchase History",
@@ -45,7 +44,6 @@ export const dashboardCardItems: CardItemsByUserType = {
       icon: Clock,
       path: "/dashboard/history",
       color: "bg-amber-100 text-amber-600",
-      stats: "..."
     },
     {
       title: "New Deals",
@@ -53,7 +51,6 @@ export const dashboardCardItems: CardItemsByUserType = {
       icon: PlusCircle,
       path: "/dashboard/deals",
       color: "bg-green-100 text-green-600",
-      stats: "..."
     },
     {
       title: "Engagement Score",
@@ -103,7 +100,7 @@ export const dashboardCardItems: CardItemsByUserType = {
       title: "Pending Events",
       description: "Events awaiting approval",
       icon: Calendar,
-      path: "/dashboard/pending-events",
+      path: "/dashboard/partner-pending-events",
       color: "bg-blue-100 text-blue-600",
       stats: "2 Pending"
     },
@@ -168,6 +165,12 @@ export const dashboardCardItems: CardItemsByUserType = {
   ]
 };
 
-export const getDashboardCards = (userType: UserType) => {
-  return dashboardCardItems[userType] || [];
+export const getDashboardCards = (
+  userType: UserType,
+  statsOverrides: Record<string, string> = {}
+) => {
+  return (dashboardCardItems[userType] || []).map((card) => ({
+    ...card,
+    stats: statsOverrides[card.title] ?? card.stats,
+  }));
 };

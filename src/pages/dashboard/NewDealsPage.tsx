@@ -1,143 +1,94 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Clock, Store, MapPin, Star, ArrowUp, ArrowDown, Globe } from "lucide-react";
+import { Clock, Store, MapPin, Star, ArrowUp, ArrowDown, Globe, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ViewToggle from "@/components/ui/ViewToggle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
+import { toast } from "sonner";
+import {
+  claimMemberVoucher,
+  fetchMemberNetworkVouchers,
+} from "@/api/memberVouchers";
+import {
+  MemberVoucherRecord,
+  getDaysUntilExpiry,
+  getVoucherDescription,
+  getVoucherDiscountLabel,
+  getVoucherExpiryDate,
+  getVoucherLocation,
+  getVoucherNetworkLabel,
+  getVoucherStatusLabel,
+  getVoucherTitle,
+} from "@/utils/memberVoucherFormatting";
 
-// Mock networks available by zip code area
-const mockNetworks = [
-  { code: "ROYAL1", name: "Royal Network", area: "Houston, TX", zipPrefixes: ["770", "771", "772", "773"] },
-  { code: "METRO1", name: "Metro Alliance", area: "Houston, TX", zipPrefixes: ["770", "774", "775"] },
-  { code: "WEST1", name: "Westside Collective", area: "Sugar Land, TX", zipPrefixes: ["774", "775"] },
-];
-
-const mockDeals = [
-  {
-    id: "DL-001",
-    title: "30% Off Weekend Brunch",
-    provider: "The Golden Table",
-    category: "Dining",
-    location: "Houston, TX",
-    discount: "30%",
-    description: "Enjoy a luxurious weekend brunch with 30% off the entire menu. Valid Saturday and Sunday only.",
-    expiry: "2024-06-01",
-    featured: true,
-    networkCode: "ROYAL1",
-  },
-  {
-    id: "DL-002",
-    title: "Buy 1 Get 1 Free Smoothie",
-    provider: "Fresh Blend Co.",
-    category: "Food & Drink",
-    location: "Houston, TX",
-    discount: "BOGO",
-    description: "Purchase any smoothie and get the second one free. All flavors included.",
-    expiry: "2024-05-25",
-    featured: false,
-    networkCode: "ROYAL1",
-  },
-  {
-    id: "DL-003",
-    title: "$15 Off Full Detail Wash",
-    provider: "Sparkle Auto Wash",
-    category: "Automotive",
-    location: "Houston, TX",
-    discount: "$15",
-    description: "Get $15 off a full interior and exterior detail wash. Appointment required.",
-    expiry: "2024-06-10",
-    featured: true,
-    networkCode: "METRO1",
-  },
-  {
-    id: "DL-004",
-    title: "20% Off Any Haircut",
-    provider: "Crown Barber Lounge",
-    category: "Beauty",
-    location: "Houston, TX",
-    discount: "20%",
-    description: "First-time and returning members get 20% off any haircut service.",
-    expiry: "2024-05-30",
-    featured: false,
-    networkCode: "METRO1",
-  },
-  {
-    id: "DL-005",
-    title: "Free Appetizer with Entrée",
-    provider: "Royal Cafe",
-    category: "Dining",
-    location: "Houston, TX",
-    discount: "Free",
-    description: "Order any entrée and receive a complimentary appetizer of your choice.",
-    expiry: "2024-06-15",
-    featured: false,
-    networkCode: "ROYAL1",
-  },
-  {
-    id: "DL-006",
-    title: "40% Off First Month Membership",
-    provider: "Elite Fitness Hub",
-    category: "Health & Fitness",
-    location: "Sugar Land, TX",
-    discount: "40%",
-    description: "New members get 40% off their first month. Includes full gym access and one free personal training session.",
-    expiry: "2024-06-20",
-    featured: true,
-    networkCode: "WEST1",
-  },
-];
-
-type Deal = typeof mockDeals[0];
-type SortKey = "title" | "provider" | "category" | "discount" | "expiry" | "featured";
+type SortKey = "title" | "provider" | "category" | "discount" | "expiry" | "network";
 type SortDir = "asc" | "desc";
 
-const getDiscountType = (discount: string): string => {
-  const lower = discount.toLowerCase();
-  if (lower === "free") return "Free";
-  if (lower === "bogo") return "BOGO";
-  if (discount.startsWith("$")) return "$ Off";
-  if (discount.endsWith("%")) return "% Off";
-  return discount;
-};
-
-const discountSortOrder: Record<string, number> = {
-  "Free": 0,
-  "$ Off": 1,
-  "% Off": 2,
-  "BOGO": 3,
-};
-
-const getUserZip = (): string => {
-  const userJson = localStorage.getItem("user");
-  if (userJson) {
-    const user = JSON.parse(userJson);
-    return user.zipCode || "77001";
+const getSortValue = (voucher: MemberVoucherRecord, key: SortKey) => {
+  switch (key) {
+    case "title":
+      return getVoucherTitle(voucher).toLowerCase();
+    case "provider":
+      return (voucher.provider_name || "").toLowerCase();
+    case "category":
+      return (voucher.provider_category || "").toLowerCase();
+    case "network":
+      return getVoucherNetworkLabel(voucher).toLowerCase();
+    case "discount":
+      return getVoucherDiscountLabel(voucher).toLowerCase();
+    case "expiry": {
+      const expiry = getVoucherExpiryDate(voucher);
+      return expiry ? expiry.getTime() : Number.POSITIVE_INFINITY;
+    }
+    default:
+      return "";
   }
-  return "77001";
 };
 
 const NewDealsPage = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [selectedDeal, setSelectedDeal] = useState<MemberVoucherRecord | null>(null);
+  const [selectedNetwork, setSelectedNetwork] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("title");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [memberName, setMemberName] = useState("");
+  const [availableDeals, setAvailableDeals] = useState<MemberVoucherRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [claimingVoucherId, setClaimingVoucherId] = useState<string | null>(null);
 
-  const userZip = getUserZip();
-  const zipPrefix = userZip.substring(0, 3);
+  useEffect(() => {
+    let cancelled = false;
 
-  // Networks available near the member's zip code
-  const nearbyNetworks = useMemo(
-    () => mockNetworks.filter((n) => n.zipPrefixes.includes(zipPrefix)),
-    [zipPrefix]
-  );
+    const loadDeals = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchMemberNetworkVouchers();
+        if (cancelled) return;
 
-  const [selectedNetwork, setSelectedNetwork] = useState<string>(
-    nearbyNetworks[0]?.code || "all"
-  );
+        setMemberName(data.member.networkName || "My Network");
+        setSelectedNetwork(data.member.networkCode || "");
+        setAvailableDeals(data.vouchers);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("failed to load member network vouchers:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to load vouchers");
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDeals();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -148,39 +99,43 @@ const NewDealsPage = () => {
     }
   };
 
-  const filteredDeals = useMemo(() => {
-    if (selectedNetwork === "all") return mockDeals;
-    return mockDeals.filter((d) => d.networkCode === selectedNetwork);
-  }, [selectedNetwork]);
-
   const sortedDeals = useMemo(() => {
-    return [...filteredDeals].sort((a, b) => {
+    return [...availableDeals].sort((a, b) => {
       const dir = sortDir === "asc" ? 1 : -1;
+      const valueA = getSortValue(a, sortKey);
+      const valueB = getSortValue(b, sortKey);
 
-      if (sortKey === "discount") {
-        const typeA = getDiscountType(a.discount);
-        const typeB = getDiscountType(b.discount);
-        const orderA = discountSortOrder[typeA] ?? 99;
-        const orderB = discountSortOrder[typeB] ?? 99;
-        if (orderA !== orderB) return (orderA - orderB) * dir;
-        const numA = parseFloat(a.discount.replace(/[^0-9.]/g, "")) || 0;
-        const numB = parseFloat(b.discount.replace(/[^0-9.]/g, "")) || 0;
-        return (numA - numB) * dir;
+      if (typeof valueA === "number" && typeof valueB === "number") {
+        return (valueA - valueB) * dir;
       }
 
-      if (sortKey === "featured") {
-        return ((a.featured === b.featured) ? 0 : a.featured ? -1 : 1) * dir;
-      }
-
-      if (sortKey === "expiry") {
-        return (new Date(a.expiry).getTime() - new Date(b.expiry).getTime()) * dir;
-      }
-
-      const valA = a[sortKey].toLowerCase();
-      const valB = b[sortKey].toLowerCase();
-      return valA.localeCompare(valB) * dir;
+      return String(valueA).localeCompare(String(valueB)) * dir;
     });
-  }, [sortKey, sortDir, filteredDeals]);
+  }, [availableDeals, sortDir, sortKey]);
+
+  const selectedNetworkName = memberName || "My Network";
+
+  const handleClaimDeal = async (voucher: MemberVoucherRecord) => {
+    if (claimingVoucherId) return;
+
+    setClaimingVoucherId(voucher.voucher_id);
+    try {
+      const result = await claimMemberVoucher(voucher.voucher_id);
+
+      if (result.alreadyClaimed) {
+        toast.info("This deal was already claimed.");
+      } else {
+        toast.success("Deal added to Your Vouchers.");
+      }
+
+      setAvailableDeals((prev) => prev.filter((item) => item.voucher_id !== voucher.voucher_id));
+      setSelectedDeal((current) => (current?.voucher_id === voucher.voucher_id ? null : current));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to claim deal");
+    } finally {
+      setClaimingVoucherId(null);
+    }
+  };
 
   const SortIcon = ({ column }: { column: SortKey }) => {
     if (sortKey !== column) return null;
@@ -189,7 +144,66 @@ const NewDealsPage = () => {
       : <ArrowDown className="h-3 w-3 inline ml-0.5" />;
   };
 
-  const selectedNetworkName = mockNetworks.find((n) => n.code === selectedNetwork)?.name || "All Networks";
+  const renderDealSummary = (voucher: MemberVoucherRecord) => {
+    const days = getDaysUntilExpiry(voucher);
+
+    return (
+      <div className="space-y-1.5 text-sm text-muted-foreground mb-5">
+        <div className="flex items-center gap-2">
+          <Store className="h-3.5 w-3.5" />
+          {voucher.provider_name}
+        </div>
+        <div className="flex items-center gap-2">
+          <MapPin className="h-3.5 w-3.5" />
+          {getVoucherLocation(voucher)}
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5" />
+          {days === null ? "No expiry date" : `${days} day${days === 1 ? "" : "s"} left`}
+        </div>
+      </div>
+    );
+  };
+
+  const renderDealDetailRows = (voucher: MemberVoucherRecord) => {
+    const expiry = getVoucherExpiryDate(voucher);
+    const days = getDaysUntilExpiry(voucher);
+
+    return [
+      { label: "Provider", value: voucher.provider_name || "Unknown provider" },
+      { label: "Network", value: getVoucherNetworkLabel(voucher) },
+      { label: "Voucher ID", value: voucher.voucher_id },
+      { label: "Category", value: voucher.provider_category || "Unspecified" },
+      { label: "Discount", value: getVoucherDiscountLabel(voucher) },
+      { label: "Description", value: getVoucherDescription(voucher) },
+      { label: "Location", value: getVoucherLocation(voucher) },
+      { label: "Expires", value: expiry ? expiry.toLocaleDateString() : "No expiry date" },
+      {
+        label: "Days Left",
+        value: days === null ? "No expiry date" : `${days} day${days === 1 ? "" : "s"}`,
+      },
+      { label: "Status", value: getVoucherStatusLabel(voucher.status) },
+      { label: "Claimed At", value: voucher.claimed_at ? new Date(voucher.claimed_at).toLocaleString() : "Unknown" },
+      { label: "Member Price", value: voucher.member_price !== null ? `$${voucher.member_price.toFixed(2)}` : "Not set" },
+      { label: "Max Redemptions", value: voucher.max_redemptions ?? "Unlimited" },
+      { label: "Event", value: voucher.event_title || "No event linked" },
+      { label: "Provider Phone", value: voucher.provider_phone || "Not provided" },
+      { label: "Provider Email", value: voucher.provider_email || "Not provided" },
+    ];
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading network deals...
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -200,28 +214,19 @@ const NewDealsPage = () => {
             <p className="text-sm text-muted-foreground">Exclusive deals from providers in your network</p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            {/* Network filter dropdown */}
-            <Select value={selectedNetwork} onValueChange={setSelectedNetwork}>
-              <SelectTrigger className="w-[180px] h-9 text-xs bg-background">
+            <Select value={selectedNetwork} onValueChange={setSelectedNetwork} disabled={!selectedNetwork}>
+              <SelectTrigger className="w-[240px] h-9 text-xs bg-background">
                 <Globe className="h-3.5 w-3.5 mr-1.5 text-primary shrink-0" />
-                <SelectValue placeholder="Select network" />
+                <SelectValue placeholder="Your network" />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
-                <SelectItem value="all">All Networks</SelectItem>
-                {nearbyNetworks.map((network) => (
-                  <SelectItem key={network.code} value={network.code}>
-                    <div className="flex flex-col">
-                      <span>{network.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{network.area}</span>
-                    </div>
-                  </SelectItem>
-                ))}
+                <SelectItem value={selectedNetwork}>{memberName || "My Network"}</SelectItem>
               </SelectContent>
             </Select>
 
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
               <Store className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">{filteredDeals.length} deals</span>
+              <span className="text-sm font-medium text-primary">{sortedDeals.length} deals</span>
             </div>
             <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
           </div>
@@ -231,32 +236,45 @@ const NewDealsPage = () => {
           viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {sortedDeals.map((deal) => (
-                <Card key={deal.id} className="flex flex-col overflow-hidden hover:shadow-md transition-shadow">
+                <Card key={deal.voucher_id} className="flex flex-col overflow-hidden hover:shadow-md transition-shadow">
                   <div className="bg-primary px-4 py-2 flex items-center justify-between">
                     <span className="text-primary-foreground font-bold text-lg">
-                      {deal.discount}
+                      {getVoucherDiscountLabel(deal) === "Free"
+                        ? "Free Item"
+                        : `${getVoucherDiscountLabel(deal)} OFF`}
                     </span>
-                    {deal.featured && (
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        <Star className="h-3 w-3" /> Featured
-                      </Badge>
-                    )}
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <Star className="h-3 w-3" /> New
+                    </Badge>
                   </div>
                   <div className="p-5 flex flex-col flex-1">
                     <div className="flex items-center gap-2 mb-3">
-                      <Badge variant="outline" className="w-fit">{deal.category}</Badge>
+                      <Badge variant="outline" className="w-fit">{deal.provider_category || "Voucher"}</Badge>
                       <Badge variant="outline" className="w-fit text-[10px] text-muted-foreground">
-                        {mockNetworks.find((n) => n.code === deal.networkCode)?.name}
+                        {getVoucherNetworkLabel(deal)}
                       </Badge>
                     </div>
-                    <h3 className="text-lg font-bold mb-1">{deal.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4 flex-1">{deal.description}</p>
-                    <div className="space-y-1.5 text-sm text-muted-foreground mb-5">
-                      <div className="flex items-center gap-2"><Store className="h-3.5 w-3.5" />{deal.provider}</div>
-                      <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" />{deal.location}</div>
-                      <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" />Expires {new Date(deal.expiry).toLocaleDateString()}</div>
+                    <h3 className="text-lg font-bold mb-1">{getVoucherTitle(deal)}</h3>
+                    <p className="text-sm text-muted-foreground mb-4 flex-1">{getVoucherDescription(deal)}</p>
+                    {renderDealSummary(deal)}
+                    <div className="flex items-center justify-between gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="px-3 text-xs"
+                        onClick={() => setSelectedDeal(deal)}
+                      >
+                        Details
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="px-3 text-xs"
+                        disabled={claimingVoucherId === deal.voucher_id}
+                        onClick={() => handleClaimDeal(deal)}
+                      >
+                        {claimingVoucherId === deal.voucher_id ? "Claiming..." : "Claim Deal"}
+                      </Button>
                     </div>
-                    <Button className="w-full">Claim Deal</Button>
                   </div>
                 </Card>
               ))}
@@ -283,32 +301,52 @@ const NewDealsPage = () => {
                         <TableHead className="text-[11px] cursor-pointer select-none" onClick={() => handleSort("expiry")}>
                           Expires <SortIcon column="expiry" />
                         </TableHead>
-                        <TableHead className="text-[11px] cursor-pointer select-none" onClick={() => handleSort("featured")}>
-                          Status <SortIcon column="featured" />
+                        <TableHead className="text-[11px] cursor-pointer select-none" onClick={() => handleSort("network")}>
+                          Network <SortIcon column="network" />
                         </TableHead>
+                        <TableHead className="text-[11px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedDeals.map((deal) => (
-                        <TableRow key={deal.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedDeal(deal)}>
-                          <TableCell className="py-2">
-                            <div className="text-xs text-muted-foreground line-clamp-1">{deal.title}</div>
-                            <div className="font-semibold text-xs">{deal.description}</div>
-                          </TableCell>
-                          <TableCell className="text-xs py-2">{deal.provider}</TableCell>
-                          <TableCell className="py-2"><Badge variant="outline" className="text-[10px]">{deal.category}</Badge></TableCell>
-                          <TableCell className="py-2 whitespace-nowrap">
-                            <Badge className="text-[10px]">{deal.discount}</Badge>
-                            {sortKey === "discount" && (
-                              <span className="block text-[9px] text-muted-foreground mt-0.5">{getDiscountType(deal.discount)}</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-xs py-2 whitespace-nowrap">{new Date(deal.expiry).toLocaleDateString()}</TableCell>
-                          <TableCell className="py-2">
-                            {deal.featured && <Badge variant="secondary" className="text-[10px]"><Star className="h-2.5 w-2.5 mr-0.5" />Featured</Badge>}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {sortedDeals.map((deal) => {
+                        const days = getDaysUntilExpiry(deal);
+
+                        return (
+                          <TableRow key={deal.voucher_id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedDeal(deal)}>
+                            <TableCell className="py-2">
+                              <div className="font-medium text-xs">{getVoucherTitle(deal)}</div>
+                              <div className="text-[11px] text-muted-foreground line-clamp-1">{getVoucherDescription(deal)}</div>
+                            </TableCell>
+                            <TableCell className="text-xs py-2">{deal.provider_name}</TableCell>
+                            <TableCell className="py-2">
+                              <Badge variant="outline" className="text-[10px]">
+                                {deal.provider_category || "Voucher"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="py-2 whitespace-nowrap">
+                              <Badge className="text-[10px]">{getVoucherDiscountLabel(deal)}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs py-2 whitespace-nowrap">
+                              {getVoucherExpiryDate(deal)?.toLocaleDateString() || "No expiry"}
+                              {days !== null ? <span className="block text-[10px] text-muted-foreground">{days}d left</span> : null}
+                            </TableCell>
+                            <TableCell className="text-xs py-2">{getVoucherNetworkLabel(deal)}</TableCell>
+                            <TableCell className="py-2">
+                              <Button
+                                size="sm"
+                                className="h-6 px-2 text-[11px]"
+                                disabled={claimingVoucherId === deal.voucher_id}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleClaimDeal(deal);
+                                }}
+                              >
+                                {claimingVoucherId === deal.voucher_id ? "Claiming..." : "Claim"}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -328,18 +366,18 @@ const NewDealsPage = () => {
         <EventDetailDialog
           open={!!selectedDeal}
           onOpenChange={(open) => !open && setSelectedDeal(null)}
-          title={selectedDeal.title}
-          description={selectedDeal.description}
-          rows={[
-            { label: "Provider", value: selectedDeal.provider },
-            { label: "Category", value: selectedDeal.category },
-            { label: "Discount", value: selectedDeal.discount },
-            { label: "Location", value: selectedDeal.location },
-            { label: "Network", value: mockNetworks.find((n) => n.code === selectedDeal.networkCode)?.name || selectedDeal.networkCode },
-            { label: "Expires", value: new Date(selectedDeal.expiry).toLocaleDateString() },
-            { label: "Featured", value: selectedDeal.featured ? "Yes" : "No" },
-          ]}
-          actions={<Button className="w-full">Claim Deal</Button>}
+          title={getVoucherTitle(selectedDeal)}
+          description={getVoucherDescription(selectedDeal)}
+          rows={renderDealDetailRows(selectedDeal)}
+          actions={
+            <Button
+              className="w-full"
+              disabled={claimingVoucherId === selectedDeal.voucher_id}
+              onClick={() => handleClaimDeal(selectedDeal)}
+            >
+              {claimingVoucherId === selectedDeal.voucher_id ? "Claiming..." : "Claim Deal"}
+            </Button>
+          }
         />
       )}
     </DashboardLayout>

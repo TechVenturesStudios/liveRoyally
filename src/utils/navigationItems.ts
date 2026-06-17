@@ -72,7 +72,7 @@ const navigationItemsByType: NavItemsByUserType = {
       name: "Provider CRM",
       shortName: "CRM",
       icon: Crown,
-      path: "/dashboard/providers",
+      path: "/dashboard/providers/crm",
     },
     {
       name: "Events Management",

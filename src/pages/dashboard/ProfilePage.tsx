@@ -22,6 +22,16 @@ const formatPlanName = (plan?: string | null) => {
   return plan.charAt(0).toUpperCase() + plan.slice(1);
 };
 
+const formatAddress = (
+  address?: string | null,
+  city?: string | null,
+  state?: string | null,
+  zip?: string | null
+) => {
+  const cityStateZip = [city, state, zip].filter(Boolean).join(" ");
+  return [address, cityStateZip].filter(Boolean).join(", ") || "Not provided";
+};
+
 const ProfilePage = () => {
   const [user, setUser] = useState<UserType | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -83,7 +93,11 @@ const ProfilePage = () => {
             agentLastName: data.profile.partnerAgentLastName,
             agentPhone: data.profile.partnerAgentPhone,
             organizationName: data.profile.organizationName,
+            organizationCategory: data.profile.organizationCategory,
             organizationAddress: data.profile.organizationAddress,
+            organizationCity: data.profile.organizationCity,
+            organizationState: data.profile.organizationState,
+            organizationZip: data.profile.organizationZip,
             organizationEmail: data.profile.organizationEmail,
             organizationPhone: data.profile.organizationPhone
           }),
@@ -96,6 +110,9 @@ const ProfilePage = () => {
             businessName: data.profile.businessName,
             businessCategory: data.profile.businessCategory,
             businessAddress: data.profile.businessAddress,
+            businessCity: data.profile.businessCity,
+            businessState: data.profile.businessState,
+            businessZip: data.profile.businessZip,
             businessEmail: data.profile.businessEmail,
             businessPhone: data.profile.businessPhone
           })
@@ -260,7 +277,7 @@ const ProfilePage = () => {
         {isEditing ? (
           <Input id="businessAddress" value={formData.businessAddress || ""} onChange={(e) => handleInputChange("businessAddress", e.target.value)} />
         ) : (
-          <p className="py-2 px-3 bg-muted rounded-md">{user.businessAddress}</p>
+          <p className="py-2 px-3 bg-muted rounded-md">{user.businessAddress}, {user.businessCity}, {user.businessState} {user.businessZip}</p>
         )}
       </div>
       {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -357,6 +374,32 @@ const ProfilePage = () => {
             )}
           </div>
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="organizationAddress">Organization Address</Label>
+          {isEditing ? (
+            <Input id="organizationAddress" value={formData.organizationAddress || ""} onChange={(e) => handleInputChange("organizationAddress", e.target.value)} />
+          ) : (
+            <p className="py-2 px-3 bg-muted rounded-md">
+              {formatAddress(user.organizationAddress, user.organizationCity, user.organizationState, user.organizationZip)}
+            </p>
+          )}
+        </div>
+        {isEditing && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="organizationCity">City</Label>
+              <Input id="organizationCity" value={formData.organizationCity || ""} onChange={(e) => handleInputChange("organizationCity", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="organizationState">State</Label>
+              <Input id="organizationState" value={formData.organizationState || ""} onChange={(e) => handleInputChange("organizationState", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="organizationZip">Zip Code</Label>
+              <Input id="organizationZip" value={formData.organizationZip || ""} onChange={(e) => handleInputChange("organizationZip", e.target.value)} />
+            </div>
+          </div>
+        )}
 
         {/* Subscription Card */}
         <Card className="mt-4 border-primary/20">
@@ -518,7 +561,16 @@ const ProfilePage = () => {
           { label: "Agent Last Name", value: pt.agentLastName, editable: true, field: "agentLastName" },
           { label: "Organization", value: pt.organizationName, editable: true, field: "organizationName" },
           { label: "Category", value: pt.organizationCategory, editable: true, field: "organizationCategory" },
-          { label: "Org Phone", value: pt.organizationPhone, editable: true, field: "organizationPhone" }
+          { label: "Org Phone", value: pt.organizationPhone, editable: true, field: "organizationPhone" },
+          {
+            label: "Org Address",
+            value: formatAddress(pt.organizationAddress, pt.organizationCity, pt.organizationState, pt.organizationZip),
+            editable: true,
+            field: "organizationAddress",
+          },
+          { label: "Org City", value: pt.organizationCity, editable: true, field: "organizationCity" },
+          { label: "Org State", value: pt.organizationState, editable: true, field: "organizationState" },
+          { label: "Org Zip", value: pt.organizationZip, editable: true, field: "organizationZip" }
         );
         break;
       }
