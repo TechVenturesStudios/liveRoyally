@@ -9,10 +9,12 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { fetchMemberNetworkVouchers, fetchMemberVouchers } from "@/api/memberVouchers";
 import { fetchMemberPurchaseHistory } from "@/api/memberPurchases";
 import { isVoucherExpired } from "@/utils/memberVoucherFormatting";
+import { getUserFromStorage } from "@/utils/userStorage";
 
 const Dashboard = () => {
   const { user, isLoading } = useAuthCheck();
   const [memberCardStats, setMemberCardStats] = useState<Record<string, string>>({});
+  const cognitoId = getUserFromStorage()?.cognitoId;
 
   useEffect(() => {
     if (!user || user.userType !== "member") {
@@ -25,8 +27,8 @@ const Dashboard = () => {
     const loadMemberStats = async () => {
       try {
         const [voucherResult, dealResult, purchaseResult] = await Promise.allSettled([
-          fetchMemberVouchers(),
-          fetchMemberNetworkVouchers(),
+          fetchMemberVouchers(cognitoId),
+          fetchMemberNetworkVouchers(cognitoId),
           fetchMemberPurchaseHistory(),
         ]);
 
@@ -70,7 +72,7 @@ const Dashboard = () => {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [cognitoId, user]);
 
   if (isLoading) return <LoadingSpinner />;
   if (!user) return null;

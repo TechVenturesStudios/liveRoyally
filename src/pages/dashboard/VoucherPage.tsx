@@ -22,6 +22,7 @@ import {
   getVoucherTitle,
 } from "@/utils/memberVoucherFormatting";
 import { toast } from "sonner";
+import { getUserFromStorage } from "@/utils/userStorage";
 
 const VoucherPage = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -30,6 +31,7 @@ const VoucherPage = () => {
   const [memberId, setMemberId] = useState("");
   const [vouchers, setVouchers] = useState<MemberVoucherRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const cognitoId = getUserFromStorage()?.cognitoId;
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +39,7 @@ const VoucherPage = () => {
     const loadVouchers = async () => {
       setLoading(true);
       try {
-        const data = await fetchMemberVouchers();
+        const data = await fetchMemberVouchers(cognitoId);
         if (cancelled) return;
 
         setMemberId(data.member.id);
@@ -58,7 +60,7 @@ const VoucherPage = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cognitoId]);
 
   const qrVoucher = useMemo(
     () => vouchers.find((voucher) => voucher.voucher_id === showQR) || null,

@@ -252,6 +252,8 @@ model users {
   partner_subscriptions partner_subscriptions[]
   provider_profiles provider_profiles? @relation("ProviderUser")
   partner_providers provider_profiles[] @relation("ProviderPartner")
+  authorized_rep_principal authorized_representative_assignments[] @relation("AuthorizedRepPrincipal")
+  authorized_rep_represented authorized_representative_assignments[] @relation("AuthorizedRepRepresented")
   provider_event_invites event_provider_invites[] @relation("ProviderEventInvites")
   partner_event_invites event_provider_invites[] @relation("PartnerEventInvites")
   purchases         purchases[]

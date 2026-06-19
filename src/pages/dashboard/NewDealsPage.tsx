@@ -13,6 +13,7 @@ import {
   claimMemberVoucher,
   fetchMemberNetworkVouchers,
 } from "@/api/memberVouchers";
+import { getUserFromStorage } from "@/utils/userStorage";
 import {
   MemberVoucherRecord,
   getDaysUntilExpiry,
@@ -59,14 +60,17 @@ const NewDealsPage = () => {
   const [availableDeals, setAvailableDeals] = useState<MemberVoucherRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [claimingVoucherId, setClaimingVoucherId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const cognitoId = getUserFromStorage()?.cognitoId;
 
   useEffect(() => {
     let cancelled = false;
 
     const loadDeals = async () => {
       setLoading(true);
+      setLoadError(null);
       try {
-        const data = await fetchMemberNetworkVouchers();
+        const data = await fetchMemberNetworkVouchers(cognitoId);
         if (cancelled) return;
 
         setMemberName(data.member.networkName || "My Network");
@@ -75,7 +79,9 @@ const NewDealsPage = () => {
       } catch (error) {
         if (cancelled) return;
         console.error("failed to load member network vouchers:", error);
-        toast.error(error instanceof Error ? error.message : "Failed to load vouchers");
+        const message = error instanceof Error ? error.message : "Failed to load vouchers";
+        setLoadError(message);
+        toast.error(message);
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -88,7 +94,7 @@ const NewDealsPage = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cognitoId]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -120,7 +126,7 @@ const NewDealsPage = () => {
 
     setClaimingVoucherId(voucher.voucher_id);
     try {
-      const result = await claimMemberVoucher(voucher.voucher_id);
+      const result = await claimMemberVoucher(voucher.voucher_id, cognitoId);
 
       if (result.alreadyClaimed) {
         toast.info("This deal was already claimed.");
@@ -214,15 +220,22 @@ const NewDealsPage = () => {
             <p className="text-sm text-muted-foreground">Exclusive deals from providers in your network</p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <Select value={selectedNetwork} onValueChange={setSelectedNetwork} disabled={!selectedNetwork}>
-              <SelectTrigger className="w-[240px] h-9 text-xs bg-background">
-                <Globe className="h-3.5 w-3.5 mr-1.5 text-primary shrink-0" />
-                <SelectValue placeholder="Your network" />
-              </SelectTrigger>
-              <SelectContent className="bg-background z-50">
-                <SelectItem value={selectedNetwork}>{memberName || "My Network"}</SelectItem>
-              </SelectContent>
-            </Select>
+            {selectedNetwork ? (
+              <Select value={selectedNetwork} onValueChange={setSelectedNetwork} disabled>
+                <SelectTrigger className="w-[240px] h-9 text-xs bg-background">
+                  <Globe className="h-3.5 w-3.5 mr-1.5 text-primary shrink-0" />
+                  <SelectValue placeholder="Your network" />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value={selectedNetwork}>{memberName || "My Network"}</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border border-border w-[240px] h-9">
+                <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="text-xs text-muted-foreground truncate">{memberName || "My Network"}</span>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
               <Store className="h-4 w-4 text-primary" />
@@ -231,6 +244,14 @@ const NewDealsPage = () => {
             <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
           </div>
         </div>
+
+        {loadError && (
+          <Card className="border-destructive/20 bg-destructive/5">
+            <CardContent className="py-4 text-sm text-destructive">
+              {loadError}
+            </CardContent>
+          </Card>
+        )}
 
         {sortedDeals.length > 0 ? (
           viewMode === "grid" ? (

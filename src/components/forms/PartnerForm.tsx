@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { createCognitoUser } from "@/api/cognito";
 import { registerPartner } from "@/api/registration";
 import { PARTNER_SUBSCRIPTION_PLAN_LIST } from "@/config/subscriptionPlans";
+import { STATE_OPTIONS } from "@/config/usStates";
 
 const ORGANIZATION_CATEGORIES = [
   { label: "Educational", value: "education" },
@@ -20,14 +21,6 @@ const ORGANIZATION_CATEGORIES = [
   { label: "Corporate", value: "corporate" },
   { label: "Community", value: "community" },
   { label: "Other", value: "other" }
-];
-
-const STATE_OPTIONS = [
-  { label: "Alabama", value: "AL" }, { label: "Alaska", value: "AK" },
-  { label: "Arizona", value: "AZ" }, { label: "Arkansas", value: "AR" },
-  { label: "California", value: "CA" }, { label: "Colorado", value: "CO" },
-  { label: "Connecticut", value: "CT" }, { label: "Delaware", value: "DE" },
-  { label: "Florida", value: "FL" }, { label: "Georgia", value: "GA" },
 ];
 
 const PartnerForm = () => {

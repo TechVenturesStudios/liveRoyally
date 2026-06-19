@@ -1,4 +1,5 @@
 import type { MemberVoucherRecord } from "@/utils/memberVoucherFormatting";
+import { buildDashboardQuery } from "@/utils/dashboardContext";
 
 type MemberNetworkResponse = {
   member: {
@@ -20,22 +21,22 @@ async function readJsonOrThrow(response: Response, fallbackMessage: string) {
   return data;
 }
 
-export async function fetchMemberNetworkVouchers() {
-  const response = await fetch("/api/member-network-vouchers", {
+export async function fetchMemberNetworkVouchers(cognitoId?: string) {
+  const response = await fetch(`/api/member-network-vouchers${buildDashboardQuery(cognitoId)}`, {
     credentials: "include",
   });
   return (await readJsonOrThrow(response, "Failed to fetch member network vouchers")) as MemberNetworkResponse;
 }
 
-export async function fetchMemberVouchers() {
-  const response = await fetch("/api/member-vouchers", {
+export async function fetchMemberVouchers(cognitoId?: string) {
+  const response = await fetch(`/api/member-vouchers${buildDashboardQuery(cognitoId)}`, {
     credentials: "include",
   });
   return (await readJsonOrThrow(response, "Failed to fetch member vouchers")) as MemberNetworkResponse;
 }
 
-export async function claimMemberVoucher(voucherId: string) {
-  const response = await fetch("/api/claim-member-voucher", {
+export async function claimMemberVoucher(voucherId: string, cognitoId?: string) {
+  const response = await fetch(`/api/claim-member-voucher${buildDashboardQuery(cognitoId)}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
