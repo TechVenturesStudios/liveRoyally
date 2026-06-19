@@ -21,6 +21,7 @@ COPY . .
 ARG DATABASE_URL="postgresql://user:password@localhost:5432/postgres?schema=public"
 ENV DATABASE_URL=${DATABASE_URL}
 
+RUN npx prisma generate
 RUN npm run build
 
 FROM base AS runner
