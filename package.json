@@ -15,7 +15,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
-    "network-codes:import": "node scripts/import-network-codes.mjs"
+    "network-codes:import": "node scripts/import-network-codes.mjs",
+    "docker:publish": "powershell -ExecutionPolicy Bypass -File scripts/publish-ecr.ps1"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"
