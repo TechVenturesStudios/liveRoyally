@@ -8,7 +8,7 @@ export type MemberVoucherRecord = {
   status: string | null;
   created_at: string | Date | null;
   promo_item: string | null;
-  member_price: number | null;
+  member_price: string | number | null;
   max_redemptions: number | null;
   event_title: string | null;
   event_start_date?: string | Date | null;
@@ -38,6 +38,8 @@ const formatDollarValue = (value: string | number | null | undefined) => {
 
   return numericValue % 1 === 0 ? `$${numericValue.toFixed(0)}` : `$${numericValue.toFixed(2)}`;
 };
+
+export const formatVoucherMemberPrice = (value: string | number | null | undefined) => formatDollarValue(value);
 
 const formatPercentValue = (value: string | number | null | undefined) => {
   if (value === null || value === undefined || value === "") {
@@ -71,7 +73,7 @@ export const getVoucherDiscountLabel = (voucher: MemberVoucherRecord) => {
       return "Free";
     default:
       return voucher.member_price !== null && voucher.member_price !== undefined
-        ? formatDollarValue(voucher.member_price) || "Special"
+        ? formatVoucherMemberPrice(voucher.member_price) || "Special"
         : "Special";
   }
 };
@@ -119,7 +121,7 @@ export const getVoucherDescription = (voucher: MemberVoucherRecord) => {
   }
 
   if (voucher.member_price !== null && voucher.member_price !== undefined) {
-    return `Member pricing starts at ${formatDollarValue(voucher.member_price) || "a special rate"} at ${providerName}.`;
+    return `Member pricing starts at ${formatVoucherMemberPrice(voucher.member_price) || "a special rate"} at ${providerName}.`;
   }
 
   return `Exclusive offer available from ${providerName}.`;

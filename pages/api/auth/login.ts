@@ -32,9 +32,14 @@ type LoginResponse =
       error: string;
     };
 
-function authCookie(name: string, value: string, maxAge: number) {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${name}=${encodeURIComponent(value)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${secure}`;
+function isSecureRequest(req: NextApiRequest) {
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
+  return forwardedProto === "https";
+}
+
+function authCookie(name: string, value: string, maxAge: number, secure: boolean) {
+  const secureFlag = secure ? "; Secure" : "";
+  return `${name}=${encodeURIComponent(value)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${secureFlag}`;
 }
 
 function cognitoAuthErrorMessage(error: unknown) {
@@ -62,7 +67,8 @@ async function signInWithAuthResult(
     AccessToken?: string;
     RefreshToken?: string;
   },
-  res: NextApiResponse<LoginResponse>
+  res: NextApiResponse<LoginResponse>,
+  secure: boolean
 ) {
   const idToken = authResult.IdToken;
   const accessToken = authResult.AccessToken;
@@ -99,12 +105,12 @@ async function signInWithAuthResult(
 
   const cookieMaxAge = 60 * 60;
   const cookies = [
-    authCookie("lr_id_token", idToken, cookieMaxAge),
-    authCookie("lr_access_token", accessToken, cookieMaxAge),
+    authCookie("lr_id_token", idToken, cookieMaxAge, secure),
+    authCookie("lr_access_token", accessToken, cookieMaxAge, secure),
   ];
 
   if (refreshToken) {
-    cookies.push(authCookie("lr_refresh_token", refreshToken, 60 * 60 * 24 * 30));
+    cookies.push(authCookie("lr_refresh_token", refreshToken, 60 * 60 * 24 * 30, secure));
   }
 
   res.setHeader("Set-Cookie", cookies);
@@ -131,6 +137,7 @@ export default async function handler(
   }
 
   try {
+    const secure = isSecureRequest(req);
     const userPoolId = process.env.COGNITO_USER_POOL_ID;
     const clientId = process.env.COGNITO_CLIENT_ID;
 
@@ -170,7 +177,7 @@ export default async function handler(
         });
       }
 
-      return signInWithAuthResult(challenge.AuthenticationResult ?? {}, res);
+        return signInWithAuthResult(challenge.AuthenticationResult ?? {}, res, secure);
     }
 
     const auth = await cognito.send(
@@ -198,7 +205,7 @@ export default async function handler(
       });
     }
 
-    return signInWithAuthResult(auth.AuthenticationResult ?? {}, res);
+    return signInWithAuthResult(auth.AuthenticationResult ?? {}, res, secure);
   } catch (error) {
     console.error(error);
 

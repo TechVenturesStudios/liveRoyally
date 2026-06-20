@@ -1,12 +1,20 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Crown, ChevronLeft, ChevronRight, User, SwitchCamera } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, User, SwitchCamera } from "lucide-react";
 import { User as UserType } from "@/utils/userStorage";
 import { UserType as UserTypeEnum } from "@/types/user";
 import { getNavItems } from "@/utils/navigationItems";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { fetchRepresentativeAssignments, type RepresentativeAssignment } from "@/api/authorizedRepresentatives";
 import { getDashboardContext, getEffectiveDashboardType, setDashboardContext } from "@/utils/dashboardContext";
 
@@ -24,6 +32,7 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
   const currentContext = getDashboardContext();
   const effectiveType = getEffectiveDashboardType(user?.userType as any) || user?.userType;
   const navItems = getNavItems(effectiveType as UserTypeEnum);
+  const currentAssignment = assignments.find((assignment) => assignment.assignmentId === currentContext?.assignmentId);
 
   useEffect(() => {
     if (user?.userType !== "member") {
@@ -58,22 +67,7 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
     return () => {
       isMounted = false;
     };
-  }, [user?.userType]);
-
-  const selectionOptions = useMemo(() => {
-    if (user?.userType !== "member") {
-      return [];
-    }
-
-    return [
-      { value: "member", label: "Member View", description: "Your personal dashboard" },
-      ...assignments.map((assignment) => ({
-        value: assignment.assignmentId,
-        label: `${assignment.representedUserType === "partner" ? "Partner" : "Provider"} View`,
-        description: assignment.representedName,
-      })),
-    ];
-  }, [assignments, user?.userType]);
+  }, [currentContext?.assignmentId, currentContext?.mode, user?.userType]);
 
   const handleViewChange = (value: string) => {
     if (value === "member") {
@@ -94,6 +88,8 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
 
     navigate(assignment.representedUserType === "partner" ? "/dashboard/crm" : "/dashboard/providers");
   };
+
+  const currentViewValue = currentContext?.mode === "rep" && currentContext.assignmentId ? currentContext.assignmentId : "member";
 
   return (
     <aside
@@ -137,30 +133,55 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
           )}
         </div>
 
-        {!collapsed && user?.userType === "member" && selectionOptions.length > 1 && (
+        {!collapsed && user?.userType === "member" && assignments.length > 0 && (
           <div className="px-2 pb-2">
             <div className="rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm">
               <div className="flex items-center gap-2 text-[11px] font-medium text-gray-500 mb-2">
                 <SwitchCamera className="h-3.5 w-3.5" />
                 Switch View
               </div>
-              <Select value={currentContext?.mode === "rep" ? currentContext.assignmentId : "member"} onValueChange={handleViewChange}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Member View" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectionOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-full justify-between gap-2 border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <SwitchCamera className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">
+                        {currentContext?.mode === "rep" && currentAssignment
+                          ? `${currentAssignment.representedUserType === "partner" ? "Partner" : "Provider"} View`
+                          : "Member View"}
+                      </span>
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  <DropdownMenuLabel>Switch View</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup value={currentViewValue} onValueChange={handleViewChange}>
+                    <DropdownMenuRadioItem value="member">
                       <div className="flex flex-col items-start">
-                        <span>{option.label}</span>
-                        {option.value !== "member" && (
-                          <span className="text-[10px] text-muted-foreground">{option.description}</span>
-                        )}
+                        <span>Member View</span>
+                        <span className="text-[10px] text-muted-foreground">Your personal dashboard</span>
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </DropdownMenuRadioItem>
+                    {assignments.map((assignment) => (
+                      <DropdownMenuRadioItem key={assignment.assignmentId} value={assignment.assignmentId}>
+                        <div className="flex flex-col items-start">
+                          <span>
+                            {assignment.representedUserType === "partner" ? "Partner" : "Provider"} View
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">{assignment.representedName}</span>
+                        </div>
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         )}

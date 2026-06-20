@@ -24,6 +24,7 @@ import {
   getVoucherNetworkLabel,
   getVoucherStatusLabel,
   getVoucherTitle,
+  formatVoucherMemberPrice,
 } from "@/utils/memberVoucherFormatting";
 
 type SortKey = "title" | "provider" | "category" | "discount" | "expiry" | "network";
@@ -190,7 +191,7 @@ const NewDealsPage = () => {
       },
       { label: "Status", value: getVoucherStatusLabel(voucher.status) },
       { label: "Claimed At", value: voucher.claimed_at ? new Date(voucher.claimed_at).toLocaleString() : "Unknown" },
-      { label: "Member Price", value: voucher.member_price !== null ? `$${voucher.member_price.toFixed(2)}` : "Not set" },
+       { label: "Member Price", value: formatVoucherMemberPrice(voucher.member_price) || "Not set" },
       { label: "Max Redemptions", value: voucher.max_redemptions ?? "Unlimited" },
       { label: "Event", value: voucher.event_title || "No event linked" },
       { label: "Provider Phone", value: voucher.provider_phone || "Not provided" },
