@@ -2,6 +2,7 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { QRCodeSVG } from 'qrcode.react';
+import { buildMemberVoucherQrCodeData } from "../../../lib/qr-code";
 
 interface QRCodeProps {
   voucherId: string;
@@ -9,11 +10,17 @@ interface QRCodeProps {
   useCaseId: string;
   networkId: string;
   userId: string;
+  qrCodeData?: string;
 }
 
-const QRCode = ({ voucherId, eventId, useCaseId, networkId, userId }: QRCodeProps) => {
-  // Generate a QR code based on these parameters
-  const qrCodeData = `${voucherId}-${eventId}-${useCaseId}-${networkId}-${userId}`;
+const QRCode = ({ voucherId, eventId, useCaseId, networkId, userId, qrCodeData }: QRCodeProps) => {
+  const qrValue = qrCodeData || buildMemberVoucherQrCodeData({
+    voucherId,
+    eventId,
+    useCaseId,
+    networkId,
+    userId,
+  });
   
   return (
     <Card className="p-6 max-w-xs mx-auto">
@@ -24,7 +31,7 @@ const QRCode = ({ voucherId, eventId, useCaseId, networkId, userId }: QRCodeProp
         {/* Real QR code */}
         <div className="w-48 h-48 mx-auto flex items-center justify-center mb-4 p-2 border-4 border-royal">
           <QRCodeSVG 
-            value={qrCodeData} 
+            value={qrValue} 
             size={176}
             level="H"
             includeMargin={false}

@@ -74,6 +74,7 @@ export default async function handler(
         v.promo_item,
         v.member_price,
         v.max_redemptions,
+        mv.qr_code_payload,
         mv.created_at AS claimed_at,
         e.title AS event_title,
         e.start_date AS event_start_date,

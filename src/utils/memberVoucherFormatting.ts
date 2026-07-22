@@ -23,6 +23,7 @@ export type MemberVoucherRecord = {
   provider_email: string | null;
   provider_network_name: string | null;
   provider_network_code: string | null;
+  qr_code_payload?: string | null;
   claimed_at?: string | Date | null;
 };
 

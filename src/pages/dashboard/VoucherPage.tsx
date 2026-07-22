@@ -259,6 +259,7 @@ const VoucherPage = () => {
                 useCaseId={String(qrVoucher.type || "N")}
                 networkId={qrVoucher.provider_network_code || "NETWORK"}
                 userId={memberId}
+                qrCodeData={qrVoucher.qr_code_payload || undefined}
               />
             </div>
           </DialogContent>

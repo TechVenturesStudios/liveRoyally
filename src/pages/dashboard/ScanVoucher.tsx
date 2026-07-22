@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, CheckCircle, XCircle, Database, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
+import { parseMemberVoucherQrCodeData } from "../../../lib/qr-code";
 
 const ScanVoucher = () => {
   const [voucherCode, setVoucherCode] = useState("");
@@ -16,11 +17,16 @@ const ScanVoucher = () => {
     e.preventDefault();
     
     // In a real app, we would validate the QR code against a database
-    // For demo purposes, we'll simulate validation with a simple check
-    const isValid = voucherCode.includes("-") && voucherCode.split("-").length >= 4;
+    // For demo purposes, we'll simulate validation with a simple payload parser
+    const parsed = parseMemberVoucherQrCodeData(voucherCode);
+    const isValid = !!parsed;
     
     if (isValid) {
-      const [voucherId, eventId, useCaseId, networkId, userId] = voucherCode.split("-");
+      const voucherId = parsed!.voucherId;
+      const eventId = parsed!.eventId;
+      const useCaseId = parsed!.useCaseId;
+      const networkId = parsed!.networkId;
+      const userId = parsed!.userId;
       
       setScanResult("success");
       setVoucherDetails({

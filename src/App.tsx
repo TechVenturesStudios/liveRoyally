@@ -37,6 +37,7 @@ import Waitlist from "./pages/Waitlist";
 import ProviderPendingEventsPage from "./pages/dashboard/ProviderPendingEventsPage";
 import ProviderUpcomingEventsPage from "./pages/dashboard/ProviderUpcomingEventsPage";
 import ProviderCRMDashboard from "./pages/dashboard/ProviderCRMDashboard";
+import ProviderScanQrPage from "./pages/dashboard/ProviderScanQrPage";
 import PartnerPendingEventsPage from "./pages/dashboard/PartnerPendingEventsPage";
 import PartnerPublishedEventsPage from "./pages/dashboard/PartnerPublishedEventsPage";
 import PartnerCreateEventPage from "./pages/dashboard/PartnerCreateEventPage";
@@ -101,6 +102,7 @@ const App = () => (
           <Route path="/dashboard/providers/events" element={<RoleRoute allowed={["provider"]}><ProviderEventsPage /></RoleRoute>} />
           <Route path="/dashboard/pending-events" element={<RoleRoute allowed={["provider"]}><ProviderPendingEventsPage /></RoleRoute>} />
           <Route path="/dashboard/upcoming-events" element={<RoleRoute allowed={["provider"]}><ProviderUpcomingEventsPage /></RoleRoute>} />
+          <Route path="/dashboard/providers/scan" element={<RoleRoute allowed={["provider"]}><ProviderScanQrPage /></RoleRoute>} />
           <Route path="/dashboard/providers/representatives" element={<RoleRoute allowed={["provider"]}><ProviderRepresentativesPage /></RoleRoute>} />
 
           {/* ── Partner-only routes ── */}

@@ -1,12 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { getCognitoIdFromRequest } from "../../lib/api-auth";
+import { buildMemberVoucherQrCodeData } from "../../lib/qr-code";
 
 type ClaimMemberVoucherResponse =
   | {
       success: boolean;
       alreadyClaimed?: boolean;
       voucherId: string;
+      qrCodeData?: string;
     }
   | {
       error: string;
@@ -60,9 +62,18 @@ export default async function handler(
       return res.status(400).json({ error: "voucherId is required" });
     }
 
-    const voucher = await prisma.$queryRaw<Array<{ voucher_id: string; provider_network_code: string | null; expiration_date: Date | null; status: string | null }>>`
+    const voucher = await prisma.$queryRaw<Array<{
+      voucher_id: string;
+      event_id: string | null;
+      type: string | null;
+      provider_network_code: string | null;
+      expiration_date: Date | null;
+      status: string | null;
+    }>>`
       SELECT
         v.voucher_id,
+        v.event_id,
+        v.type,
         pp.network_code AS provider_network_code,
         v.expiration_date,
         v.status
@@ -82,6 +93,10 @@ export default async function handler(
       return res.status(403).json({ error: "Voucher does not belong to your network" });
     }
 
+    if (!voucherRecord.event_id) {
+      return res.status(400).json({ error: "Voucher is missing an event" });
+    }
+
     if (String(voucherRecord.status || "").trim().toLowerCase() !== "active") {
       return res.status(400).json({ error: "This voucher is not active" });
     }
@@ -89,6 +104,21 @@ export default async function handler(
     if (voucherRecord.expiration_date && voucherRecord.expiration_date < new Date()) {
       return res.status(400).json({ error: "This voucher has expired" });
     }
+
+    const qrCodeData = buildMemberVoucherQrCodeData({
+      voucherId,
+      eventId: voucherRecord.event_id,
+      useCaseId: String(voucherRecord.type || "N"),
+      networkId: voucherRecord.provider_network_code || member.member_profiles.network_code || "NETWORK",
+      userId: member.user_id,
+    });
+
+    await prisma.$executeRaw`
+      INSERT INTO member_vouchers (member_id, voucher_id, qr_code_payload)
+      VALUES (${member.user_id}::uuid, ${voucherId}, ${qrCodeData})
+      ON CONFLICT (member_id, voucher_id)
+      DO UPDATE SET qr_code_payload = EXCLUDED.qr_code_payload;
+    `;
 
     const existingClaim = await prisma.member_vouchers.findFirst({
       where: {
@@ -106,19 +136,14 @@ export default async function handler(
         success: true,
         alreadyClaimed: true,
         voucherId,
+        qrCodeData,
       });
     }
-
-    await prisma.member_vouchers.create({
-      data: {
-        member_id: member.user_id,
-        voucher_id: voucherId,
-      },
-    });
 
     return res.status(200).json({
       success: true,
       voucherId,
+      qrCodeData,
     });
   } catch (error) {
     console.error("claim-member-voucher error:", error);

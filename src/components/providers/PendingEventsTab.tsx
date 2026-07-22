@@ -30,7 +30,7 @@ const PendingEventsTab = ({ events, sortOrder, toggleSortOrder }: PendingEventsT
   const navigate = useNavigate();
 
   const handleGoToVouchers = () => {
-    navigate("/dashboard/vouchers");
+    navigate("/dashboard/providers/scan");
   };
 
   return (

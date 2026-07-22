@@ -49,5 +49,6 @@ export async function claimMemberVoucher(voucherId: string, cognitoId?: string) 
     success: boolean;
     alreadyClaimed?: boolean;
     voucherId: string;
+    qrCodeData?: string;
   };
 }

@@ -102,7 +102,7 @@ const navigationItemsByType: NavItemsByUserType = {
       name: "Scan QR Code",
       shortName: "Scan",
       icon: ScanLine,
-      path: "/dashboard/vouchers",
+      path: "/dashboard/providers/scan",
     },
   ],
   

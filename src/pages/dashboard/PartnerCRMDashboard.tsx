@@ -274,7 +274,7 @@ const PartnerCRMDashboard = () => {
       </div>
 
       <Tabs value={activeTab} className="w-full" onValueChange={(value) => setActiveTab(value)}>
-        <TabsList className="hidden sm:grid grid-cols-4 mb-6 h-auto">
+        <TabsList className="hidden sm:grid grid-cols-3 mb-6 h-auto">
           <TabsTrigger value="campaigns" className="flex items-center gap-1.5 text-sm">
             <BarChart3 className="h-4 w-4" />
             <span>Event Info</span>
@@ -287,10 +287,10 @@ const PartnerCRMDashboard = () => {
             <Users className="h-4 w-4" />
             <span>Providers</span>
           </TabsTrigger>
-          <TabsTrigger value="messaging" className="flex items-center gap-1.5 text-sm">
+          {/* <TabsTrigger value="messaging" className="flex items-center gap-1.5 text-sm">
             <MessageSquare className="h-4 w-4" />
             <span>Messaging</span>
-          </TabsTrigger>
+          </TabsTrigger> */}
         </TabsList>
 
         <MobileFolderTabs
@@ -298,7 +298,7 @@ const PartnerCRMDashboard = () => {
             { value: "campaigns", label: "Events", icon: BarChart3 },
             { value: "event-analytics", label: "Analytics", icon: CalendarCheck },
             { value: "accounts", label: "Providers", icon: Users },
-            { value: "messaging", label: "Messages", icon: MessageSquare },
+            // { value: "messaging", label: "Messages", icon: MessageSquare },
           ]}
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -316,9 +316,9 @@ const PartnerCRMDashboard = () => {
           <AccountManagementTab providers={providers} loading={providersLoading} />
         </TabsContent>
 
-        <TabsContent value="messaging">
+        {/* <TabsContent value="messaging">
           <MessagingTab />
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
 
       <Dialog open={showOpenCampaigns} onOpenChange={setShowOpenCampaigns}>
