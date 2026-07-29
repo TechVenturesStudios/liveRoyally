@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { createEvent } from "@/api/events";
 import { fetchPartnerProviders, PartnerProvider } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
+import { getDashboardContext } from "@/utils/dashboardContext";
 
 const PartnerCreateEventPage = () => {
   const navigate = useNavigate();
@@ -117,7 +118,7 @@ const PartnerCreateEventPage = () => {
     }
 
     const user = getUserFromStorage();
-    const partnerId = user?.id;
+    const partnerId = getDashboardContext()?.targetId ?? user?.id;
 
     if (!partnerId) {
       toast({ title: "Event creation failed", description: "Could not find the current partner.", variant: "destructive" });

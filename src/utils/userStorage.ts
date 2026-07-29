@@ -1,5 +1,6 @@
 // src/utils/userStorage.ts
 import { UserType } from "@/types/user";
+import { clearDashboardContext } from "@/utils/dashboardContext";
 
 export interface User {
   id: string;
@@ -70,6 +71,7 @@ export const saveUserToStorage = (user: User) => {
   localStorage.removeItem("idToken");
   localStorage.removeItem("accessToken");
   localStorage.removeItem("user");
+  clearDashboardContext();
   sessionStorage.setItem("user", JSON.stringify(user));
 };
 
@@ -79,4 +81,5 @@ export const removeUserFromStorage = () => {
   localStorage.removeItem("idToken");
   localStorage.removeItem("accessToken");
   localStorage.removeItem("user");
+  clearDashboardContext();
 };

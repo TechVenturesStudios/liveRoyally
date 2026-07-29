@@ -3,16 +3,16 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import FormField from "@/components/ui/FormField";
 import { Button } from "@/components/ui/button";
-import { PartnerUser, USER_TYPES } from "@/types/user";
+import { PartnerUser } from "@/types/user";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Check, ArrowLeft, CreditCard, Loader2, Shield } from "lucide-react";
+import { Check, ArrowLeft } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { createCognitoUser } from "@/api/cognito";
 import { registerPartner } from "@/api/registration";
 import { PARTNER_SUBSCRIPTION_PLAN_LIST } from "@/config/subscriptionPlans";
 import { STATE_OPTIONS } from "@/config/usStates";
+import SquareCardCheckout from "@/components/forms/SquareCardCheckout";
 
 const ORGANIZATION_CATEGORIES = [
   { label: "Educational", value: "education" },
@@ -102,28 +102,25 @@ const PartnerForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!(e.currentTarget as HTMLFormElement).checkValidity()) {
+      (e.currentTarget as HTMLFormElement).reportValidity();
+      return;
+    }
+
     if (!membershipPlan) return;
+    if (!formData.termsAccepted) return;
     setShowCheckout(true);
   };
 
-  const handlePay = async () => {
+  const handlePay = async (paymentToken: string) => {
     setIsSubmitting(true);
     setSubmitError("");
 
     try {
-      const cognitoUser = await createCognitoUser({
-        email: formData.organizationEmail,
-        firstName: formData.agentFirstName,
-        lastName: formData.agentLastName,
-        phoneNumber: formData.agentPhone,
-        userType: USER_TYPES.partner,
-      });
-
       await registerPartner({
-        cognitoSub: cognitoUser.cognitoSub,
         ...formData,
-        userType: USER_TYPES.partner,
         membershipPlan,
+        paymentToken,
       });
 
       navigate("/dashboard");
@@ -192,11 +189,11 @@ const PartnerForm = () => {
         </div>
 
         {/* Cost Breakdown */}
-        <div className="rounded-lg border p-5 mb-8 space-y-3">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Cost Breakdown</h3>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{selectedPlan.label} Membership (monthly)</span>
-            <span className="text-foreground">${subtotal.toFixed(2)}</span>
+          <div className="rounded-lg border p-5 mb-8 space-y-3">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Cost Breakdown</h3>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{selectedPlan.label} Membership (monthly)</span>
+              <span className="text-foreground">${subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Platform fee</span>
@@ -210,24 +207,23 @@ const PartnerForm = () => {
           <p className="text-[11px] text-muted-foreground">Billed monthly. Cancel anytime.</p>
         </div>
 
-        {/* Pay Button */}
-        <div className="space-y-4">
-          <Button
-            onClick={handlePay}
-            disabled={isSubmitting}
-            className="w-full bg-royal hover:bg-royal-dark text-white h-12 text-base font-semibold gap-2"
-          >
-            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
-            {isSubmitting ? "Creating account..." : `Pay $${total.toFixed(2)} & Create Account`}
-          </Button>
-          {submitError && (
-            <p className="text-sm text-destructive text-center">{submitError}</p>
-          )}
-          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <Shield className="h-3.5 w-3.5" />
-            Secure payment — your information is encrypted
-          </div>
-        </div>
+        <SquareCardCheckout
+          total={total}
+          isSubmitting={isSubmitting}
+          billingContact={{
+            givenName: String(formData.agentFirstName || "").trim(),
+            familyName: String(formData.agentLastName || "").trim(),
+            email: String(formData.organizationEmail || "").trim(),
+            phone: String(formData.organizationPhone || formData.agentPhone || "").trim(),
+            addressLines: [String(formData.organizationAddress || "").trim()].filter(Boolean),
+            city: String(formData.organizationCity || "").trim(),
+            state: String(formData.organizationState || "").trim(),
+            countryCode: "US",
+            postalCode: String(formData.organizationZip || "").replace(/\D/g, "").slice(0, 5),
+          }}
+          onSubmitToken={handlePay}
+          submitError={submitError}
+        />
       </Card>
     );
   }

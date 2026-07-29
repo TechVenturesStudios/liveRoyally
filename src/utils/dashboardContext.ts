@@ -6,6 +6,8 @@ export interface DashboardContext {
   assignmentId?: string;
   targetType?: DashboardContextTarget;
   targetLabel?: string;
+  targetId?: string;
+  ownerCognitoId?: string;
 }
 
 const DASHBOARD_CONTEXT_KEY = "dashboard-context";
@@ -34,10 +36,20 @@ export const setDashboardContext = (context: DashboardContext | null) => {
   sessionStorage.setItem(DASHBOARD_CONTEXT_KEY, JSON.stringify(context));
 };
 
-export const getEffectiveDashboardType = (defaultType?: DashboardContextTarget): DashboardContextTarget | undefined => {
+export const clearDashboardContext = () => setDashboardContext(null);
+
+export const getEffectiveDashboardType = (
+  defaultType?: DashboardContextTarget,
+  currentCognitoId?: string
+): DashboardContextTarget | undefined => {
   const context = getDashboardContext();
 
-  if (defaultType === "member" && context?.mode === "rep" && context.targetType) {
+  if (
+    context?.mode === "rep" &&
+    context.targetType &&
+    currentCognitoId &&
+    context.ownerCognitoId === currentCognitoId
+  ) {
     return context.targetType;
   }
 

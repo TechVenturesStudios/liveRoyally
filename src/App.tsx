@@ -60,7 +60,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 const RoleRoute = ({ children, allowed }: { children: JSX.Element; allowed: UserType[] }) => {
   const user = getUserFromStorage();
   if (!user) return <Navigate to="/login" replace />;
-  const effectiveType = getEffectiveDashboardType(user.userType as any) || user.userType;
+  const effectiveType = getEffectiveDashboardType(user.userType as any, user.cognitoId) || user.userType;
   if (!allowed.includes(effectiveType as UserType)) {
     return <Navigate to="/dashboard" replace />;
   }

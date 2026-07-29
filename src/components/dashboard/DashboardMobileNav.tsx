@@ -30,12 +30,12 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
   const location = useLocation();
   const [assignments, setAssignments] = useState<RepresentativeAssignment[]>([]);
   const currentContext = getDashboardContext();
-  const effectiveType = getEffectiveDashboardType(user?.userType as any) || user?.userType;
+  const effectiveType = getEffectiveDashboardType(user?.userType as any, user?.cognitoId) || user?.userType;
   const navItems = getNavItems(effectiveType as UserTypeEnum);
   const currentAssignment = assignments.find((assignment) => assignment.assignmentId === currentContext?.assignmentId);
 
   useEffect(() => {
-    if (user?.userType !== "member") {
+    if (!user) {
       setAssignments([]);
       return;
     }
@@ -82,8 +82,10 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
     setDashboardContext({
       mode: "rep",
       assignmentId: assignment.assignmentId,
+      targetId: assignment.representedUserId,
       targetType: assignment.representedUserType,
       targetLabel: assignment.representedName,
+      ownerCognitoId: user.cognitoId,
     });
 
     navigate(assignment.representedUserType === "partner" ? "/dashboard/crm" : "/dashboard/providers");
@@ -119,12 +121,14 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-900">{user?.displayId || "User ID"}</p>
-                    <p className="text-xs capitalize text-gray-500">{effectiveType || "Member"}</p>
+                    <p className="text-xs capitalize text-gray-500">
+                      {effectiveType ? effectiveType : "Member"}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {user?.userType === "member" && assignments.length > 0 && (
+              {assignments.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
                     <SwitchCamera className="h-4 w-4" />
@@ -139,8 +143,8 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
                         onClick={() => handleViewChange("member")}
                       >
                         <span className="flex flex-col items-start">
-                          <span>Member View</span>
-                          <span className="text-[11px] text-muted-foreground">Your personal dashboard</span>
+                          <span>Primary View</span>
+                          <span className="text-[11px] text-muted-foreground">Your own dashboard</span>
                         </span>
                       </Button>
                     </SheetClose>

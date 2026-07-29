@@ -30,12 +30,12 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
   const location = useLocation();
   const [assignments, setAssignments] = useState<RepresentativeAssignment[]>([]);
   const currentContext = getDashboardContext();
-  const effectiveType = getEffectiveDashboardType(user?.userType as any) || user?.userType;
+  const effectiveType = getEffectiveDashboardType(user?.userType as any, user?.cognitoId) || user?.userType;
   const navItems = getNavItems(effectiveType as UserTypeEnum);
   const currentAssignment = assignments.find((assignment) => assignment.assignmentId === currentContext?.assignmentId);
 
   useEffect(() => {
-    if (user?.userType !== "member") {
+    if (!user) {
       setAssignments([]);
       return;
     }
@@ -82,8 +82,10 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
     setDashboardContext({
       mode: "rep",
       assignmentId: assignment.assignmentId,
+      targetId: assignment.representedUserId,
       targetType: assignment.representedUserType,
       targetLabel: assignment.representedName,
+      ownerCognitoId: user.cognitoId,
     });
 
     navigate(assignment.representedUserType === "partner" ? "/dashboard/crm" : "/dashboard/providers");
@@ -127,13 +129,13 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
             <div className="overflow-hidden">
               <p className="text-sm font-semibold truncate">{user?.displayId || "User ID"}</p>
               <p className="text-xs text-gray-500 capitalize">
-                {effectiveType || "Member"}
+                {effectiveType ? effectiveType.charAt(0).toUpperCase() + effectiveType.slice(1) : "Member"}
               </p>
             </div>
           )}
         </div>
 
-        {!collapsed && user?.userType === "member" && assignments.length > 0 && (
+        {!collapsed && assignments.length > 0 && (
           <div className="px-2 pb-2">
             <div className="rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm">
               <div className="flex items-center gap-2 text-[11px] font-medium text-gray-500 mb-2">
@@ -165,8 +167,8 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
                   <DropdownMenuRadioGroup value={currentViewValue} onValueChange={handleViewChange}>
                     <DropdownMenuRadioItem value="member">
                       <div className="flex flex-col items-start">
-                        <span>Member View</span>
-                        <span className="text-[10px] text-muted-foreground">Your personal dashboard</span>
+                        <span>Primary View</span>
+                        <span className="text-[10px] text-muted-foreground">Your own dashboard</span>
                       </div>
                     </DropdownMenuRadioItem>
                     {assignments.map((assignment) => (

@@ -10,6 +10,7 @@ import { fetchMemberNetworkVouchers, fetchMemberVouchers } from "@/api/memberVou
 import { fetchMemberPurchaseHistory } from "@/api/memberPurchases";
 import { isVoucherExpired } from "@/utils/memberVoucherFormatting";
 import { getUserFromStorage } from "@/utils/userStorage";
+import { getEffectiveDashboardType } from "@/utils/dashboardContext";
 
 const Dashboard = () => {
   const { user, isLoading } = useAuthCheck();
@@ -77,8 +78,10 @@ const Dashboard = () => {
   if (isLoading) return <LoadingSpinner />;
   if (!user) return null;
 
+  const effectiveType = getEffectiveDashboardType(user.userType as any, user.cognitoId) || user.userType;
+
   // Each role gets redirected to their specific landing page
-  switch (user.userType) {
+  switch (effectiveType) {
     case "partner":
       return <Navigate to="/dashboard/crm" replace />;
     case "admin":

@@ -85,7 +85,7 @@ export async function resolveDashboardAccount(
 
   const assignmentId = String(req.query.actingAsAssignmentId || "").trim();
 
-  if (assignmentId && currentUser.user_type === "member") {
+  if (assignmentId) {
     const assignment = await prisma.$queryRaw<AssignmentLookupRow[]>`
       SELECT
         a.assignment_id,
@@ -124,4 +124,3 @@ export async function resolveDashboardAccount(
 
   return actingAccount;
 }
-

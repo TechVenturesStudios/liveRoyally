@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { completeNewPasswordChallenge, confirmPasswordReset, loginWithCognito } from "@/api/auth";
 import { saveUserToStorage } from "@/utils/userStorage";
+import { clearDashboardContext } from "@/utils/dashboardContext";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -59,6 +60,7 @@ const Login = () => {
       if (needsNewPassword) {
         const user = await completeNewPasswordChallenge(email, challengeSession, newPassword);
         saveUserToStorage(user);
+        clearDashboardContext();
         toast.success("Password updated", { description: "Welcome to Live Royally!" });
         navigate("/dashboard");
         return;
@@ -87,6 +89,7 @@ const Login = () => {
 
       const user = result.user;
       saveUserToStorage(user);
+      clearDashboardContext();
       toast.success("Login successful", { description: "Welcome back!" });
       navigate("/dashboard");
     } catch (err) {

@@ -61,8 +61,8 @@ export default async function handler(
       },
     });
 
-    if (!member || member.user_type !== "member") {
-      return res.status(403).json({ error: "Current user is not a member" });
+    if (!member) {
+      return res.status(404).json({ error: "Current user not found" });
     }
 
     const assignments = await prisma.$queryRaw<
@@ -107,4 +107,3 @@ export default async function handler(
     });
   }
 }
-

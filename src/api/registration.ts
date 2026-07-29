@@ -54,5 +54,8 @@ export async function registerPartner(input: Record<string, unknown>) {
     displayId: string;
     partnerCode: string;
     subscriptionId: string;
+    squareCustomerId: string;
+    squareCardId: string;
+    squareSubscriptionId: string;
   };
 }
