@@ -32,6 +32,11 @@ type MyProvidersResponse =
         networkCode: string | null;
       };
       providers: ProviderEntry[];
+      subscription: {
+        status: string | null;
+        maxProviders: number | null;
+        currentProviders: number;
+      };
     }
   | {
       error: string;
@@ -108,6 +113,18 @@ export default async function handler(
       },
     });
 
+    const activeSubscription = await prisma.partner_subscriptions.findFirst({
+      where: {
+        partner_id: account.actingUserId,
+        status: "active",
+      },
+      orderBy: { created_at: "desc" },
+      select: {
+        status: true,
+        max_providers: true,
+      },
+    });
+
     const providers = await prisma.provider_profiles.findMany({
       where: {
         partner_id: account.actingUserId,
@@ -175,6 +192,11 @@ export default async function handler(
         createdAt: provider.created_at,
         partnerId: provider.partner_id,
       })),
+      subscription: {
+        status: activeSubscription?.status ?? null,
+        maxProviders: activeSubscription?.max_providers ?? null,
+        currentProviders: providers.length,
+      },
     });
   } catch (error) {
     console.error("my-providers error:", error);

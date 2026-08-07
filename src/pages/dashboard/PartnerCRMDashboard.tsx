@@ -16,7 +16,7 @@ import CampaignManagementTab from "@/components/crm/CampaignManagementTab";
 import AccountManagementTab from "@/components/crm/AccountManagementTab";
 import EventAnalyticsTab from "@/components/crm/EventAnalyticsTab";
 import { fetchPartnerDashboardEvents, type PartnerDashboardEvent } from "@/api/partnerEvents";
-import { fetchPartnerProviders, PartnerProvider } from "@/api/myProviders";
+import { fetchPartnerProviders } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
 import MobileFolderTabs from "@/components/ui/MobileFolderTabs";
 
@@ -309,7 +309,7 @@ const PartnerCRMDashboard = () => {
         </TabsContent>
 
         <TabsContent value="event-analytics">
-          <EventAnalyticsTab />
+          <EventAnalyticsTab events={partnerEvents} loading={eventsLoading} />
         </TabsContent>
 
         <TabsContent value="accounts">
@@ -438,7 +438,7 @@ const PartnerCRMDashboard = () => {
                 {currentPlan.name} Plan
               </span>
               <span className="text-muted-foreground">
-                {providers.length} / {maxProviders === -1 ? "∞" : maxProviders}
+                {providers.length} / {maxProviders === -1 ? "unlimited" : maxProviders}
               </span>
             </div>
             {maxProviders !== -1 && <Progress value={usagePercent} className="h-1.5" />}

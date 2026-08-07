@@ -29,6 +29,7 @@ const ProviderForm = () => {
   const [partnerLookupStatus, setPartnerLookupStatus] = useState<"idle" | "loading" | "found" | "not_found">("idle");
   const [partnerInfo, setPartnerInfo] = useState<{ id: string; name: string; networkName: string; networkCode: string } | null>(null);
   const [cameFromInvite, setCameFromInvite] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const [formData, setFormData] = useState<Partial<ProviderUser>>({
     networkName: "",
@@ -117,24 +118,30 @@ const ProviderForm = () => {
     setFormData((prev) => ({ ...prev, [name]: checked }));
   };
 
-  const handleSubmit = async(e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const data1 = await createCognitoUser({
-      email: formData.businessEmail,
-      firstName: formData.agentFirstName,
-      lastName: formData.agentLastName,
-      phoneNumber: formData.businessPhone,
-      userType: USER_TYPES.provider,
-    });
+    setSubmitError("");
 
-    const cognitoSub = data1.cognitoSub;
-    await registerProvider({
-      cognitoSub,
-      partnerCode: partnerCode.trim().toUpperCase(),
-      ...formData,
-      userType: USER_TYPES.provider,
-    });
-    navigate("/dashboard");
+    try {
+      const data1 = await createCognitoUser({
+        email: formData.businessEmail,
+        firstName: formData.agentFirstName,
+        lastName: formData.agentLastName,
+        phoneNumber: formData.businessPhone,
+        userType: USER_TYPES.provider,
+      });
+
+      const cognitoSub = data1.cognitoSub;
+      await registerProvider({
+        cognitoSub,
+        partnerCode: partnerCode.trim().toUpperCase(),
+        ...formData,
+        userType: USER_TYPES.provider,
+      });
+      navigate("/dashboard");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Failed to create provider account");
+    }
   };
 
   return (
@@ -286,6 +293,13 @@ const ProviderForm = () => {
           <FormField label="Notifications" name="notificationEnabled" type="checkbox" placeholder="I want to receive email/text notifications" checked={formData.notificationEnabled} onCheckboxChange={handleCheckboxChange("notificationEnabled")} />
           <FormField label="Terms of Agreement" name="termsAccepted" type="checkbox" placeholder="I accept the Terms of Agreement" required checked={formData.termsAccepted} onCheckboxChange={handleCheckboxChange("termsAccepted")} />
         </div>
+
+        {submitError && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>{submitError}</span>
+          </div>
+        )}
         
         <div className="flex justify-end gap-4 pt-4">
           <Button type="button" variant="outline" onClick={() => navigate("/")} className="border-royal text-royal px-6">

@@ -3,6 +3,7 @@ import { randomInt } from "crypto";
 import { UserType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { getOrCreateRole } from "../../lib/roles";
+import { PARTNER_SUBSCRIPTION_PLANS } from "../../src/config/subscriptionPlans";
 
 type RegisterProviderResponse =
   | {
@@ -62,6 +63,53 @@ export default async function handler(
         throw new Error("A valid partner code is required");
       }
 
+      const activeSubscription = await tx.$queryRaw<
+        Array<{
+          subscription_id: string;
+          max_providers: number | null;
+        }>
+      >`
+        SELECT subscription_id, max_providers
+        FROM partner_subscriptions
+        WHERE partner_id = ${partner.user_id}::uuid
+          AND status = 'active'
+        ORDER BY created_at DESC
+        LIMIT 1
+        FOR UPDATE
+      `;
+
+      const subscription = activeSubscription[0] ?? null;
+
+      if (!subscription) {
+        const message = "Your account does not have an active subscription. Please renew or upgrade to add providers.";
+        const error = new Error(message);
+        (error as Error & { statusCode?: number }).statusCode = 403;
+        throw error;
+      }
+
+      const providerCountResult = await tx.$queryRaw<
+        Array<{
+          count: number;
+        }>
+      >`
+        SELECT COUNT(*)::int AS count
+        FROM provider_profiles
+        WHERE partner_id = ${partner.user_id}::uuid
+      `;
+
+      const currentProviderCount = providerCountResult[0]?.count ?? 0;
+
+      if (subscription.max_providers !== null && currentProviderCount >= subscription.max_providers) {
+        const matchedPlan = Object.values(PARTNER_SUBSCRIPTION_PLANS).find(
+          (plan) => plan.maxProviders === subscription.max_providers
+        );
+        const limitLabel = matchedPlan?.maxProviders ?? subscription.max_providers;
+        const message = `Your current plan allows ${limitLabel} providers. Upgrade to add more.`;
+        const error = new Error(message);
+        (error as Error & { statusCode?: number }).statusCode = 409;
+        throw error;
+      }
+
       const user = await tx.users.create({
         data: {
           cognito_id: String(cognitoId),
@@ -116,8 +164,11 @@ export default async function handler(
       partnerId: result.partner.user_id,
     });
   } catch (error) {
+    const statusCode = error instanceof Error
+      ? (error as Error & { statusCode?: number }).statusCode
+      : undefined;
     console.error(error);
-    return res.status(500).json({
+    return res.status(statusCode ?? 500).json({
       error: error instanceof Error ? error.message : "Failed to register provider",
     });
   }

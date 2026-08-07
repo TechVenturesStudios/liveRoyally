@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
+import { isDeadlinePassed } from "@/utils/inviteDeadline";
 
 type ProviderPendingEventsResponse =
   | {
@@ -97,8 +98,27 @@ export default async function handler(
       },
     });
 
+    const expiredInviteIds = invites
+      .filter((invite) => isDeadlinePassed(invite.events.response_deadline))
+      .map((invite) => invite.invite_id);
+
+    if (expiredInviteIds.length > 0) {
+      await prisma.event_provider_invites.updateMany({
+        where: {
+          invite_id: {
+            in: expiredInviteIds,
+          },
+        },
+        data: {
+          status: "expired",
+        },
+      });
+    }
+
     return res.status(200).json({
-      events: invites.map((invite) => ({
+      events: invites
+        .filter((invite) => !isDeadlinePassed(invite.events.response_deadline))
+        .map((invite) => ({
         inviteId: invite.invite_id,
         eventId: invite.event_id,
         providerId: invite.provider_id,

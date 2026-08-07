@@ -17,6 +17,10 @@ import EventDetailDialog from "@/components/ui/EventDetailDialog";
 import { fetchMemberPurchaseHistory } from "@/api/memberPurchases";
 import type { MemberPurchaseRecord } from "@/utils/memberPurchaseHistory";
 
+function getPurchaseStatusVariant(status: MemberPurchaseRecord["status"]) {
+  return status === "refunded" ? "destructive" : "default";
+}
+
 const PurchaseHistoryPage = () => {
   const isMobile = useIsMobile();
   const [viewMode, setViewMode] = useState<"grid" | "list">(isMobile ? "grid" : "list");
@@ -53,7 +57,7 @@ const PurchaseHistoryPage = () => {
   }, []);
 
   const totalSaved = useMemo(
-    () => purchases.filter((purchase) => purchase.status === "completed").reduce((sum, purchase) => sum + purchase.discount, 0),
+    () => purchases.filter((purchase) => purchase.status !== "refunded").reduce((sum, purchase) => sum + purchase.discount, 0),
     [purchases]
   );
 
@@ -97,7 +101,7 @@ const PurchaseHistoryPage = () => {
                       <h3 className="text-base font-semibold truncate">{purchase.title}</h3>
                       <p className="text-xs text-muted-foreground mt-0.5">Voucher: {purchase.voucherId}</p>
                     </div>
-                    <Badge variant={purchase.status === "completed" ? "default" : "destructive"} className="text-xs shrink-0">
+                    <Badge variant={getPurchaseStatusVariant(purchase.status)} className="text-xs shrink-0">
                       {purchase.status}
                     </Badge>
                   </div>
@@ -164,7 +168,7 @@ const PurchaseHistoryPage = () => {
                           <TableCell className="text-xs py-2 text-right text-green-600 font-medium">-${purchase.discount.toFixed(2)}</TableCell>
                           <TableCell className="text-xs py-2 text-right font-semibold">${purchase.finalPrice.toFixed(2)}</TableCell>
                           <TableCell className="py-2">
-                            <Badge variant={purchase.status === "completed" ? "default" : "destructive"} className="text-[10px]">
+                            <Badge variant={getPurchaseStatusVariant(purchase.status)} className="text-[10px]">
                               {purchase.status}
                             </Badge>
                           </TableCell>
@@ -197,7 +201,7 @@ const PurchaseHistoryPage = () => {
             { label: "Original Price", value: `$${selectedPurchase.originalPrice.toFixed(2)}` },
             { label: "Discount", value: `-$${selectedPurchase.discount.toFixed(2)}` },
             { label: "You Paid", value: `$${selectedPurchase.finalPrice.toFixed(2)}` },
-            { label: "Status", value: <Badge variant={selectedPurchase.status === "completed" ? "default" : "destructive"}>{selectedPurchase.status}</Badge> },
+            { label: "Status", value: <Badge variant={getPurchaseStatusVariant(selectedPurchase.status)}>{selectedPurchase.status}</Badge> },
           ]}
         />
       )}

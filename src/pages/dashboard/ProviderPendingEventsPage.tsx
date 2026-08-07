@@ -17,6 +17,7 @@ import PointsCircle from "@/components/ui/PointsCircle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
 import { fetchProviderPendingEvents, ProviderPendingInvite, respondToProviderInvite } from "@/api/providerEvents";
 import { getUserFromStorage } from "@/utils/userStorage";
+import { isDeadlinePassed } from "@/utils/inviteDeadline";
 
 const ProviderPendingEventsPage = () => {
   const [events, setEvents] = useState<ProviderPendingInvite[]>([]);
@@ -77,6 +78,8 @@ const ProviderPendingEventsPage = () => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
+  const isInviteExpired = (event: ProviderPendingInvite) => event.status === "expired" || isDeadlinePassed(event.deadline);
+
   const sortedEvents = useMemo(() => {
     return [...events].sort((a, b) => {
       const dateA = new Date(a.eventDate || a.deadline).getTime();
@@ -86,6 +89,15 @@ const ProviderPendingEventsPage = () => {
   }, [events, sortOrder]);
 
   const handleOpenApproval = (event: ProviderPendingInvite) => {
+    if (isInviteExpired(event)) {
+      toast({
+        title: "Invitation expired",
+        description: "This invite has passed its response deadline and can no longer be accepted or declined.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSelectedEvent(event);
     resetPricing();
     setShowApprovalDialog(true);
@@ -93,6 +105,15 @@ const ProviderPendingEventsPage = () => {
 
   const handleApprove = async () => {
     if (!selectedEvent) return;
+
+    if (isInviteExpired(selectedEvent)) {
+      toast({
+        title: "Invitation expired",
+        description: "This invite has passed its response deadline and can no longer be accepted or declined.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (pricingData.discountType === "none" && !pricingData.memberPrice.trim()) {
       toast({ title: "Member price required", description: "Enter a member price when no discount is selected.", variant: "destructive" });
@@ -145,6 +166,15 @@ const ProviderPendingEventsPage = () => {
   };
 
   const handleDecline = async (event: ProviderPendingInvite) => {
+    if (isInviteExpired(event)) {
+      toast({
+        title: "Invitation expired",
+        description: "This invite has passed its response deadline and can no longer be accepted or declined.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setApproving(true);
       await respondToProviderInvite({
@@ -248,18 +278,20 @@ const ProviderPendingEventsPage = () => {
                     </div>
                     <div className="flex items-center justify-between pt-1 border-t">
                       <span className="text-xs font-medium text-foreground/60 uppercase tracking-wide">Deadline</span>
-                      <Badge variant="outline" className="bg-amber-50 text-amber-700 text-xs">Due {event.deadline || "TBD"}</Badge>
+                      <Badge variant="outline" className={isInviteExpired(event) ? "bg-slate-100 text-slate-600 text-xs" : "bg-amber-50 text-amber-700 text-xs"}>
+                        {isInviteExpired(event) ? "Expired" : `Due ${event.deadline || "TBD"}`}
+                      </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-foreground/60 uppercase tracking-wide">Invite</span>
-                      {getStatusBadge(event.status)}
+                      {getStatusBadge(isInviteExpired(event) ? "expired" : event.status)}
                     </div>
                   </CardContent>
                   <div className="p-4 pt-0 flex gap-2">
-                    <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleOpenApproval(event)}>
+                    <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleOpenApproval(event)} disabled={isInviteExpired(event)}>
                       <CheckCircle className="h-4 w-4 mr-1" /> Approve
                     </Button>
-                    <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleDecline(event)}>
+                    <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleDecline(event)} disabled={isInviteExpired(event)}>
                       <XCircle className="h-4 w-4 mr-1" /> Decline
                     </Button>
                   </div>
@@ -294,16 +326,18 @@ const ProviderPendingEventsPage = () => {
                           <TableCell className="text-xs py-2">{event.location}</TableCell>
                           <TableCell className="text-xs py-2 whitespace-nowrap">{event.eventDate}</TableCell>
                           <TableCell className="py-2">
-                            <Badge variant="outline" className="bg-amber-50 text-amber-700 text-[10px] px-1.5 py-0">Due {event.deadline || "TBD"}</Badge>
+                            <Badge variant="outline" className={isInviteExpired(event) ? "bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0" : "bg-amber-50 text-amber-700 text-[10px] px-1.5 py-0"}>
+                              {isInviteExpired(event) ? "Expired" : `Due ${event.deadline || "TBD"}`}
+                            </Badge>
                           </TableCell>
-                          <TableCell className="py-2">{getStatusBadge(event.status)}</TableCell>
+                          <TableCell className="py-2">{getStatusBadge(isInviteExpired(event) ? "expired" : event.status)}</TableCell>
                           <TableCell className="py-2"><PointsCircle points={event.networkPoints} size="sm" /></TableCell>
                           <TableCell className="py-2">
                             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                              <Button size="sm" className="h-6 px-2 text-[10px] bg-green-600 hover:bg-green-700" onClick={() => handleOpenApproval(event)}>
+                              <Button size="sm" className="h-6 px-2 text-[10px] bg-green-600 hover:bg-green-700" onClick={() => handleOpenApproval(event)} disabled={isInviteExpired(event)}>
                                 <CheckCircle className="h-2.5 w-2.5 mr-0.5" /> Approve
                               </Button>
-                              <Button size="sm" variant="destructive" className="h-6 px-2 text-[10px]" onClick={() => handleDecline(event)}>
+                              <Button size="sm" variant="destructive" className="h-6 px-2 text-[10px]" onClick={() => handleDecline(event)} disabled={isInviteExpired(event)}>
                                 <XCircle className="h-2.5 w-2.5 mr-0.5" /> Decline
                               </Button>
                             </div>
@@ -346,11 +380,13 @@ const ProviderPendingEventsPage = () => {
                   </div>
                   <div className="flex items-center gap-2 pt-1">
                     <Badge variant="outline">{selectedEvent.networkPoints} Network Points</Badge>
-                    <Badge variant="outline" className="text-muted-foreground">Respond by {selectedEvent.deadline || "TBD"}</Badge>
+                    <Badge variant="outline" className={isInviteExpired(selectedEvent) ? "bg-slate-100 text-slate-600" : "text-muted-foreground"}>
+                      {isInviteExpired(selectedEvent) ? "Expired" : `Respond by ${selectedEvent.deadline || "TBD"}`}
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-foreground/60 uppercase tracking-wide">Invite Status</span>
-                    {getStatusBadge(selectedEvent.status)}
+                    {getStatusBadge(isInviteExpired(selectedEvent) ? "expired" : selectedEvent.status)}
                   </div>
                 </div>
 
@@ -430,10 +466,10 @@ const ProviderPendingEventsPage = () => {
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <Button className="flex-1" onClick={handleApprove} disabled={approving}>
+                  <Button className="flex-1" onClick={handleApprove} disabled={approving || isInviteExpired(selectedEvent)}>
                     <CheckCircle2 className="h-4 w-4 mr-2" /> {approving ? "Approving..." : "Approve Event"}
                   </Button>
-                  <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => handleDecline(selectedEvent)} disabled={approving}>
+                  <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => handleDecline(selectedEvent)} disabled={approving || isInviteExpired(selectedEvent)}>
                     <XCircle className="h-4 w-4 mr-2" /> Decline
                   </Button>
                 </div>

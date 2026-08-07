@@ -203,6 +203,15 @@ export default async function handler(
       return res.status(404).json({ error: "Voucher not found for this QR code" });
     }
 
+    await prisma.$executeRaw`
+      INSERT INTO purchases (member_id, voucher_id, purchase_date, status)
+      VALUES (${scan.member_id}::uuid, ${scan.voucher_id}, NOW(), 'used')
+      ON CONFLICT (member_id, voucher_id)
+      DO UPDATE SET
+        purchase_date = EXCLUDED.purchase_date,
+        status = EXCLUDED.status;
+    `;
+
     return res.status(200).json({
       success: true,
       scan: {

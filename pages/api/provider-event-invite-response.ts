@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { randomBytes } from "crypto";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
+import { isDeadlinePassed } from "@/utils/inviteDeadline";
 
 type ProviderInviteResponse =
   | {
@@ -98,11 +99,29 @@ export default async function handler(
         provider_id: true,
         status: true,
         voucher_id: true,
+        events: {
+          select: {
+            response_deadline: true,
+          },
+        },
       },
     });
 
     if (!invite) {
       return res.status(404).json({ error: "Invitation not found" });
+    }
+
+    if (isDeadlinePassed(invite.events.response_deadline)) {
+      if (invite.status !== "expired") {
+        await prisma.event_provider_invites.update({
+          where: { invite_id: invite.invite_id },
+          data: {
+            status: "expired",
+          },
+        });
+      }
+
+      return res.status(410).json({ error: "This invitation has expired" });
     }
 
     if (action === "decline") {

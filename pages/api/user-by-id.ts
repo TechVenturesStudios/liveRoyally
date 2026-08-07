@@ -77,6 +77,9 @@ export default async function handler(
         },
         partner_profiles: true,
         partner_subscriptions: {
+          where: {
+            status: "active",
+          },
           orderBy: { created_at: "desc" },
           take: 1,
           select: {

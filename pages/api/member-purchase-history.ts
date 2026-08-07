@@ -185,7 +185,12 @@ export default async function handler(
         discount: Number(amounts.discount.toFixed(2)),
         finalPrice: Number(amounts.finalPrice.toFixed(2)),
         date: purchase.purchase_date ? purchase.purchase_date.toISOString() : "",
-        status: String(purchase.status || "completed").toLowerCase() === "refunded" ? "refunded" : "completed",
+        status:
+          String(purchase.status || "completed").trim().toLowerCase() === "refunded"
+            ? "refunded"
+            : String(purchase.status || "completed").trim().toLowerCase() === "used"
+              ? "used"
+              : "completed",
       };
     });
 

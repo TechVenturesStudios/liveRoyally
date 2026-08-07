@@ -48,6 +48,34 @@ interface ProviderEntry {
   businessZip: string;
 }
 
+type MyProvidersApiResponse = {
+  partner: {
+    id: string;
+    partnerCode: string | null;
+    networkName: string | null;
+    networkCode: string | null;
+  };
+  providers: Array<{
+    id: string;
+    businessName: string | null;
+    businessCategory: string | null;
+    agentFirstName: string | null;
+    agentLastName: string | null;
+    agentPhone: string | null;
+    businessEmail: string | null;
+    businessPhone: string | null;
+    businessAddress: string | null;
+    businessCity: string | null;
+    businessState: string | null;
+    businessZip: string | null;
+  }>;
+  subscription: {
+    status: string | null;
+    maxProviders: number | null;
+    currentProviders: number;
+  };
+};
+
 type MyProvidersApiProvider = {
   id: string;
   businessName: string | null;
@@ -102,6 +130,8 @@ const PartnerProvidersPage = () => {
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProviderEntry | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [providerLimit, setProviderLimit] = useState<number | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [newProvider, setNewProvider] = useState({
     businessName: "",
     businessCategory: "",
@@ -128,7 +158,7 @@ const PartnerProvidersPage = () => {
         const user = getUserFromStorage();
         const query = user?.cognitoId ? `?cognitoId=${encodeURIComponent(user.cognitoId)}` : "";
         const response = await fetch(`/api/my-providers${query}`);
-        const data = await response.json();
+        const data = (await response.json()) as MyProvidersApiResponse & { error?: string };
 
         if (!response.ok) {
           throw new Error(data.error || "Failed to load providers");
@@ -136,6 +166,8 @@ const PartnerProvidersPage = () => {
 
         if (isMounted) {
           setProviders(Array.isArray(data.providers) ? data.providers.map(mapApiProvider) : []);
+          setProviderLimit(data.subscription?.maxProviders ?? null);
+          setSubscriptionStatus(data.subscription?.status ?? null);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to load providers";
@@ -170,6 +202,13 @@ const PartnerProvidersPage = () => {
     );
   }, [providers, searchQuery]);
 
+  const hasActiveSubscription = subscriptionStatus === "active";
+  const hasProviderCapacity =
+    hasActiveSubscription && (providerLimit === null || providers.length < providerLimit);
+  const providerCapacityLabel = hasActiveSubscription
+    ? `${providers.length} / ${providerLimit === null ? "Unlimited" : providerLimit} providers`
+    : "No active plan";
+
   const handleDelete = () => {
     if (!deleteTarget) return;
     setProviders((prev) => prev.filter((p) => p.id !== deleteTarget.id));
@@ -182,6 +221,20 @@ const PartnerProvidersPage = () => {
       toast.error("Business name and email are required.");
       return;
     }
+
+    if (!hasProviderCapacity) {
+      if (!hasActiveSubscription) {
+        toast.error("Your subscription is not active. Please renew or upgrade to add providers.");
+      } else {
+        toast.error(
+          providerLimit === null
+            ? "Unable to add provider right now."
+            : `Your current plan allows ${providerLimit} providers. Upgrade to add more.`
+        );
+      }
+      return;
+    }
+
     const id = `PRV${String(Date.now()).slice(-5)}`;
     setProviders((prev) => [
       ...prev,
@@ -231,9 +284,14 @@ const PartnerProvidersPage = () => {
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
               <Users className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">{providers.length} providers</span>
+              <span className="text-sm font-medium text-primary">{providerCapacityLabel}</span>
             </div>
-            <Button onClick={() => setShowAddDialog(true)} size="sm" className="bg-royal hover:bg-royal-dark text-white gap-1.5">
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              size="sm"
+              className="bg-royal hover:bg-royal-dark text-white gap-1.5"
+              disabled={!hasProviderCapacity}
+            >
               <Plus className="h-4 w-4" />
               Add Provider
             </Button>
@@ -245,6 +303,18 @@ const PartnerProvidersPage = () => {
         {providersError && (
           <Card className="border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
             {providersError}
+          </Card>
+        )}
+
+        {!hasActiveSubscription && !providersError && (
+          <Card className="border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+            Your subscription is not active. Renew or upgrade your plan to add providers.
+          </Card>
+        )}
+
+        {hasActiveSubscription && providerLimit !== null && providers.length >= providerLimit && (
+          <Card className="border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+            You have reached your provider limit for the current plan. Upgrade to add more.
           </Card>
         )}
 
@@ -405,6 +475,15 @@ const PartnerProvidersPage = () => {
             <DialogTitle>Send Invite</DialogTitle>
             <DialogDescription>Send an invite to a new provider to join your network.</DialogDescription>
           </DialogHeader>
+          {!hasProviderCapacity && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              {hasActiveSubscription
+                ? providerLimit === null
+                  ? "Provider capacity is unavailable right now."
+                  : `Your current plan allows ${providerLimit} providers. Upgrade to add more.`
+                : "Your subscription is not active. Renew or upgrade your plan to add providers."}
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
             <FormField label="Business Name" name="businessName" type="text" placeholder="Enter business name" required value={newProvider.businessName} onChange={handleNewProviderInput} />
             <FormField label="Category" name="businessCategory" type="select" required options={BUSINESS_CATEGORIES} value={newProvider.businessCategory} onSelectChange={handleNewProviderSelect("businessCategory")} />
@@ -420,7 +499,13 @@ const PartnerProvidersPage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
-            <Button onClick={handleAdd} className="bg-royal hover:bg-royal-dark text-white">Send Invite</Button>
+            <Button
+              onClick={handleAdd}
+              className="bg-royal hover:bg-royal-dark text-white"
+              disabled={!hasProviderCapacity}
+            >
+              Send Invite
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
