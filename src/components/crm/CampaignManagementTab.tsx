@@ -183,8 +183,12 @@ const CampaignManagementTab = () => {
       });
 
       toast({
-        title: "Event Created & Sent",
-        description: `"${eventForm.title}" (${result.eventId}) has been sent to ${selectedProviders.length} provider(s) for approval.`,
+        title: result.notifications?.failed
+          ? "Event Created with Email Warnings"
+          : "Event Created & Sent",
+        description: result.notifications?.failed
+          ? `"${eventForm.title}" (${result.eventId}) was created, but only ${result.notifications.sent}/${selectedProviders.length} provider email(s) were delivered.`
+          : `"${eventForm.title}" (${result.eventId}) has been sent to ${selectedProviders.length} provider(s) for approval.`,
       });
 
       setEventForm({ title: "", description: "", date: "", endDate: "", time: "", location: "", networkPoints: "", deadline: "" });

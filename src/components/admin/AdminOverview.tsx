@@ -1,11 +1,38 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Calendar, Users, Medal, BarChart3, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { fetchPendingPartnerApplications } from "@/api/adminPartners";
 
 const AdminOverview = () => {
   const navigate = useNavigate();
+  const [pendingPartnerCount, setPendingPartnerCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPendingCount = async () => {
+      try {
+        const result = await fetchPendingPartnerApplications();
+
+        if (!cancelled) {
+          setPendingPartnerCount(result.pendingCount);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPendingPartnerCount(0);
+          console.error("Failed to load pending partner count", error);
+        }
+      }
+    };
+
+    loadPendingCount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const topNetworks = [
     { name: "Network Alpha", score: 950, code: "ROYAL1" },
@@ -16,7 +43,7 @@ const AdminOverview = () => {
   const adminStats = [
     { 
       title: "Pending Partners", 
-      value: "3", 
+      value: pendingPartnerCount === null ? "..." : String(pendingPartnerCount), 
       description: "Partner applications to review",
       icon: Users,
       color: "bg-purple-100 text-purple-600", 
@@ -53,7 +80,9 @@ const AdminOverview = () => {
           <div>
             <h3 className="font-barlow font-bold text-sm sm:text-lg mb-1 sm:mb-2">Pending Partners</h3>
             <p className="text-muted-foreground text-xs sm:text-sm">Review and approve partner applications</p>
-            <p className="text-primary font-medium text-sm sm:text-base mt-2 sm:mt-4">3 Awaiting Approval</p>
+            <p className="text-primary font-medium text-sm sm:text-base mt-2 sm:mt-4">
+              {pendingPartnerCount === null ? "Loading..." : `${pendingPartnerCount} Awaiting Approval`}
+            </p>
           </div>
           <div className="rounded-full p-2 sm:p-3 bg-purple-100 text-purple-600">
             <Users className="h-4 w-4 sm:h-6 sm:w-6" />

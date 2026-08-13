@@ -27,5 +27,9 @@ export async function createEvent(input: CreateEventInput) {
   return data as {
     message: string;
     eventId: string;
+    notifications?: {
+      sent: number;
+      failed: number;
+    };
   };
 }

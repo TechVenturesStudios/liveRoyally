@@ -150,7 +150,9 @@ const PartnerForm = () => {
         </button>
 
         <h2 className="text-2xl font-barlow font-bold mb-2 royal-header">Order Summary</h2>
-        <p className="text-sm text-muted-foreground mb-8">Review your membership details before completing payment.</p>
+        <p className="text-sm text-muted-foreground mb-8">
+          Review your membership details before submitting your card for approval.
+        </p>
 
         {/* Account Info */}
         <div className="rounded-lg border bg-muted/30 p-5 mb-6 space-y-2">
@@ -201,10 +203,12 @@ const PartnerForm = () => {
           </div>
           <Separator />
           <div className="flex justify-between text-base font-bold">
-            <span className="text-foreground">Total due today</span>
+            <span className="text-foreground">Total due on approval</span>
             <span className="text-primary">${total.toFixed(2)}</span>
           </div>
-          <p className="text-[11px] text-muted-foreground">Billed monthly. Cancel anytime.</p>
+          <p className="text-[11px] text-muted-foreground">
+            Your card will be stored securely today and charged only after admin approval. Billed monthly thereafter.
+          </p>
         </div>
 
         <SquareCardCheckout

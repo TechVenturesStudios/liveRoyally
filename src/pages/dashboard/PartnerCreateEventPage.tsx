@@ -141,8 +141,12 @@ const PartnerCreateEventPage = () => {
       });
 
       toast({
-        title: "Event Created & Sent",
-        description: `"${formData.title}" (${result.eventId}) has been sent to ${selectedProviders.length} provider(s) for approval.`,
+        title: result.notifications?.failed
+          ? "Event Created with Email Warnings"
+          : "Event Created & Sent",
+        description: result.notifications?.failed
+          ? `"${formData.title}" (${result.eventId}) was created, but only ${result.notifications.sent}/${selectedProviders.length} provider email(s) were delivered.`
+          : `"${formData.title}" (${result.eventId}) has been sent to ${selectedProviders.length} provider(s) for approval.`,
       });
       navigate("/dashboard/partner-pending-events");
     } catch (error) {

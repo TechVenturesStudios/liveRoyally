@@ -1,11 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { randomInt } from "crypto";
 import { prisma } from "../../lib/prisma";
+import { getAppBaseUrl } from "../../lib/app-url";
+import { sendSesSimpleEmail } from "../../lib/ses-email";
 
 type CreateEventResponse =
   | {
       message: string;
       eventId: string;
+      notifications?: {
+        sent: number;
+        failed: number;
+      };
     }
   | {
       error: string;
@@ -42,6 +48,15 @@ function parseNumber(value: unknown) {
   }
 
   return Math.trunc(parsed);
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export default async function handler(
@@ -133,9 +148,114 @@ export default async function handler(
       return createdEvent;
     });
 
+    const [partner, providers] = await Promise.all([
+      prisma.users.findUnique({
+        where: { user_id: partnerId },
+        select: {
+          email: true,
+          first_name: true,
+          last_name: true,
+          partner_profiles: {
+            select: {
+              org_name: true,
+            },
+          },
+        },
+      }),
+      prisma.users.findMany({
+        where: {
+          user_id: {
+            in: providerIds,
+          },
+        },
+        select: {
+          user_id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+          provider_profiles: {
+            select: {
+              business_email: true,
+              business_name: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const partnerName =
+      partner?.partner_profiles?.org_name?.trim() ||
+      [partner?.first_name, partner?.last_name].filter(Boolean).join(" ").trim() ||
+      partner?.email?.trim() ||
+      "Your partner";
+    const pendingEventsUrl = new URL("/dashboard/provider-pending-events", getAppBaseUrl(req)).toString();
+
+    const emailResults = await Promise.allSettled(
+      providers.map(async (provider) => {
+        const recipientEmail =
+          provider.provider_profiles?.business_email?.trim() ||
+          provider.email.trim();
+
+        const providerName =
+          provider.provider_profiles?.business_name?.trim() ||
+          [provider.first_name, provider.last_name].filter(Boolean).join(" ").trim() ||
+          recipientEmail;
+
+        const eventTitle = title.trim();
+        const eventDate = String(body.startDate).trim();
+        const eventTimeLabel = eventTime || "TBD";
+        const locationLabel = location.trim();
+        const subject = `Event invitation from ${partnerName}`;
+        const textBody = [
+          `Hello ${providerName},`,
+          "",
+          `${partnerName} invited you to "${eventTitle}" on Live Royally.`,
+          "",
+          `Event date: ${eventDate}`,
+          `Time: ${eventTimeLabel}`,
+          `Location: ${locationLabel}`,
+          "",
+          `Review the invitation and accept or decline it here: ${pendingEventsUrl}`,
+          "",
+          "If you were not expecting this invitation, you can ignore this email.",
+        ].join("\n");
+        const htmlBody = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
+            <p>Hello ${escapeHtml(providerName)},</p>
+            <p><strong>${escapeHtml(partnerName)}</strong> invited you to <strong>${escapeHtml(eventTitle)}</strong> on Live Royally.</p>
+            <ul>
+              <li><strong>Event date:</strong> ${escapeHtml(eventDate)}</li>
+              <li><strong>Time:</strong> ${escapeHtml(eventTimeLabel)}</li>
+              <li><strong>Location:</strong> ${escapeHtml(locationLabel)}</li>
+            </ul>
+            <p>
+              <a href="${pendingEventsUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;">
+                View pending events
+              </a>
+            </p>
+            <p>If you were not expecting this invitation, you can ignore this email.</p>
+          </div>
+        `;
+
+        return sendSesSimpleEmail({
+          toEmail: recipientEmail,
+          subject,
+          textBody,
+          htmlBody,
+        });
+      })
+    );
+
+    const sent = emailResults.filter((result) => result.status === "fulfilled").length;
+    const failed = emailResults.length - sent;
+
     return res.status(200).json({
       message: "Event created",
       eventId: event.event_id,
+      notifications: {
+        sent,
+        failed,
+      },
     });
   } catch (error) {
     console.error("Error creating event:", error);

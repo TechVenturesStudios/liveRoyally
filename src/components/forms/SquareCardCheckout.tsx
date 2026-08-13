@@ -208,7 +208,7 @@ const SquareCardCheckout = ({
         className="w-full bg-royal hover:bg-royal-dark text-white h-12 text-base font-semibold gap-2"
       >
         {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
-        {isSubmitting ? "Processing payment..." : `Pay $${total.toFixed(2)} & Create Account`}
+        {isSubmitting ? "Saving card..." : `Save Card & Submit for Approval`}
       </Button>
 
       {(submitError || paymentError) && (
@@ -217,7 +217,7 @@ const SquareCardCheckout = ({
 
       <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
         <Shield className="h-3.5 w-3.5" />
-        Secure Square card entry
+        Secure Square card entry. Your card will be charged after admin approval.
       </div>
     </div>
   );

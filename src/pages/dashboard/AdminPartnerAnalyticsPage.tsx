@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useAuthCheck } from "@/hooks/useAuthCheck";
@@ -17,6 +17,7 @@ import {
 import ViewToggle from "@/components/ui/ViewToggle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
 import { Users, Clock, Building, CalendarDays, BarChart3, Globe, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { fetchPendingPartnerApplications } from "@/api/adminPartners";
 
 interface PartnerAnalytics {
   id: string;
@@ -73,6 +74,32 @@ const AdminPartnerAnalyticsPage = () => {
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkData | null>(null);
   const [sortKey, setSortKey] = useState<keyof PartnerAnalytics | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [pendingPartnerCount, setPendingPartnerCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPendingCount = async () => {
+      try {
+        const result = await fetchPendingPartnerApplications();
+
+        if (!cancelled) {
+          setPendingPartnerCount(result.pendingCount);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPendingPartnerCount(0);
+          console.error("Failed to load pending partner count", error);
+        }
+      }
+    };
+
+    loadPendingCount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   
 
@@ -128,7 +155,7 @@ const AdminPartnerAnalyticsPage = () => {
     { label: "Total Partners", value: totals.partners, icon: Building, color: "text-purple-600 bg-purple-100", path: "/dashboard/admin/partners" },
     { label: "Total Providers", value: totals.providers, icon: Users, color: "text-blue-600 bg-blue-100", path: "/dashboard/admin/providers" },
     { label: "Total Members", value: totalMembers, icon: Globe, color: "text-cyan-600 bg-cyan-100", path: "/dashboard/admin/members" },
-    { label: "Pending Partners", value: 3, icon: Clock, color: "text-amber-600 bg-amber-100", path: "/dashboard/admin/pending-partners" },
+    { label: "Pending Partners", value: pendingPartnerCount === null ? "..." : pendingPartnerCount, icon: Clock, color: "text-amber-600 bg-amber-100", path: "/dashboard/admin/pending-partners" },
   ];
 
   const getPartnerDetailRows = (p: PartnerAnalytics) => [
