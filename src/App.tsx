@@ -24,7 +24,6 @@ import AdminPartnerAnalyticsPage from "./pages/dashboard/AdminPartnerAnalyticsPa
 import AdminMembersPage from "./pages/dashboard/AdminMembersPage";
 import AdminProvidersPage from "./pages/dashboard/AdminProvidersPage";
 import AdminPartnersListPage from "./pages/dashboard/AdminPartnersListPage";
-import PartnerCRMDashboard from "./pages/dashboard/PartnerCRMDashboard";
 import Demo from "./pages/Demo";
 import ProviderEventsPage from "./pages/dashboard/ProviderEventsPage";
 import ProfilePage from "./pages/dashboard/ProfilePage";
@@ -106,7 +105,7 @@ const App = () => (
           <Route path="/dashboard/providers/representatives" element={<RoleRoute allowed={["provider"]}><ProviderRepresentativesPage /></RoleRoute>} />
 
           {/* ── Partner-only routes ── */}
-          <Route path="/dashboard/crm" element={<RoleRoute allowed={["partner"]}><PartnerCRMDashboard /></RoleRoute>} />
+          <Route path="/dashboard/crm" element={<RoleRoute allowed={["partner"]}><PartnersDashboard /></RoleRoute>} />
           <Route path="/dashboard/my-providers" element={<RoleRoute allowed={["partner"]}><PartnerProvidersPage /></RoleRoute>} />
           <Route path="/dashboard/partner/representatives" element={<RoleRoute allowed={["partner"]}><ProviderRepresentativesPage ownerType="partner" /></RoleRoute>} />
           <Route path="/dashboard/analytics" element={<RoleRoute allowed={["partner"]}><EventAnalyticsDashboard /></RoleRoute>} />

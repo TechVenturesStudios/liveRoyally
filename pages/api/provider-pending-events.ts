@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
 import { isDeadlinePassed } from "@/utils/inviteDeadline";
+import { deriveEventLifecycleStatus } from "@/utils/eventStatus";
 
 type ProviderPendingEventsResponse =
   | {
@@ -35,6 +36,42 @@ function formatDate(value: Date | string | null | undefined) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toISOString().slice(0, 10);
+}
+
+async function syncEventLifecycleStatus(eventId: string) {
+  const event = await prisma.events.findUnique({
+    where: { event_id: eventId },
+    select: {
+      event_id: true,
+      status: true,
+      start_date: true,
+      response_deadline: true,
+      event_provider_invites: {
+        select: {
+          status: true,
+        },
+      },
+    },
+  });
+
+  if (!event) {
+    return;
+  }
+
+  const nextStatus = deriveEventLifecycleStatus({
+    startDate: event.start_date,
+    responseDeadline: event.response_deadline,
+    inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
+  });
+
+  if (event.status !== nextStatus) {
+    await prisma.events.update({
+      where: { event_id: event.event_id },
+      data: {
+        status: nextStatus,
+      },
+    });
+  }
 }
 
 export default async function handler(
@@ -113,6 +150,14 @@ export default async function handler(
           status: "expired",
         },
       });
+
+      const affectedEventIds = new Set(invites
+        .filter((invite) => expiredInviteIds.includes(invite.invite_id))
+        .map((invite) => invite.event_id));
+
+      for (const eventId of affectedEventIds) {
+        await syncEventLifecycleStatus(eventId);
+      }
     }
 
     return res.status(200).json({

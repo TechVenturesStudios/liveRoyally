@@ -11,6 +11,13 @@ import { fetchProviderDashboardEvents } from "@/api/providerDashboardEvents";
 import { fetchProviderPendingEvents } from "@/api/providerEvents";
 import { fetchAuthorizedRepresentatives } from "@/api/authorizedRepresentatives";
 
+const isOnOrAfterToday = (dateString: string) => {
+  if (!dateString) return false;
+
+  const today = new Date().toISOString().slice(0, 10);
+  return dateString >= today;
+};
+
 const ProviderCRMDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -35,8 +42,16 @@ const ProviderCRMDashboard = () => {
 
         if (!isMounted) return;
 
-        setActiveEvents(eventsResult.status === "fulfilled" ? eventsResult.value.filter((event) => event.status === "active").length : 0);
-        setPendingEvents(pendingResult.status === "fulfilled" ? pendingResult.value.length : 0);
+        setActiveEvents(
+          eventsResult.status === "fulfilled"
+            ? eventsResult.value.filter((event) => event.inviteStatus === "accepted" && isOnOrAfterToday(event.date)).length
+            : 0
+        );
+        setPendingEvents(
+          pendingResult.status === "fulfilled"
+            ? pendingResult.value.filter((event) => event.status === "pending").length
+            : 0
+        );
         setRepresentatives(repsResult.status === "fulfilled" ? repsResult.value.representatives.length : 0);
         setProviderCount(repsResult.status === "fulfilled" ? repsResult.value.networkMembers.length : 0);
       } catch (error) {
@@ -59,14 +74,14 @@ const ProviderCRMDashboard = () => {
   const quickLinks = [
     {
       title: "Events Management",
-      description: "Review active and completed events",
+      description: "Review accepted upcoming and past events",
       count: activeEvents,
       icon: Calendar,
       action: () => navigate("/dashboard/providers/events"),
     },
     {
       title: "Pending Approvals",
-      description: "Handle upcoming event invitations",
+      description: "Handle unresponded event invitations",
       count: pendingEvents,
       icon: Clock,
       action: () => navigate("/dashboard/pending-events"),
@@ -180,4 +195,3 @@ const ProviderCRMDashboard = () => {
 };
 
 export default ProviderCRMDashboard;
-

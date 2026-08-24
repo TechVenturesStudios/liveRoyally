@@ -1,3 +1,5 @@
+import { buildDashboardQuery } from "@/utils/dashboardContext";
+
 export type PartnerEventProviderStatus = "pending" | "accepted" | "declined" | "expired";
 
 export type PartnerPendingEventProvider = {
@@ -43,6 +45,16 @@ export type PartnerDashboardEvent = {
   providers: PartnerPendingEventProvider[];
 };
 
+export type PartnerEventAnalytics = PartnerDashboardEvent & {
+  providerId: string;
+  providerName: string;
+  membersAttended: number;
+  membersInvited: number;
+  revenue: number;
+  targetRevenue: number;
+  providerParticipated: boolean;
+};
+
 export async function fetchPartnerPendingEvents(cognitoId?: string) {
   const response = await fetch(`/api/partner-pending-events${buildDashboardQuery(cognitoId)}`);
   const data = await response.json();
@@ -64,4 +76,14 @@ export async function fetchPartnerDashboardEvents(cognitoId?: string) {
 
   return Array.isArray(data.events) ? (data.events as PartnerDashboardEvent[]) : [];
 }
-import { buildDashboardQuery } from "@/utils/dashboardContext";
+
+export async function fetchPartnerEventAnalytics(cognitoId?: string) {
+  const response = await fetch(`/api/partner-event-analytics${buildDashboardQuery(cognitoId)}`);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to load partner event analytics");
+  }
+
+  return Array.isArray(data.events) ? (data.events as PartnerEventAnalytics[]) : [];
+}

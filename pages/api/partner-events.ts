@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
+import { deriveEventLifecycleStatus, normalizeEventStage } from "@/utils/eventStatus";
 
 type PartnerEventsResponse =
   | {
@@ -14,7 +15,7 @@ type PartnerEventsResponse =
         networkPoints: number;
         createdDate: string;
         responseDeadline: string;
-        status: string;
+        status: "pending" | "active" | "completed";
         stage: "needs_approval" | "upcoming" | "past";
         providerCount: number;
         pendingProviderCount: number;
@@ -45,16 +46,6 @@ function formatDate(value: Date | string | null | undefined) {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toISOString().slice(0, 10);
-}
-
-function isBeforeToday(value: Date | string | null | undefined) {
-  if (!value) return false;
-  const date = value instanceof Date ? new Date(value) : new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  date.setHours(0, 0, 0, 0);
-  return date < today;
 }
 
 export default async function handler(
@@ -122,15 +113,24 @@ export default async function handler(
     });
 
     return res.status(200).json({
-      events: events.map((event) => {
+      events: await Promise.all(events.map(async (event) => {
+        const status = deriveEventLifecycleStatus({
+          startDate: event.start_date,
+          responseDeadline: event.response_deadline,
+          inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
+        });
+
+        if (event.status !== status) {
+          await prisma.events.update({
+            where: { event_id: event.event_id },
+            data: { status },
+          });
+        }
+
         const pendingProviderCount = event.event_provider_invites.filter((invite) => invite.status === "pending").length;
         const acceptedProviderCount = event.event_provider_invites.filter((invite) => invite.status === "accepted").length;
         const declinedProviderCount = event.event_provider_invites.filter((invite) => invite.status === "declined").length;
-        const stage = pendingProviderCount > 0
-          ? "needs_approval"
-          : isBeforeToday(event.start_date)
-            ? "past"
-            : "upcoming";
+        const stage = normalizeEventStage(status);
 
         return {
           id: event.event_id,
@@ -142,7 +142,7 @@ export default async function handler(
           networkPoints: event.network_points ?? 0,
           createdDate: formatDate(event.created_at),
           responseDeadline: formatDate(event.response_deadline),
-          status: event.status ?? "pending",
+          status,
           stage,
           providerCount: event.event_provider_invites.length,
           pendingProviderCount,
@@ -162,7 +162,7 @@ export default async function handler(
             respondedAt: invite.responded_at ? invite.responded_at.toISOString() : null,
           })),
         };
-      }),
+      })),
     });
   } catch (error) {
     console.error("partner-events error:", error);

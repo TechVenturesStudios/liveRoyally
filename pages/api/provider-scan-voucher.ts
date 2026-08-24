@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
+import { awardRewardTask } from "../../lib/rewards";
 import {
   buildMemberVoucherQrCodeData,
   parseMemberVoucherQrCodeData,
@@ -203,14 +204,22 @@ export default async function handler(
       return res.status(404).json({ error: "Voucher not found for this QR code" });
     }
 
-    await prisma.$executeRaw`
-      INSERT INTO purchases (member_id, voucher_id, purchase_date, status)
-      VALUES (${scan.member_id}::uuid, ${scan.voucher_id}, NOW(), 'used')
-      ON CONFLICT (member_id, voucher_id)
-      DO UPDATE SET
-        purchase_date = EXCLUDED.purchase_date,
-        status = EXCLUDED.status;
-    `;
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        INSERT INTO purchases (member_id, voucher_id, purchase_date, status)
+        VALUES (${scan.member_id}::uuid, ${scan.voucher_id}, NOW(), 'used')
+        ON CONFLICT (member_id, voucher_id)
+        DO UPDATE SET
+          purchase_date = EXCLUDED.purchase_date,
+          status = EXCLUDED.status;
+      `;
+
+      await awardRewardTask(tx, {
+        userId: account.actingUserId,
+        taskKey: "provider_validate_member_voucher",
+        description: "Member voucher validated",
+      });
+    });
 
     return res.status(200).json({
       success: true,

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { getCognitoIdFromRequest } from "../../lib/api-auth";
 import { buildMemberVoucherQrCodeData } from "../../lib/qr-code";
+import { awardRewardTask } from "../../lib/rewards";
 
 type ClaimMemberVoucherResponse =
   | {
@@ -105,46 +106,52 @@ export default async function handler(
       return res.status(400).json({ error: "This voucher has expired" });
     }
 
-    const qrCodeData = buildMemberVoucherQrCodeData({
-      voucherId,
-      eventId: voucherRecord.event_id,
-      useCaseId: String(voucherRecord.type || "N"),
-      networkId: voucherRecord.provider_network_code || member.member_profiles.network_code || "NETWORK",
-      userId: member.user_id,
-    });
+    const result = await prisma.$transaction(async (tx) => {
+      const existingClaim = await tx.member_vouchers.findFirst({
+        where: {
+          member_id: member.user_id,
+          voucher_id: voucherId,
+        },
+        select: {
+          member_id: true,
+          voucher_id: true,
+        },
+      });
 
-    await prisma.$executeRaw`
-      INSERT INTO member_vouchers (member_id, voucher_id, qr_code_payload)
-      VALUES (${member.user_id}::uuid, ${voucherId}, ${qrCodeData})
-      ON CONFLICT (member_id, voucher_id)
-      DO UPDATE SET qr_code_payload = EXCLUDED.qr_code_payload;
-    `;
+      const qrCodeData = buildMemberVoucherQrCodeData({
+        voucherId,
+        eventId: voucherRecord.event_id,
+        useCaseId: String(voucherRecord.type || "N"),
+        networkId:
+          voucherRecord.provider_network_code || member.member_profiles.network_code || "NETWORK",
+        userId: member.user_id,
+      });
 
-    const existingClaim = await prisma.member_vouchers.findFirst({
-      where: {
-        member_id: member.user_id,
-        voucher_id: voucherId,
-      },
-      select: {
-        member_id: true,
-        voucher_id: true,
-      },
-    });
+      await tx.$executeRaw`
+        INSERT INTO member_vouchers (member_id, voucher_id, qr_code_payload)
+        VALUES (${member.user_id}::uuid, ${voucherId}, ${qrCodeData})
+        ON CONFLICT (member_id, voucher_id)
+        DO UPDATE SET qr_code_payload = EXCLUDED.qr_code_payload;
+      `;
 
-    if (existingClaim) {
-      return res.status(200).json({
+      if (!existingClaim) {
+        await awardRewardTask(tx, {
+          userId: member.user_id,
+          taskKey: "member_scan_business_qr_code",
+          eventId: voucherRecord.event_id,
+          description: "Business QR code scanned",
+        });
+      }
+
+      return {
         success: true,
-        alreadyClaimed: true,
+        alreadyClaimed: Boolean(existingClaim),
         voucherId,
         qrCodeData,
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      voucherId,
-      qrCodeData,
+      };
     });
+
+    return res.status(200).json(result);
   } catch (error) {
     console.error("claim-member-voucher error:", error);
     return res.status(500).json({

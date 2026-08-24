@@ -163,17 +163,8 @@ export async function createSquareCard(params: {
   paymentToken: string;
   customerId: string;
   cardholderName: string;
-  organizationAddress?: string | null;
-  organizationCity?: string | null;
-  organizationState?: string | null;
-  organizationZip?: string | null;
   referenceId: string;
 }) {
-  const addressLine1 = params.organizationAddress?.trim();
-  const locality = params.organizationCity?.trim();
-  const region = params.organizationState?.trim();
-  const postalCode = params.organizationZip?.trim();
-
   const payload = await squareRequest<SquareCardResponse>("/v2/cards", {
     idempotency_key: squareIdempotencyKey("lr-card", params.referenceId),
     source_id: params.paymentToken,
@@ -181,17 +172,6 @@ export async function createSquareCard(params: {
       customer_id: params.customerId,
       cardholder_name: params.cardholderName,
       reference_id: params.referenceId,
-      ...(addressLine1 && locality && region && postalCode
-        ? {
-            billing_address: {
-              address_line_1: addressLine1,
-              locality,
-              administrative_district_level_1: region,
-              postal_code: postalCode,
-              country: "US",
-            },
-          }
-        : {}),
     },
   });
 

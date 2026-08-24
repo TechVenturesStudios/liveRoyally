@@ -223,7 +223,6 @@ const PartnerForm = () => {
             city: String(formData.organizationCity || "").trim(),
             state: String(formData.organizationState || "").trim(),
             countryCode: "US",
-            postalCode: String(formData.organizationZip || "").replace(/\D/g, "").slice(0, 5),
           }}
           onSubmitToken={handlePay}
           submitError={submitError}

@@ -13,8 +13,20 @@ interface DashboardHeaderProps {
   user: User;
 }
 
+const getGreetingName = (user: User) => {
+  const candidates = [user.firstName, user.profile?.agentFirstName, user.profile?.partnerAgentFirstName];
+
+  for (const candidate of candidates) {
+    const value = candidate?.trim();
+    if (value) return value;
+  }
+
+  return "User";
+};
+
 const DashboardHeader = ({ user }: DashboardHeaderProps) => {
   const navigate = useNavigate();
+  const greetingName = getGreetingName(user);
 
   const handleLogout = async () => {
     await logout();
@@ -32,7 +44,7 @@ const DashboardHeader = ({ user }: DashboardHeaderProps) => {
         <div className="flex items-center gap-4">
           <div className="hidden md:block text-sm">
             <span className="text-gray-500">Welcome, </span>
-            <span className="font-medium">{user?.email || "User"}</span>
+            <span className="font-medium">{greetingName}</span>
           </div>
           <Button
             variant="ghost"

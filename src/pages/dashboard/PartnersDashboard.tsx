@@ -7,7 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { PartnerUser } from "@/types/user";
+import { fetchEngagementAnalytics } from "@/api/engagementAnalytics";
+import { fetchAuthorizedRepresentatives, type AuthorizedRepresentative } from "@/api/authorizedRepresentatives";
+import { fetchPartnerDashboardEvents } from "@/api/partnerEvents";
+import { getUserFromStorage } from "@/utils/userStorage";
 import {
   CalendarDays,
   Calendar,
@@ -22,72 +25,26 @@ import {
   CheckCircle
 } from "lucide-react";
 
-// Mock data for partners
-const mockPartners: PartnerUser[] = [
-  {
-    id: "PRT001",
-    partnerCode: "PTR-ABC123",
-    networkName: "Baton Rouge Network",
-    networkCode: "BR-001",
-    email: "partner1@example.com",
-    userType: "partner",
-    notificationEnabled: true,
-    termsAccepted: true,
-    agentFirstName: "David",
-    agentLastName: "Miller",
-    agentPhone: "555-111-2222",
-    organizationName: "City Community Foundation",
-    organizationAddress: "100 Civic Plaza",
-    organizationCity: "Metropolis",
-    organizationState: "NY",
-    organizationZip: "10001",
-    organizationCategory: "Non-Profit",
-    organizationEmail: "info@cityfoundation.org",
-    organizationPhone: "555-333-4444"
-  },
-  {
-    id: "PRT002",
-    partnerCode: "PTR-DEF456",
-    networkName: "Lafayette Network",
-    networkCode: "LAF-002",
-    email: "partner2@example.com",
-    userType: "partner",
-    notificationEnabled: true,
-    termsAccepted: true,
-    agentFirstName: "Sarah",
-    agentLastName: "Wilson",
-    agentPhone: "555-222-3333",
-    organizationName: "Downtown Business Alliance",
-    organizationAddress: "200 Commerce St",
-    organizationCity: "Springfield",
-    organizationState: "IL",
-    organizationZip: "62701",
-    organizationCategory: "Business Association",
-    organizationEmail: "info@downtownalliance.org",
-    organizationPhone: "555-444-5555"
-  },
-  {
-    id: "PRT003",
-    partnerCode: "PTR-GHI789",
-    networkName: "New Orleans Network",
-    networkCode: "NOLA-003",
-    email: "partner3@example.com",
-    userType: "partner",
-    notificationEnabled: false,
-    termsAccepted: true,
-    agentFirstName: "Robert",
-    agentLastName: "Jones",
-    agentPhone: "555-333-4444",
-    organizationName: "Jones Event Planning",
-    organizationAddress: "300 Event Ave",
-    organizationCity: "Eventville",
-    organizationState: "CA",
-    organizationZip: "90210",
-    organizationCategory: "Event Management",
-    organizationEmail: "info@jonesevents.com",
-    organizationPhone: "555-555-6666"
-  }
-];
+type PartnerAccountProfile = {
+  networkName: string | null;
+  networkCode: string | null;
+  partnerCode: string | null;
+  organizationName: string | null;
+  organizationAddress: string | null;
+  organizationCity: string | null;
+  organizationState: string | null;
+  organizationZip: string | null;
+  organizationEmail: string | null;
+  organizationPhone: string | null;
+};
+
+type RepresentativeContact = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  type: string;
+};
 
 // Mock data for events
 const mockEvents = [
@@ -164,30 +121,20 @@ const mockEvents = [
   }
 ];
 
-// Mock data for contacts
-const mockContacts = [
-  { id: "USR001", name: "David Miller", email: "david@example.com", role: "Publisher", type: "member" },
-  { id: "USR002", name: "Sarah Wilson", email: "sarah@example.com", role: "Approver", type: "member" },
-  { id: "USR003", name: "James Johnson", email: "james@example.com", role: "Creator", type: "provider" }
-];
-
 const PartnersDashboard = () => {
-  const [partner, setPartner] = useState<PartnerUser | null>(null);
+  const [partner, setPartner] = useState<PartnerAccountProfile | null>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [pendingEvents, setPendingEvents] = useState<any[]>([]);
   const [historicalEvents, setHistoricalEvents] = useState<any[]>([]);
-  const [contacts, setContacts] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<RepresentativeContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [showAddContact, setShowAddContact] = useState(false);
-  const [networkScore, setNetworkScore] = useState(850);
+  const [rewardPoints, setRewardPoints] = useState(0);
+  const [eventsCreatedCount, setEventsCreatedCount] = useState(0);
 
   useEffect(() => {
-    // In a real app, fetch partner data from API
-    setPartner(mockPartners[0]);
-    setContacts(mockContacts);
-    
-    // Sort events based on current direction
+    // Keep the event list sorted without refetching profile data.
     const sortedEvents = [...mockEvents].sort((a, b) => {
       return sortDirection === "asc" 
         ? new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -197,9 +144,130 @@ const PartnersDashboard = () => {
     setEvents(sortedEvents);
     setPendingEvents(sortedEvents.filter(event => event.status === "pending"));
     setHistoricalEvents(sortedEvents.filter(event => event.status === "completed"));
-    
-    setIsLoading(false);
   }, [sortDirection]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPartnerProfile = async () => {
+      try {
+        setIsLoading(true);
+
+        const user = getUserFromStorage();
+        if (!user?.cognitoId) {
+          if (isMounted) {
+            setPartner(null);
+            setContacts([]);
+          }
+          return;
+        }
+
+        const [profileResult, representativesResult, analyticsResult, partnerEventsResult] = await Promise.allSettled([
+          fetch(`/api/user-by-id?cognitoId=${encodeURIComponent(user.cognitoId)}`, {
+            method: "GET",
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          }).then(async (response) => {
+            const contentType = response.headers.get("content-type") || "";
+            if (!contentType.includes("application/json")) {
+              throw new Error("Partner profile API returned a non-JSON response");
+            }
+
+            const profileData = await response.json();
+            if (!response.ok) {
+              throw new Error(profileData.error || "Failed to load partner profile");
+            }
+
+            return profileData;
+          }),
+          fetchAuthorizedRepresentatives(user.cognitoId),
+          fetchEngagementAnalytics(user.cognitoId),
+          fetchPartnerDashboardEvents(user.cognitoId),
+        ]);
+
+        if (isMounted) {
+          if (profileResult.status === "fulfilled") {
+            const profileData = profileResult.value;
+            setPartner({
+              networkName: profileData.profile.networkName ?? null,
+              networkCode: profileData.profile.networkCode ?? null,
+              partnerCode: profileData.profile.partnerCode ?? null,
+              organizationName: profileData.profile.organizationName ?? null,
+              organizationAddress: profileData.profile.organizationAddress ?? null,
+              organizationCity: profileData.profile.organizationCity ?? null,
+              organizationState: profileData.profile.organizationState ?? null,
+              organizationZip: profileData.profile.organizationZip ?? null,
+              organizationEmail: profileData.profile.organizationEmail ?? null,
+              organizationPhone: profileData.profile.organizationPhone ?? null,
+            });
+          } else if (representativesResult.status === "fulfilled") {
+            setPartner({
+              networkName: representativesResult.value.organization.networkName ?? null,
+              networkCode: representativesResult.value.organization.networkCode ?? null,
+              partnerCode: null,
+              organizationName: null,
+              organizationAddress: null,
+              organizationCity: null,
+              organizationState: null,
+              organizationZip: null,
+              organizationEmail: null,
+              organizationPhone: null,
+            });
+          } else {
+            console.error("failed to load partner profile:", profileResult.reason);
+            setPartner(null);
+          }
+
+          if (representativesResult.status === "fulfilled") {
+            setContacts(
+              representativesResult.value.representatives.map((rep: AuthorizedRepresentative) => ({
+                id: rep.assignmentId,
+                name: rep.name,
+                email: rep.email,
+                role: rep.role,
+                type: rep.status,
+              }))
+            );
+          } else {
+            console.error("failed to load authorized representatives:", representativesResult.reason);
+            setContacts([]);
+          }
+
+          if (analyticsResult.status === "fulfilled") {
+            setRewardPoints(analyticsResult.value.points.balance);
+          } else {
+            console.error("failed to load engagement analytics:", analyticsResult.reason);
+            setRewardPoints(0);
+          }
+
+          if (partnerEventsResult.status === "fulfilled") {
+            setEventsCreatedCount(partnerEventsResult.value.length);
+          } else {
+            console.error("failed to load partner events:", partnerEventsResult.reason);
+            setEventsCreatedCount(0);
+          }
+        }
+      } catch (error) {
+        console.error("failed to load partner profile:", error);
+        if (isMounted) {
+          setPartner(null);
+          setContacts([]);
+          setRewardPoints(0);
+          setEventsCreatedCount(0);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadPartnerProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSort = () => {
     setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -246,8 +314,8 @@ const PartnersDashboard = () => {
         <div className="flex-1 flex items-center gap-1 px-2 py-1.5 rounded-md bg-amber-50 text-left">
           <Medal className="h-3 w-3 text-amber-600 shrink-0" />
           <div className="min-w-0">
-            <p className="text-[9px] font-medium text-amber-800 truncate">Score</p>
-            <p className="text-xs font-bold text-amber-900">{networkScore}</p>
+          <p className="text-[9px] font-medium text-amber-800 truncate">Score</p>
+            <p className="text-xs font-bold text-amber-900">{rewardPoints}</p>
           </div>
         </div>
       </div>
@@ -288,7 +356,7 @@ const PartnersDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-amber-600">{networkScore}</p>
+            <p className="text-3xl font-bold text-amber-600">{rewardPoints}</p>
           </CardContent>
         </Card>
       </div>
@@ -577,15 +645,15 @@ const PartnersDashboard = () => {
               <CardDescription>Your performance in the network</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Network Score</span>
-                  <span className="font-medium">{networkScore}</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Network Score</span>
+                  <span className="font-medium">{rewardPoints}</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-royal rounded-full" 
-                    style={{ width: `${Math.min(networkScore / 10, 100)}%` }}
+                    style={{ width: `${Math.min(rewardPoints / 10, 100)}%` }}
                   ></div>
                 </div>
               </div>
@@ -598,7 +666,7 @@ const PartnersDashboard = () => {
                       <Calendar className="h-4 w-4 mr-1 text-royal" />
                       Events Created
                     </span>
-                    <span className="font-medium">{events.length}</span>
+                    <span className="font-medium">{eventsCreatedCount}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="flex items-center">

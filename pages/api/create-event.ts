@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { randomInt } from "crypto";
 import { prisma } from "../../lib/prisma";
+import { awardRewardTask } from "../../lib/rewards";
 import { getAppBaseUrl } from "../../lib/app-url";
 import { sendSesSimpleEmail } from "../../lib/ses-email";
 
@@ -143,6 +144,13 @@ export default async function handler(
           status: "pending",
         })),
         skipDuplicates: true,
+      });
+
+      await awardRewardTask(tx, {
+        userId: partnerId,
+        taskKey: "partner_create_campaign",
+        eventId: createdEvent.event_id,
+        description: "Campaign created",
       });
 
       return createdEvent;

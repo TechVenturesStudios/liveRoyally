@@ -7,6 +7,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum RewardFrequencyPeriod {
+  lifetime
+  year
+  month
+  week
+  event
+}
+
+enum RewardTaskCategory {
+  profile
+  event
+  voucher
+  network
+  engagement
+  milestone
+  streak
+  other
+}
+
+enum RewardPointTransactionType {
+  task_completion
+  streak_bonus
+  manual_adjustment
+  reward_redemption
+  expiration
+}
+
+enum RewardGoalMetric {
+  vouchers_redeemed
+  events_attended
+  active_networks
+  points_earned
+  other
+}
+
 enum UserType {
   member
   provider
@@ -56,7 +91,7 @@ model events {
   users              users?                    @relation(fields: [partner_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
   vouchers           vouchers[]
   event_provider_invites event_provider_invites[]
-
+  reward_completions        reward_task_completions[]
   @@index([partner_id], map: "idx_events_partner")
 }
 
@@ -264,6 +299,11 @@ model users {
   user_roles        user_roles[]
   vouchers          vouchers[]
 
+  reward_accounts       reward_accounts[]
+  reward_completions    reward_task_completions[]
+  reward_transactions   reward_point_transactions[]
+  reward_streaks        reward_streaks[]
+
   @@index([cognito_id], map: "idx_users_cognito")
   @@index([email], map: "idx_users_email")
 }
@@ -288,4 +328,166 @@ model vouchers {
 
   @@index([event_id], map: "idx_vouchers_event")
   @@index([provider_id], map: "idx_vouchers_provider")
+}
+
+model reward_tiers {
+  tier_id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  user_type       UserType
+  name            String    @db.VarChar(50)
+
+  min_points      Int
+  max_points      Int?
+
+  display_order   Int       @default(0)
+
+  active          Boolean   @default(true)
+
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime  @updatedAt @db.Timestamp(6)
+
+  @@unique([user_type, name], map: "uq_reward_tier_user_type_name")
+  @@unique([user_type, display_order], map: "uq_reward_tier_user_type_order")
+  @@index([user_type], map: "idx_reward_tiers_user_type")
+  @@index([min_points], map: "idx_reward_tiers_min_points")
+}
+
+model reward_accounts {
+  reward_account_id String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  user_id           String    @db.Uuid
+  reward_year       Int
+
+  points_balance    Int       @default(0)
+  points_earned     Int       @default(0)
+  points_spent      Int       @default(0)
+
+  created_at        DateTime  @default(now()) @db.Timestamp(6)
+  updated_at        DateTime  @updatedAt @db.Timestamp(6)
+
+  user              users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  transactions      reward_point_transactions[]
+  completions       reward_task_completions[]
+
+  @@unique([user_id, reward_year], map: "uq_reward_account_user_year")
+  @@index([user_id], map: "idx_reward_accounts_user")
+  @@index([reward_year], map: "idx_reward_accounts_year")
+}
+
+model reward_tasks {
+  task_id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  task_key             String                 @unique @db.VarChar(100)
+
+  name                 String                 @db.VarChar(150)
+  description          String?
+
+  user_type            UserType
+  category             RewardTaskCategory
+
+  points               Int
+
+  frequency_period     RewardFrequencyPeriod
+  frequency_limit      Int?   // null means unlimited within the period
+
+  active               Boolean                @default(true)
+
+  display_order        Int                    @default(0)
+
+  // Badge information
+  badge_name           String?                @db.VarChar(100)
+  badge_description    String?
+  badge_icon           String?                @db.VarChar(100)
+
+  created_at           DateTime               @default(now()) @db.Timestamp(6)
+  updated_at           DateTime               @updatedAt
+
+  completions          reward_task_completions[]
+  transactions         reward_point_transactions[]
+
+  @@index([user_type], map: "idx_reward_tasks_user_type")
+  @@index([category], map: "idx_reward_tasks_category")
+  @@index([active], map: "idx_reward_tasks_active")
+  @@index([display_order], map: "idx_reward_tasks_display_order")
+}
+
+model reward_task_completions {
+  completion_id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  user_id             String    @db.Uuid
+  task_id             String    @db.Uuid
+
+  reward_year         Int
+
+  event_id            String?   @db.VarChar(50)
+
+  points_awarded      Int
+
+  completed_at        DateTime  @default(now()) @db.Timestamp(6)
+
+  user                users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  task                reward_tasks @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
+
+  event               events?   @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+
+  reward_account      reward_accounts @relation(fields: [user_id, reward_year], references: [user_id, reward_year], onDelete: Cascade)
+
+  @@index([user_id], map: "idx_reward_completions_user")
+  @@index([task_id], map: "idx_reward_completions_task")
+  @@index([reward_year], map: "idx_reward_completions_year")
+  @@index([event_id], map: "idx_reward_completions_event")
+  @@index([user_id, task_id, reward_year], map: "idx_reward_completions_user_task_year")
+}
+
+model reward_point_transactions {
+  transaction_id      String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  user_id             String                       @db.Uuid
+  reward_account_id   String                       @db.Uuid
+
+  task_id             String?                      @db.Uuid
+  completion_id       String?                      @db.Uuid
+
+  transaction_type    RewardPointTransactionType
+
+  points              Int
+
+  description         String?
+
+  created_at          DateTime                     @default(now()) @db.Timestamp(6)
+
+  user                users                        @relation(fields: [user_id],references: [user_id],onDelete: Cascade)
+
+  reward_account      reward_accounts              @relation(fields: [reward_account_id], references: [reward_account_id], onDelete: Cascade)
+
+  task                reward_tasks?                @relation(fields: [task_id], references: [task_id], onDelete: SetNull)
+
+  @@index([user_id], map: "idx_reward_transactions_user")
+  @@index([reward_account_id], map: "idx_reward_transactions_account")
+  @@index([task_id], map: "idx_reward_transactions_task")
+  @@index([completion_id], map: "idx_reward_transactions_completion")
+  @@index([created_at], map: "idx_reward_transactions_created")
+}
+
+model reward_streaks {
+  streak_id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  user_id            String    @db.Uuid
+  reward_year        Int
+
+  current_streak     Int       @default(0)
+  longest_streak     Int       @default(0)
+
+  last_activity_at   DateTime?
+
+  created_at         DateTime  @default(now()) @db.Timestamp(6)
+  updated_at         DateTime  @updatedAt
+
+  user               users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([user_id, reward_year], map: "uq_reward_streak_user_year")
+  @@index([user_id], map: "idx_reward_streaks_user")
+  @@index([reward_year], map: "idx_reward_streaks_year")
 }

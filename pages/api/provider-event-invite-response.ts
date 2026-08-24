@@ -3,6 +3,8 @@ import { randomBytes } from "crypto";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
 import { isDeadlinePassed } from "@/utils/inviteDeadline";
+import { deriveEventLifecycleStatus } from "@/utils/eventStatus";
+import { awardRewardTask } from "../../lib/rewards";
 
 type ProviderInviteResponse =
   | {
@@ -57,6 +59,42 @@ function parseVoucherType(value: unknown) {
   return type as UiVoucherType;
 }
 
+async function syncEventLifecycleStatus(tx: any, eventId: string) {
+  const event = await tx.events.findUnique({
+    where: { event_id: eventId },
+    select: {
+      event_id: true,
+      status: true,
+      start_date: true,
+      response_deadline: true,
+      event_provider_invites: {
+        select: {
+          status: true,
+        },
+      },
+    },
+  });
+
+  if (!event) {
+    return;
+  }
+
+  const nextStatus = deriveEventLifecycleStatus({
+    startDate: event.start_date,
+    responseDeadline: event.response_deadline,
+    inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
+  });
+
+  if (event.status !== nextStatus) {
+    await tx.events.update({
+      where: { event_id: event.event_id },
+      data: {
+        status: nextStatus,
+      },
+    });
+  }
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ProviderInviteResponse>
@@ -97,6 +135,7 @@ export default async function handler(
         invite_id: true,
         event_id: true,
         provider_id: true,
+        partner_id: true,
         status: true,
         voucher_id: true,
         events: {
@@ -121,6 +160,8 @@ export default async function handler(
         });
       }
 
+      await syncEventLifecycleStatus(prisma, invite.event_id);
+
       return res.status(410).json({ error: "This invitation has expired" });
     }
 
@@ -138,6 +179,8 @@ export default async function handler(
           voucher_id: true,
         },
       });
+
+      await syncEventLifecycleStatus(prisma, invite.event_id);
 
       return res.status(200).json({ invite: declinedInvite });
     }
@@ -224,9 +267,20 @@ export default async function handler(
           },
         });
 
-        return {
-          invite: updatedInvite,
-          voucher: existingVoucher,
+      if (invite.status !== "accepted") {
+        await awardRewardTask(tx, {
+          userId: invite.partner_id,
+          taskKey: "partner_invite_provider",
+          eventId: invite.event_id,
+          description: "Provider invite accepted",
+        });
+      }
+
+      await syncEventLifecycleStatus(tx, invite.event_id);
+
+      return {
+        invite: updatedInvite,
+        voucher: existingVoucher,
           alreadyApproved: true,
         };
       }
@@ -319,6 +373,17 @@ export default async function handler(
           voucher_id: true,
         },
       });
+
+      if (invite.status !== "accepted") {
+        await awardRewardTask(tx, {
+          userId: invite.partner_id,
+          taskKey: "partner_invite_provider",
+          eventId: invite.event_id,
+          description: "Provider invite accepted",
+        });
+      }
+
+      await syncEventLifecycleStatus(tx, invite.event_id);
 
       return {
         invite: updatedInvite,

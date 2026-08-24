@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
+import { awardRewardTask } from "../../lib/rewards";
 
 type AuthorizedRepresentative = {
   assignmentId: string;
@@ -164,55 +165,71 @@ export default async function handler(
         return res.status(404).json({ error: "Member not found in this network" });
       }
 
-      const existing = await prisma.$queryRaw<AuthorizedRepresentative[]>`
-        SELECT
-          a.assignment_id AS "assignmentId",
-          u.user_id AS "memberId",
-          TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS name,
-          u.email,
-          COALESCE(u.phone_number, '') AS phone,
-          CASE WHEN a.is_active THEN 'Assistant Representative' ELSE 'Inactive' END AS role,
-          CASE WHEN a.is_active THEN 'active' ELSE 'inactive' END AS status,
-          COALESCE(m.created_at, u.created_at) AS "memberSince"
-        FROM authorized_representative_assignments a
-        INNER JOIN users u ON u.user_id = a.principal_user_id
-        LEFT JOIN member_profiles m ON m.user_id = u.user_id
-        WHERE a.principal_user_id = ${memberId}::uuid
-          AND a.represented_user_id = ${account.actingUserId}::uuid
-        LIMIT 1
-      `;
+      const result = await prisma.$transaction(async (tx) => {
+        const existing = await tx.$queryRaw<AuthorizedRepresentative[]>`
+          SELECT
+            a.assignment_id AS "assignmentId",
+            u.user_id AS "memberId",
+            TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS name,
+            u.email,
+            COALESCE(u.phone_number, '') AS phone,
+            CASE WHEN a.is_active THEN 'Assistant Representative' ELSE 'Inactive' END AS role,
+            CASE WHEN a.is_active THEN 'active' ELSE 'inactive' END AS status,
+            COALESCE(m.created_at, u.created_at) AS "memberSince"
+          FROM authorized_representative_assignments a
+          INNER JOIN users u ON u.user_id = a.principal_user_id
+          LEFT JOIN member_profiles m ON m.user_id = u.user_id
+          WHERE a.principal_user_id = ${memberId}::uuid
+            AND a.represented_user_id = ${account.actingUserId}::uuid
+          LIMIT 1
+        `;
 
-      if (existing[0]) {
-        return res.status(200).json({ assignment: existing[0] });
-      }
+        if (existing[0]) {
+          return { assignment: existing[0], awarded: false };
+        }
 
-      const inserted = await prisma.$queryRaw<AuthorizedRepresentative[]>`
-        INSERT INTO authorized_representative_assignments (
-          principal_user_id,
-          represented_user_id,
-          is_active
-        )
-        VALUES (
-          ${memberId}::uuid,
-          ${account.actingUserId}::uuid,
-          true
-        )
-        RETURNING assignment_id AS "assignmentId"
-      `;
+        const inserted = await tx.$queryRaw<AuthorizedRepresentative[]>`
+          INSERT INTO authorized_representative_assignments (
+            principal_user_id,
+            represented_user_id,
+            is_active
+          )
+          VALUES (
+            ${memberId}::uuid,
+            ${account.actingUserId}::uuid,
+            true
+          )
+          RETURNING assignment_id AS "assignmentId"
+        `;
 
-      const assignment = inserted[0];
+        const assignment = inserted[0];
+
+        await awardRewardTask(tx, {
+          userId: account.actingUserId,
+          taskKey:
+            account.actingUserType === "partner"
+              ? "partner_add_representative"
+              : "provider_add_representative",
+          description: "Representative added",
+        });
+
+        return {
+          assignment: {
+            assignmentId: assignment.assignmentId,
+            memberId: eligibleMember[0].id,
+            name: eligibleMember[0].name,
+            email: eligibleMember[0].email,
+            phone: eligibleMember[0].phone || "",
+            role: "Assistant Representative",
+            status: "active",
+            memberSince: eligibleMember[0].memberSince,
+          },
+          awarded: true,
+        };
+      });
 
       return res.status(200).json({
-        assignment: {
-          assignmentId: assignment.assignmentId,
-          memberId: eligibleMember[0].id,
-          name: eligibleMember[0].name,
-          email: eligibleMember[0].email,
-          phone: eligibleMember[0].phone || "",
-          role: "Assistant Representative",
-          status: "active",
-          memberSince: eligibleMember[0].memberSince,
-        },
+        assignment: result.assignment,
       });
     }
 

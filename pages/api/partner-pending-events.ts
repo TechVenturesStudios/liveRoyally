@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
+import { deriveEventLifecycleStatus } from "@/utils/eventStatus";
 
 type PartnerPendingEventsResponse =
   | {
@@ -106,8 +107,30 @@ export default async function handler(
       },
     });
 
+    const eventSnapshots = await Promise.all(events.map(async (event) => {
+      const status = deriveEventLifecycleStatus({
+        startDate: event.start_date,
+        responseDeadline: event.response_deadline,
+        inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
+      });
+
+      if (event.status !== status) {
+        await prisma.events.update({
+          where: { event_id: event.event_id },
+          data: { status },
+        });
+      }
+
+      return {
+        ...event,
+        status,
+      };
+    }));
+
     return res.status(200).json({
-      events: events.map((event) => ({
+      events: eventSnapshots
+        .filter((event) => event.status === "pending")
+        .map((event) => ({
         id: event.event_id,
         title: event.title ?? "Untitled Event",
         description: event.description ?? "",

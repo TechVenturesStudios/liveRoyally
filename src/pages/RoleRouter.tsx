@@ -7,6 +7,7 @@ import Dashboard from "./dashboard/Dashboard";
 import ProvidersDashboard from "./dashboard/ProvidersDashboard";
 import PartnersDashboard from "./dashboard/PartnersDashboard";
 import AdminDashboard from "./dashboard/AdminDashboard";
+import PartnerCRMDashboard from "./dashboard/PartnerCRMDashboard";
 
 const RoleRouter = () => {
   const { user, isLoading } = useAuthCheck();

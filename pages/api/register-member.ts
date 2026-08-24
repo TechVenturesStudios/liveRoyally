@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { randomInt } from "crypto";
 import { UserType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
+import { awardRewardTask } from "../../lib/rewards";
 import { getOrCreateRole } from "../../lib/roles";
 
 type RegisterMemberResponse =
@@ -84,6 +85,12 @@ export default async function handler(
           notification_enabled: Boolean(body.notificationEnabled),
           terms_accepted: Boolean(body.termsAccepted),
         },
+      });
+
+      await awardRewardTask(tx, {
+        userId: user.user_id,
+        taskKey: "member_create_account",
+        description: "Member account created",
       });
 
       return user;

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { randomInt } from "crypto";
 import { UserType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
+import { awardRewardTask } from "../../lib/rewards";
 import { getOrCreateRole } from "../../lib/roles";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../src/config/subscriptionPlans";
 
@@ -153,6 +154,18 @@ export default async function handler(
           terms_accepted: Boolean(body.termsAccepted),
         },
       });
+
+      await awardRewardTask(tx, {
+        userId: user.user_id,
+        taskKey: "provider_create_business_profile",
+        description: "Business profile created",
+      });
+
+      // await awardRewardTask(tx, {
+      //   userId: user.user_id,
+      //   taskKey: "provider_complete_business_profile",
+      //   description: "Business profile completed",
+      // });
 
       return { user, partner };
     });

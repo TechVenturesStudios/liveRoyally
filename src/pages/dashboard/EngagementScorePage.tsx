@@ -1,55 +1,172 @@
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Medal, Ticket, Users, TrendingUp, Award, Target, CalendarPlus,
-  CalendarCheck, PartyPopper, Crown, Flame, Star, Zap, Trophy,
-  CheckCircle2, Lock, ChevronRight,
+  Award,
+  CheckCircle2,
+  Crown,
+  Flame,
+  Loader2,
+  Lock,
+  Target,
+  Ticket,
+  PartyPopper,
+  Users,
 } from "lucide-react";
-import { getUserFromStorage } from "@/utils/userStorage";
+import { fetchEngagementAnalytics, type EngagementAnalyticsResponse } from "@/api/engagementAnalytics";
+import { getUserFromStorage, type User } from "@/utils/userStorage";
 import { UserType } from "@/types/user";
 
-// ── helpers ──────────────────────────────────────────────────────
-const getLevelColor = (level: string) => {
-  switch (level) {
-    case "Bronze": return "bg-orange-100 text-orange-800 border-orange-200";
-    case "Silver": return "bg-gray-100 text-gray-700 border-gray-200";
-    case "Gold":   return "bg-yellow-50 text-yellow-800 border-yellow-200";
-    case "Platinum": return "bg-purple-50 text-purple-800 border-purple-200";
-    default: return "bg-muted text-muted-foreground";
-  }
+type DashboardUserType = Exclude<UserType, "admin">;
+
+type RoleCopy = {
+  description: string;
+  streakDescription: string;
+  milestonesDescription: string;
+  milestoneHeading: string;
+  milestoneIntro: string;
+  roleLabel: string;
 };
 
-const getLevelGradient = (level: string) => {
-  switch (level) {
-    case "Bronze": return "from-orange-400 to-orange-600";
-    case "Silver": return "from-gray-400 to-gray-600";
-    case "Gold":   return "from-yellow-400 to-amber-500";
-    case "Platinum": return "from-purple-400 to-purple-600";
-    default: return "from-primary to-primary";
-  }
+const ROLE_COPY: Record<DashboardUserType, RoleCopy> = {
+  member: {
+    description: "Track your event participation, voucher redemptions, and milestone progress.",
+    streakDescription: "Consecutive weeks attending events or using vouchers",
+    milestonesDescription: "Earn points by attending events and redeeming vouchers",
+    milestoneHeading: "Member Milestones",
+    milestoneIntro: "These are the active reward tasks for members.",
+    roleLabel: "Member",
+  },
+  provider: {
+    description: "Track your hosting activity, voucher honors, and milestone progress.",
+    streakDescription: "Consecutive weeks hosting events or honoring vouchers",
+    milestonesDescription: "Earn points by hosting events and honoring vouchers",
+    milestoneHeading: "Provider Milestones",
+    milestoneIntro: "These are the active reward tasks for providers.",
+    roleLabel: "Provider",
+  },
+  partner: {
+    description: "Track your active providers, voucher redemption status, and milestone progress.",
+    streakDescription: "Consecutive weeks creating events or growing your network",
+    milestonesDescription: "Earn points by creating events and growing your provider network",
+    milestoneHeading: "Partner Milestones",
+    milestoneIntro: "These are the active reward tasks for partners.",
+    roleLabel: "Partner",
+  },
 };
 
-// ── Shared Components ────────────────────────────────────────────
+function getTierBadgeClass(tier: { minPoints: number; maxPoints: number | null }) {
+  if (tier.maxPoints === null) {
+    return "bg-amber-50 text-amber-800 border-amber-200";
+  }
 
-const ScoreRing = ({ score, level, label, pointsToNext, nextLevel }: {
-  score: number; level: string; label: string; pointsToNext: number; nextLevel: string;
+  if (tier.minPoints === 0) {
+    return "bg-sky-50 text-sky-800 border-sky-200";
+  }
+
+  return "bg-slate-100 text-slate-700 border-slate-200";
+}
+
+function getTierProgressPercent(data: EngagementAnalyticsResponse) {
+  const { balance, tier, nextTier } = data.points;
+
+  if (!nextTier) {
+    return 100;
+  }
+
+  const lowerBound = tier.minPoints;
+  const upperBound = nextTier.minPoints;
+  const span = Math.max(1, upperBound - lowerBound);
+  const progress = ((balance - lowerBound) / span) * 100;
+
+  return Math.max(0, Math.min(100, Math.round(progress)));
+}
+
+const MEMBER_PROGRESS_PLACEHOLDERS = [
+  {
+    icon: Ticket,
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
+    title: "Vouchers Redeemed",
+    current: 14,
+    goal: 20,
+  },
+  {
+    icon: PartyPopper,
+    iconBg: "bg-blue-50",
+    iconColor: "text-blue-600",
+    title: "Events Attended",
+    current: 8,
+    goal: 12,
+  },
+  {
+    icon: Users,
+    iconBg: "bg-green-50",
+    iconColor: "text-green-600",
+    title: "Active Networks",
+    current: 3,
+    goal: 5,
+  },
+] as const;
+
+const PARTNER_PROGRESS_PLACEHOLDERS = [
+  {
+    icon: Ticket,
+    iconBg: "bg-fuchsia-50",
+    iconColor: "text-fuchsia-600",
+    title: "Voucher Redemption Status",
+    current: 41,
+    goal: 58,
+  },
+] as const;
+
+const PROVIDER_PROGRESS_PLACEHOLDERS = [
+  {
+    icon: Ticket,
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
+    title: "Vouchers Honored",
+    current: 18,
+    goal: 24,
+  },
+] as const;
+
+const ScoreRing = ({
+  points,
+  tierName,
+  roleLabel,
+  tier,
+  pointsToNextTier,
+  nextTierName,
+  progressPercent,
+}: {
+  points: number;
+  tierName: string;
+  roleLabel: string;
+  tier: { minPoints: number; maxPoints: number | null };
+  pointsToNextTier: number;
+  nextTierName: string | null;
+  progressPercent: number;
 }) => {
   const circumference = 2 * Math.PI * 54;
-  const offset = circumference - (score / 100) * circumference;
+  const offset = circumference - (progressPercent / 100) * circumference;
+
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative">
         <svg width="140" height="140" viewBox="0 0 120 120" className="-rotate-90">
           <circle cx="60" cy="60" r="54" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
           <circle
-            cx="60" cy="60" r="54" fill="none"
-            stroke="url(#scoreGrad)" strokeWidth="8" strokeLinecap="round"
-            strokeDasharray={circumference} strokeDashoffset={offset}
+            cx="60"
+            cy="60"
+            r="54"
+            fill="none"
+            stroke="url(#scoreGrad)"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
             className="transition-all duration-1000"
           />
           <defs>
@@ -59,71 +176,256 @@ const ScoreRing = ({ score, level, label, pointsToNext, nextLevel }: {
             </linearGradient>
           </defs>
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-bold">{score}</span>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">points</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-bold">{points}</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">points</span>
         </div>
       </div>
-      <Badge className={`${getLevelColor(level)} text-xs px-3 py-1`}>
-        {level} {label}
+      <Badge className={`${getTierBadgeClass(tier)} px-3 py-1 text-xs`}>
+        {tierName} {roleLabel}
       </Badge>
-      <p className="text-xs text-muted-foreground">
-        <span className="font-medium">{pointsToNext} pts</span> to {nextLevel}
+      <p className="text-center text-xs text-muted-foreground">
+        {nextTierName ? (
+          <span className="font-medium">{pointsToNextTier} pts</span>
+        ) : (
+          <span className="font-medium">Top tier reached</span>
+        )}{" "}
+        {nextTierName ? `to ${nextTierName}` : ""}
       </p>
     </div>
   );
 };
 
-const ProgressMetric = ({ icon: Icon, iconBg, iconColor, title, current, goal, unit }: {
-  icon: any; iconBg: string; iconColor: string; title: string; current: number; goal: number; unit?: string;
-}) => {
-  const pct = goal > 0 ? Math.round((current / goal) * 100) : 0;
-  return (
-    <div className="space-y-2.5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className={`rounded-lg p-2 ${iconBg}`}>
-            <Icon className={`h-4 w-4 ${iconColor}`} />
-          </div>
-          <span className="text-sm font-medium">{title}</span>
+const ProgressMetric = ({
+  icon: Icon,
+  iconBg,
+  iconColor,
+  title,
+  current,
+  goal,
+  helperText,
+}: {
+  icon: any;
+  iconBg: string;
+  iconColor: string;
+  title: string;
+  current: number;
+  goal?: number | null;
+  helperText?: string;
+}) => (
+  <div className="space-y-2.5">
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <div className={`shrink-0 rounded-lg p-2.5 ${iconBg}`}>
+          <Icon className={`h-4 w-4 ${iconColor}`} />
         </div>
-        <span className="text-sm font-semibold">{current}{unit ? ` ${unit}` : ""} <span className="text-muted-foreground font-normal">/ {goal}</span></span>
+        <span className="truncate text-sm font-medium">{title}</span>
       </div>
-      <Progress value={pct} className="h-2" />
+      <span className="shrink-0 text-sm font-semibold">
+        {current}
+        {typeof goal === "number" ? (
+          <span className="font-normal text-muted-foreground"> / {goal}</span>
+        ) : null}
+      </span>
+    </div>
+    {typeof goal === "number" ? (
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-primary to-pink-500 transition-all duration-500"
+          style={{ width: `${goal > 0 ? Math.max(0, Math.min(100, Math.round((current / goal) * 100))) : 0}%` }}
+        />
+      </div>
+    ) : helperText ? (
+      <p className="text-xs text-muted-foreground">{helperText}</p>
+    ) : null}
+  </div>
+);
+
+const ProviderCapacityMetric = ({
+  currentProviders,
+  maxProviders,
+}: {
+  currentProviders: number;
+  maxProviders: number | null;
+}) => {
+  const hasLimit = typeof maxProviders === "number";
+  const progressPercent = hasLimit && maxProviders > 0
+    ? Math.max(0, Math.min(100, Math.round((currentProviders / maxProviders) * 100)))
+    : 0;
+
+  return (
+    <div className="space-y-2.5 rounded-xl border border-border bg-background px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="shrink-0 rounded-lg bg-primary/10 p-2.5">
+            <Users className="h-4 w-4 text-primary" />
+          </div>
+          <span className="truncate text-sm font-medium">Active Providers</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-sm font-semibold">
+            {currentProviders}{" "}
+            <span className="font-normal text-muted-foreground">
+              / {hasLimit ? maxProviders : "unlimited"}
+            </span>
+          </span>
+          {!hasLimit ? (
+            <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+              Unlimited
+            </Badge>
+          ) : null}
+        </div>
+      </div>
+
+      {hasLimit ? (
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-primary to-pink-500 transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">Your plan does not cap provider seats.</p>
+      )}
     </div>
   );
 };
 
-const MilestoneCard = ({ label, completed, points, icon: Icon }: {
-  label: string; completed: boolean; points: number; icon: any;
-}) => (
-  <div className={`group relative p-4 rounded-xl border transition-all ${
-    completed
-      ? "bg-primary/5 border-primary/20 hover:border-primary/30"
-      : "bg-muted/20 border-border hover:bg-muted/30"
-  }`}>
-    <div className="flex items-start gap-3">
-      <div className={`rounded-lg p-2 shrink-0 ${
-        completed ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-      }`}>
-        <Icon className="h-4 w-4" />
+const ProviderRankingCard = ({
+  title,
+  description,
+  providers,
+  currentUserId,
+}: {
+  title: string;
+  description: string;
+  providers: EngagementAnalyticsResponse["partnerProviders"];
+  currentUserId?: string | null;
+}) => {
+  const sortedProviders = [...providers].sort((a, b) => {
+    if (b.points !== a.points) {
+      return b.points - a.points;
+    }
+
+    return a.rank - b.rank;
+  });
+
+  const providerCount = sortedProviders.length;
+
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">{title}</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+        </div>
+        <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+          {providerCount} {providerCount === 1 ? "provider" : "providers"}
+        </Badge>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium leading-tight ${!completed ? "text-muted-foreground" : ""}`}>
-          {label}
+
+      <div className="mt-4 space-y-2.5">
+        {sortedProviders.length > 0 ? (
+          sortedProviders.map((provider) => {
+            const isCurrentProvider = provider.userId === currentUserId;
+            const displayName =
+              [provider.firstName, provider.lastName].filter(Boolean).join(" ").trim() ||
+              provider.businessName ||
+              provider.displayId ||
+              "Unnamed Provider";
+
+            return (
+              <div
+                key={provider.userId}
+                className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                  isCurrentProvider ? "border-primary/30 bg-primary/5" : "border-border bg-background"
+                }`}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                    {provider.rank}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-medium">{displayName}</p>
+                      {isCurrentProvider ? (
+                        <Badge className="border-primary/20 bg-primary/10 text-[10px] text-primary">You</Badge>
+                      ) : null}
+                    </div>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {provider.businessName || provider.displayId || "Provider profile"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-semibold">{provider.points}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">points</p>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center">
+            <p className="text-sm font-medium">No provider rankings yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Once your partner has linked providers with reward activity, the ranking list will appear here.
+            </p>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+};
+
+const MilestoneCard = ({
+  milestone,
+}: {
+  milestone: EngagementAnalyticsResponse["milestones"][number];
+}) => (
+  <div
+    className={`group relative rounded-xl border p-4 transition-all ${
+      milestone.earned
+        ? "border-primary/20 bg-primary/5 hover:border-primary/30"
+        : "border-border bg-muted/20 hover:bg-muted/30"
+    }`}
+  >
+    <div className="flex items-start gap-3">
+      <div
+        className={`shrink-0 rounded-lg p-2 ${
+          milestone.earned ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+        }`}
+      >
+        <Ticket className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className={`text-sm font-medium leading-tight ${!milestone.earned ? "text-muted-foreground" : ""}`}>
+          {milestone.name}
         </p>
-        <div className="flex items-center gap-2 mt-1.5">
-          <span className="text-xs text-muted-foreground">+{points} pts</span>
-          {completed ? (
-            <span className="inline-flex items-center gap-1 text-xs text-primary font-medium">
-              <CheckCircle2 className="h-3 w-3" /> Earned
+        <div className="mt-1.5 flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">+{milestone.points} pts</span>
+          {milestone.earned ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+              <CheckCircle2 className="h-3 w-3" />
+              Earned
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <Lock className="h-3 w-3" /> Locked
+              <Lock className="h-3 w-3" />
+              Locked
             </span>
           )}
         </div>
+        {milestone.completedAt ? (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Completed{" "}
+            {new Date(milestone.completedAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </p>
+        ) : null}
       </div>
     </div>
   </div>
@@ -131,7 +433,7 @@ const MilestoneCard = ({ label, completed, points, icon: Icon }: {
 
 const StreakDisplay = ({ weeks, description }: { weeks: number; description: string }) => (
   <div className="flex items-center gap-4">
-    <div className="rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 p-4 shrink-0">
+    <div className="shrink-0 rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 p-4">
       <Flame className="h-7 w-7 text-orange-500" />
     </div>
     <div>
@@ -139,321 +441,307 @@ const StreakDisplay = ({ weeks, description }: { weeks: number; description: str
         <span className="text-3xl font-bold">{weeks}</span>
         <span className="text-sm text-muted-foreground">week streak</span>
       </div>
-      <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
     </div>
   </div>
 );
 
-// ── mock data per role ───────────────────────────────────────────
-
-// PARTNER data
-const partnerData = {
-  overallScore: 82, level: "Gold", nextLevel: "Platinum", pointsToNext: 18,
-  activeProviders: 12, providerGoal: 15, vouchersCreated: 58, vouchersUsed: 41,
-  streakWeeks: 8,
-  providerActivity: [
-    { name: "Sunrise Health Clinic", score: 94, tier: "Growth", events: 12, vouchersUsed: 18 },
-    { name: "Green Valley Nutrition", score: 87, tier: "Growth", events: 9, vouchersUsed: 14 },
-    { name: "Mindful Therapy Group", score: 76, tier: "Starter", events: 7, vouchersUsed: 8 },
-    { name: "Family First Pediatrics", score: 68, tier: "Growth", events: 5, vouchersUsed: 6 },
-    { name: "City Wellness Center", score: 55, tier: "Starter", events: 3, vouchersUsed: 3 },
-  ],
-  tierComparison: { tierName: "Growth", yourRank: 3, totalInTier: 18, avgScore: 65 },
-};
-
-const partnerMilestones = [
-  { label: "Created First Event", completed: true, points: 5, icon: CalendarPlus },
-  { label: "5 Events Created", completed: true, points: 10, icon: CalendarPlus },
-  { label: "10 Providers in Network", completed: true, points: 15, icon: Users },
-  { label: "50 Vouchers Created", completed: true, points: 20, icon: Ticket },
-  { label: "75% Voucher Redemption Rate", completed: false, points: 25, icon: Target },
-  { label: "20 Events Created", completed: false, points: 30, icon: CalendarPlus },
-];
-
-// PROVIDER data
-const providerData = {
-  overallScore: 76, level: "Silver", nextLevel: "Gold", pointsToNext: 24,
-  eventsHosted: 9, eventGoal: 15, vouchersHonored: 32, voucherGoal: 50,
-  streakWeeks: 5,
-  tierComparison: { tierName: "Growth", yourRank: 5, totalInTier: 22, avgScore: 62 },
-  peerRanking: [
-    { name: "You", score: 76, highlight: true },
-    { name: "Sunrise Health Clinic", score: 94, highlight: false },
-    { name: "Green Valley Nutrition", score: 87, highlight: false },
-    { name: "City Wellness Center", score: 55, highlight: false },
-    { name: "Metro Fitness Hub", score: 48, highlight: false },
-  ],
-};
-
-const providerMilestones = [
-  { label: "Hosted First Event", completed: true, points: 5, icon: CalendarCheck },
-  { label: "5 Events Hosted", completed: true, points: 10, icon: CalendarCheck },
-  { label: "Honored 25 Vouchers", completed: true, points: 15, icon: Ticket },
-  { label: "4-Week Activity Streak", completed: true, points: 10, icon: Flame },
-  { label: "Honored 50 Vouchers", completed: false, points: 25, icon: Ticket },
-  { label: "15 Events Hosted", completed: false, points: 30, icon: CalendarCheck },
-];
-
-// MEMBER data
-const memberData = {
-  overallScore: 72, level: "Gold", nextLevel: "Platinum", pointsToNext: 28,
-  vouchersRedeemed: 14, voucherGoal: 20, eventsAttended: 8, eventGoal: 12,
-  activeNetworks: 3, networkGoal: 5, streakWeeks: 6,
-};
-
-const memberMilestones = [
-  { label: "First Voucher Redeemed", completed: true, points: 5, icon: Ticket },
-  { label: "Attended First Event", completed: true, points: 5, icon: PartyPopper },
-  { label: "5 Events Attended", completed: true, points: 10, icon: PartyPopper },
-  { label: "10 Vouchers Redeemed", completed: true, points: 15, icon: Ticket },
-  { label: "12 Events Attended", completed: false, points: 20, icon: PartyPopper },
-  { label: "20 Vouchers Redeemed", completed: false, points: 25, icon: Ticket },
-];
-
-// ── Leaderboard Row ──────────────────────────────────────────────
-const LeaderboardRow = ({ rank, name, score, subtitle, isYou }: {
-  rank: number; name: string; score: number; subtitle?: string; isYou?: boolean;
-}) => {
-  const medals = ["🥇", "🥈", "🥉"];
-  return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-      isYou ? "bg-primary/5 border border-primary/20" : "hover:bg-muted/50"
-    }`}>
-      <span className="w-8 text-center text-lg shrink-0">
-        {rank <= 3 ? medals[rank - 1] : <span className="text-sm text-muted-foreground font-medium">#{rank}</span>}
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium truncate ${isYou ? "text-primary" : ""}`}>
-          {name} {isYou && <Badge variant="secondary" className="ml-1 text-[10px] py-0">You</Badge>}
-        </p>
-        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
-      </div>
-      <div className="flex items-center gap-3 shrink-0">
-        <span className="text-sm font-bold">{score}</span>
-        <div className="w-16">
-          <Progress value={score} className="h-1.5" />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ── Component ────────────────────────────────────────────────────
-
 const EngagementScorePage = () => {
-  const user = getUserFromStorage();
-  const role: UserType = user?.userType || "member";
+  const [user, setUser] = useState<User | null>(null);
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const [analytics, setAnalytics] = useState<EngagementAnalyticsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // ── PARTNER VIEW ───────────────────────────────────────────────
-  if (role === "partner") {
-    const d = partnerData;
-    const voucherRate = d.vouchersCreated > 0 ? Math.round((d.vouchersUsed / d.vouchersCreated) * 100) : 0;
-    return (
-      <DashboardLayout>
-        <div className="space-y-6 max-w-5xl mx-auto">
-          <div>
-            <h1 className="font-barlow font-bold text-2xl sm:text-3xl text-foreground">Engagement Score</h1>
-            <p className="text-sm text-muted-foreground mt-1">Track your network's performance and provider activity</p>
-          </div>
+  useEffect(() => {
+    setUser(getUserFromStorage());
+    setHasHydrated(true);
+  }, []);
 
-          {/* Hero: Score + Metrics side by side */}
-          <Card className="p-6">
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <ScoreRing score={d.overallScore} level={d.level} label="Partner" pointsToNext={d.pointsToNext} nextLevel={d.nextLevel} />
-              <div className="flex-1 w-full space-y-5">
-                <ProgressMetric icon={Users} iconBg="bg-primary/10" iconColor="text-primary" title="Active Providers" current={d.activeProviders} goal={d.providerGoal} />
-                <ProgressMetric icon={Ticket} iconBg="bg-green-50" iconColor="text-green-600" title="Voucher Redemption" current={d.vouchersUsed} goal={d.vouchersCreated} unit="used" />
-                <div className="pt-1">
-                  <StreakDisplay weeks={d.streakWeeks} description="Consecutive weeks with network activity" />
-                </div>
-              </div>
-            </div>
-          </Card>
+  useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
 
-          {/* Tier Standing */}
-          <Card className="p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-primary/10 p-2.5">
-                  <Crown className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">Tier Standing — {d.tierComparison.tierName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Rank <strong>#{d.tierComparison.yourRank}</strong> of {d.tierComparison.totalInTier} partners · Average score: {d.tierComparison.avgScore}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
+    if (!user?.cognitoId) {
+      setAnalytics(null);
+      setError("No signed-in user found.");
+      setLoading(false);
+      return;
+    }
 
-          {/* Provider Activity Leaderboard */}
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" /> Provider Leaderboard
-            </h2>
-            <div className="space-y-1">
-              {d.providerActivity
-                .sort((a, b) => b.score - a.score)
-                .map((provider, i) => (
-                  <LeaderboardRow
-                    key={i}
-                    rank={i + 1}
-                    name={provider.name}
-                    score={provider.score}
-                    subtitle={`${provider.events} events · ${provider.vouchersUsed} vouchers · ${provider.tier}`}
-                  />
-                ))}
-            </div>
-          </Card>
+    let cancelled = false;
 
-          {/* Milestones */}
-          <div>
-            <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" /> Partner Milestones
-            </h2>
-            <p className="text-xs text-muted-foreground mb-4">Earn points by creating events and growing your provider network</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {partnerMilestones.map((m, i) => (
-                <MilestoneCard key={i} {...m} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+    setLoading(true);
+    setError(null);
 
-  // ── PROVIDER VIEW ──────────────────────────────────────────────
-  if (role === "provider") {
-    const d = providerData;
-    const sorted = [...d.peerRanking].sort((a, b) => b.score - a.score);
-    return (
-      <DashboardLayout>
-        <div className="space-y-6 max-w-5xl mx-auto">
-          <div>
-            <h1 className="font-barlow font-bold text-2xl sm:text-3xl text-foreground">Engagement Score</h1>
-            <p className="text-sm text-muted-foreground mt-1">Track your hosting performance and compare with peers</p>
-          </div>
+    fetchEngagementAnalytics(user.cognitoId)
+      .then((data) => {
+        if (!cancelled) {
+          setAnalytics(data);
+        }
+      })
+      .catch((fetchError) => {
+        if (!cancelled) {
+          setAnalytics(null);
+          setError(fetchError instanceof Error ? fetchError.message : "Failed to load engagement analytics");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
 
-          {/* Hero: Score + Metrics */}
-          <Card className="p-6">
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <ScoreRing score={d.overallScore} level={d.level} label="Provider" pointsToNext={d.pointsToNext} nextLevel={d.nextLevel} />
-              <div className="flex-1 w-full space-y-5">
-                <ProgressMetric icon={CalendarCheck} iconBg="bg-primary/10" iconColor="text-primary" title="Events Hosted" current={d.eventsHosted} goal={d.eventGoal} />
-                <ProgressMetric icon={Ticket} iconBg="bg-green-50" iconColor="text-green-600" title="Vouchers Honored" current={d.vouchersHonored} goal={d.voucherGoal} />
-                <div className="pt-1">
-                  <StreakDisplay weeks={d.streakWeeks} description="Consecutive weeks hosting or honoring vouchers" />
-                </div>
-              </div>
-            </div>
-          </Card>
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, user?.cognitoId]);
 
-          {/* Tier Standing */}
-          <Card className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-primary/10 p-2.5">
-                <Crown className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Tier Standing — {d.tierComparison.tierName}</p>
-                <p className="text-xs text-muted-foreground">
-                  Rank <strong>#{d.tierComparison.yourRank}</strong> of {d.tierComparison.totalInTier} providers · Average score: {d.tierComparison.avgScore}
-                </p>
-              </div>
-            </div>
-          </Card>
+  const role = (user?.userType && user.userType in ROLE_COPY ? user.userType : "member") as DashboardUserType;
+  const copy = ROLE_COPY[role];
 
-          {/* Peer Comparison */}
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-primary" /> Peer Comparison — {d.tierComparison.tierName} Tier
-            </h2>
-            <div className="space-y-1">
-              {sorted.map((peer, i) => (
-                <LeaderboardRow
-                  key={i}
-                  rank={i + 1}
-                  name={peer.name}
-                  score={peer.score}
-                  isYou={peer.highlight}
-                />
-              ))}
-            </div>
-          </Card>
+  const tierProgressPercent = analytics ? getTierProgressPercent(analytics) : 0;
 
-          {/* Milestones */}
-          <div>
-            <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" /> Provider Milestones
-            </h2>
-            <p className="text-xs text-muted-foreground mb-4">Earn points by hosting events and honoring vouchers</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {providerMilestones.map((m, i) => (
-                <MilestoneCard key={i} {...m} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  // ── MEMBER VIEW (default) ──────────────────────────────────────
-  const d = memberData;
   return (
     <DashboardLayout>
-      <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="mx-auto max-w-5xl space-y-6">
         <div>
-          <h1 className="font-barlow font-bold text-2xl sm:text-3xl text-foreground">Engagement Score</h1>
-          <p className="text-sm text-muted-foreground mt-1">Your score is based on event participation and voucher redemptions</p>
+          <h1 className="font-barlow text-2xl font-bold text-foreground sm:text-3xl">Engagement Score</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{copy.description}</p>
         </div>
 
-        {/* Hero: Score + Metrics */}
-        <Card className="p-6">
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <ScoreRing score={d.overallScore} level={d.level} label="Member" pointsToNext={d.pointsToNext} nextLevel={d.nextLevel} />
-            <div className="flex-1 w-full space-y-5">
-              <ProgressMetric icon={Ticket} iconBg="bg-primary/10" iconColor="text-primary" title="Vouchers Redeemed" current={d.vouchersRedeemed} goal={d.voucherGoal} />
-              <ProgressMetric icon={PartyPopper} iconBg="bg-blue-50" iconColor="text-blue-600" title="Events Attended" current={d.eventsAttended} goal={d.eventGoal} />
-              <ProgressMetric icon={Users} iconBg="bg-green-50" iconColor="text-green-600" title="Active Networks" current={d.activeNetworks} goal={d.networkGoal} />
-            </div>
-          </div>
-        </Card>
-
-        {/* Streak + Next Goal */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Card className="p-5">
-            <StreakDisplay weeks={d.streakWeeks} description="Consecutive weeks attending events or using vouchers" />
+        {error ? (
+          <Card className="border-destructive/30 bg-destructive/5 p-5">
+            <p className="text-sm font-medium text-destructive">{error}</p>
           </Card>
-          <Card className="p-5">
-            <div className="flex items-center gap-4">
-              <div className="rounded-xl bg-primary/10 p-4 shrink-0">
-                <Target className="h-7 w-7 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Next Goal</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Attend {d.eventGoal - d.eventsAttended} more events to reach {d.nextLevel}
-                </p>
-              </div>
+        ) : null}
+
+        {loading || !analytics ? (
+          <Card className="p-8">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading engagement analytics...
             </div>
           </Card>
-        </div>
+        ) : (
+          <>
+            {role === "provider" ? (
+              <>
+                <Card className="p-6">
+                  <div className="flex flex-col items-center gap-8 md:flex-row">
+                    <ScoreRing
+                      points={analytics.points.balance}
+                      tierName={analytics.points.tier.name}
+                      roleLabel={copy.roleLabel}
+                      tier={analytics.points.tier}
+                      pointsToNextTier={analytics.points.pointsToNextTier}
+                      nextTierName={analytics.points.nextTier?.name ?? null}
+                      progressPercent={tierProgressPercent}
+                    />
 
-        {/* Milestones */}
-        <div>
-          <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
-            <Award className="h-5 w-5 text-primary" /> Member Milestones
-          </h2>
-          <p className="text-xs text-muted-foreground mb-4">Earn points by attending events and redeeming vouchers</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {memberMilestones.map((m, i) => (
-              <MilestoneCard key={i} {...m} />
-            ))}
-          </div>
-        </div>
+                    <div className="w-full flex-1 space-y-5">
+                      {PROVIDER_PROGRESS_PLACEHOLDERS.map((metric) => (
+                        <ProgressMetric
+                          key={metric.title}
+                          icon={metric.icon}
+                          iconBg={metric.iconBg}
+                          iconColor={metric.iconColor}
+                          title={metric.title}
+                          current={metric.current}
+                          goal={metric.goal}
+                        />
+                      ))}
+                      <ProgressMetric
+                        icon={PartyPopper}
+                        iconBg="bg-blue-50"
+                        iconColor="text-blue-600"
+                        title="Events Hosted"
+                        current={analytics.providerHostedCompletedEvents}
+                        helperText="Completed events you accepted an invite for"
+                      />
+                      <div className="pt-1">
+                        <StreakDisplay
+                          weeks={analytics.streak.currentWeeks}
+                          description={copy.streakDescription}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-primary/10 p-2.5">
+                      <Crown className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Tier Standing — {analytics.points.tier.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {analytics.partnerStanding
+                          ? `Rank #${analytics.partnerStanding.rank} of ${analytics.partnerStanding.totalPartners} partners · Average score: ${analytics.partnerStanding.averagePoints}`
+                          : "Rank and average score will populate once partner comparison data is available."}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                <ProviderRankingCard
+                  title={`Peer Comparison - ${analytics.points.tier.name} Tier`}
+                  description={
+                    analytics.providerNetwork?.partnerName
+                      ? `Providers linked to ${analytics.providerNetwork.partnerName} are ordered by current-year points.`
+                      : "Providers linked to your partner are ordered by current-year points."
+                  }
+                  providers={analytics.partnerProviders}
+                  currentUserId={user?.id}
+                />
+              </>
+            ) : role === "partner" ? (
+              <>
+                <Card className="p-6">
+                  <div className="flex flex-col items-center gap-8 md:flex-row">
+                    <ScoreRing
+                      points={analytics.points.balance}
+                      tierName={analytics.points.tier.name}
+                      roleLabel={copy.roleLabel}
+                      tier={analytics.points.tier}
+                      pointsToNextTier={analytics.points.pointsToNextTier}
+                      nextTierName={analytics.points.nextTier?.name ?? null}
+                      progressPercent={tierProgressPercent}
+                    />
+
+                    <div className="w-full flex-1 space-y-5">
+                       <ProviderCapacityMetric
+                        currentProviders={analytics.partnerProviderCapacity?.currentProviders ?? analytics.partnerProviders.length}
+                        maxProviders={analytics.partnerProviderCapacity?.maxProviders ?? null}
+                      />
+                      {PARTNER_PROGRESS_PLACEHOLDERS.map((metric) => (
+                        <ProgressMetric
+                          key={metric.title}
+                          icon={metric.icon}
+                          iconBg={metric.iconBg}
+                          iconColor={metric.iconColor}
+                          title={metric.title}
+                          current={metric.current}
+                          goal={metric.goal}
+                        />
+                      ))}
+                      <div className="pt-1">
+                        <StreakDisplay
+                          weeks={analytics.streak.currentWeeks}
+                          description={copy.streakDescription}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-primary/10 p-2.5">
+                      <Crown className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Tier Standing — {analytics.points.tier.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {analytics.partnerStanding
+                          ? `Rank #${analytics.partnerStanding.rank} of ${analytics.partnerStanding.totalPartners} partners · Average score: ${analytics.partnerStanding.averagePoints}`
+                          : "Rank and average score will populate once partner comparison data is available."}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                <ProviderRankingCard
+                  title="Provider Rankings"
+                  description={
+                    analytics.providerNetwork?.partnerName
+                      ? `Providers linked to ${analytics.providerNetwork.partnerName} are ordered by current-year points.`
+                      : "Providers linked to your network are ordered by current-year points."
+                  }
+                  providers={analytics.partnerProviders}
+                  currentUserId={user?.id}
+                />
+              </>
+            ) : (
+              <>
+                <Card className="p-6">
+                  <div className="flex flex-col items-center gap-8 md:flex-row">
+                    <ScoreRing
+                      points={analytics.points.balance}
+                      tierName={analytics.points.tier.name}
+                      roleLabel={copy.roleLabel}
+                      tier={analytics.points.tier}
+                      pointsToNextTier={analytics.points.pointsToNextTier}
+                      nextTierName={analytics.points.nextTier?.name ?? null}
+                      progressPercent={tierProgressPercent}
+                    />
+
+                    <div className="w-full flex-1 space-y-5">
+                      {MEMBER_PROGRESS_PLACEHOLDERS.map((metric) => (
+                        <ProgressMetric
+                          key={metric.title}
+                          icon={metric.icon}
+                          iconBg={metric.iconBg}
+                          iconColor={metric.iconColor}
+                          title={metric.title}
+                          current={metric.current}
+                          goal={metric.goal}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Card className="p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 p-4 shrink-0">
+                        <Flame className="h-7 w-7 text-orange-500" />
+                      </div>
+                      <div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-3xl font-bold">{analytics.streak.currentWeeks}</span>
+                          <span className="text-sm text-muted-foreground">week streak</span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{copy.streakDescription}</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-5">
+                    <div className="flex items-start gap-4">
+                      <div className="rounded-xl bg-primary/10 p-4 shrink-0">
+                        <Target className="h-7 w-7 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">Next Goal</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {analytics.points.nextTier
+                            ? `Earn ${analytics.points.pointsToNextTier} more points to reach ${analytics.points.nextTier.name}.`
+                            : "Your next goal is to keep your streak alive and maintain your current tier."}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </>
+            )}
+
+            <div>
+              <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+                <Award className="h-5 w-5 text-primary" /> {copy.milestoneHeading}
+              </h2>
+              <p className="mb-4 text-xs text-muted-foreground">{copy.milestoneIntro}</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {analytics.milestones.map((milestone) => (
+                  <MilestoneCard key={milestone.taskId} milestone={milestone} />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

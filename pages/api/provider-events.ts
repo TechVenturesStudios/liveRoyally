@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
+import { deriveEventLifecycleStatus } from "@/utils/eventStatus";
 
 type ProviderEventsResponse =
   | {
@@ -41,23 +42,6 @@ function formatDate(value: Date | string | null | undefined) {
   return date.toISOString().slice(0, 10);
 }
 
-function classifyEventStatus(inviteStatus: string, eventDate: Date | string | null | undefined) {
-  if (inviteStatus === "pending") {
-    return "pending" as const;
-  }
-
-  const date = eventDate ? new Date(eventDate) : null;
-  if (!date || Number.isNaN(date.getTime())) {
-    return "active" as const;
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  date.setHours(0, 0, 0, 0);
-
-  return date < today ? ("completed" as const) : ("active" as const);
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ProviderEventsResponse>
@@ -84,9 +68,6 @@ export default async function handler(
     const invites = await prisma.event_provider_invites.findMany({
       where: {
         provider_id: account.actingUserId,
-        status: {
-          in: ["pending", "accepted", "declined", "expired"],
-        },
       },
       orderBy: [{ invited_at: "desc" }],
       select: {
@@ -103,6 +84,7 @@ export default async function handler(
             event_time: true,
             location: true,
             network_points: true,
+            response_deadline: true,
             status: true,
             users: {
               select: {
@@ -114,15 +96,36 @@ export default async function handler(
                 },
               },
             },
+            event_provider_invites: {
+              select: {
+                status: true,
+              },
+            },
           },
         },
       },
     });
 
     const events = await Promise.all(invites.map(async (invite) => {
+      const status = deriveEventLifecycleStatus({
+        startDate: invite.events.start_date,
+        responseDeadline: invite.events.response_deadline,
+        inviteStatuses: invite.events.event_provider_invites.map((eventInvite) => eventInvite.status),
+      });
+
+      if (invite.events.status !== status) {
+        await prisma.events.update({
+          where: {
+            event_id: invite.events.event_id,
+          },
+          data: {
+            status,
+          },
+        });
+      }
+
       const eventDate = formatDate(invite.events.start_date);
       const inviteStatus = invite.status;
-      const status = classifyEventStatus(inviteStatus, invite.events.start_date);
       const voucher = await prisma.vouchers.findFirst({
         where: {
           event_id: invite.events.event_id,
@@ -153,7 +156,7 @@ export default async function handler(
         organizer: invite.events.users.partner_profiles?.org_name ?? invite.events.users.email ?? "Partner",
         partner: invite.events.users.partner_profiles?.org_name ?? invite.events.users.email ?? "Partner",
         status,
-        participated: status === "completed" ? redemptions > 0 : false,
+        participated: status === "completed" && inviteStatus === "accepted" ? redemptions > 0 : false,
         networkScore: invite.events.network_points ?? 0,
         approvedDate: formatDate(invite.responded_at),
         goLiveDate: eventDate,
