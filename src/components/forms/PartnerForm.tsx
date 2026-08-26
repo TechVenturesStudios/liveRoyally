@@ -194,7 +194,7 @@ const PartnerForm = () => {
           <div className="rounded-lg border p-5 mb-8 space-y-3">
             <h3 className="text-sm font-semibold text-foreground mb-3">Cost Breakdown</h3>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{selectedPlan.label} Membership (monthly)</span>
+              <span className="text-muted-foreground">{selectedPlan.label} Membership (yearly)</span>
               <span className="text-foreground">${subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm">
@@ -207,7 +207,7 @@ const PartnerForm = () => {
             <span className="text-primary">${total.toFixed(2)}</span>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Your card will be stored securely today and charged only after admin approval. Billed monthly thereafter.
+            Your card will be stored securely today and charged only after admin approval. Billed yearly thereafter.
           </p>
         </div>
 
@@ -235,21 +235,21 @@ const PartnerForm = () => {
   return (
     <Card className="royal-card w-full max-w-4xl mx-auto p-8 md:p-10">
       <h2 className="text-2xl font-barlow font-bold mb-2 royal-header">Partner Registration</h2>
-      <p className="text-sm text-muted-foreground mb-8">Set up your partner account and choose a membership plan.</p>
+      <p className="text-sm text-muted-foreground mb-8">Set up your partner account and choose a yearly membership plan.</p>
       
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Membership Plan Selection */}
         <div className="space-y-5">
           <div>
-            <h3 className="text-base font-semibold text-foreground">Choose Your Membership Plan</h3>
-            <p className="text-xs text-muted-foreground mt-1">Select the plan that best fits your organization's needs.</p>
+            <h3 className="text-base font-semibold text-foreground">Choose Your Yearly Membership Plan</h3>
+            <p className="text-xs text-muted-foreground mt-1">All plans are billed annually.</p>
           </div>
-          <RadioGroup value={membershipPlan} onValueChange={setMembershipPlan} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <RadioGroup value={membershipPlan} onValueChange={setMembershipPlan} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
             {PARTNER_SUBSCRIPTION_PLAN_LIST.map((plan) => (
               <Label
                 key={plan.value}
                 htmlFor={`plan-${plan.value}`}
-                className={`relative flex flex-col rounded-xl border-2 p-5 cursor-pointer transition-all ${
+                className={`relative flex min-w-0 w-full flex-col rounded-xl border-2 p-5 cursor-pointer transition-all ${
                   membershipPlan === plan.value
                     ? "border-primary bg-primary/5 shadow-md"
                     : "border-border hover:border-primary/40"
@@ -261,14 +261,16 @@ const PartnerForm = () => {
                     <Check className="h-3 w-3 text-primary-foreground" />
                   </div>
                 )}
-                <span className="text-lg font-bold text-foreground">{plan.label}</span>
-                <span className="text-xl font-bold text-primary mt-1">{plan.price}</span>
-                <span className="text-xs text-muted-foreground mt-2">{plan.description}</span>
+                <span className="text-lg font-bold text-foreground break-words">{plan.label}</span>
+                <span className="mt-1 text-xl font-bold text-primary break-words">{plan.price}</span>
+                <span className="mt-2 text-xs leading-snug text-muted-foreground whitespace-normal break-words">
+                  {plan.description}
+                </span>
                 <ul className="mt-3 space-y-1.5">
                   {plan.features.map((f) => (
-                    <li key={f} className="text-xs text-muted-foreground flex items-start gap-1.5">
-                      <Check className="h-3 w-3 text-primary mt-0.5 shrink-0" />
-                      {f}
+                    <li key={f} className="flex items-start gap-1.5 text-xs leading-snug text-muted-foreground">
+                      <Check className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+                      <span className="whitespace-normal break-words">{f}</span>
                     </li>
                   ))}
                 </ul>

@@ -138,7 +138,7 @@ const AdminPendingPartnersPage = () => {
           : partner.networkCode || "Not assigned",
       },
       { label: "Subscription Tier", value: planLabel },
-      { label: "Tier Price", value: planPrice },
+      { label: "Yearly Price", value: planPrice },
       {
         label: "Card on File",
         value: <Badge variant="outline" className="bg-emerald-50 text-emerald-700">Stored for later charge</Badge>,
@@ -271,7 +271,7 @@ const AdminPendingPartnersPage = () => {
                         <TableHead className="text-[11px]">Organization</TableHead>
                         <TableHead className="text-[11px]">Plan</TableHead>
                         <TableHead className="text-[11px]">Contact</TableHead>
-                        <TableHead className="text-[11px]">Amount</TableHead>
+                        <TableHead className="text-[11px]">Yearly Amount</TableHead>
                         <TableHead className="text-[11px]">Submitted</TableHead>
                         <TableHead className="text-[11px]">Actions</TableHead>
                       </TableRow>

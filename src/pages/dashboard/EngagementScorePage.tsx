@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +31,7 @@ type RoleCopy = {
 
 const ROLE_COPY: Record<DashboardUserType, RoleCopy> = {
   member: {
-    description: "Track your event participation, voucher redemptions, and milestone progress.",
+    description: "Track your voucher redemptions and milestone progress.",
     streakDescription: "Consecutive weeks attending events or using vouchers",
     milestonesDescription: "Earn points by attending events and redeeming vouchers",
     milestoneHeading: "Member Milestones",
@@ -85,22 +85,6 @@ function getTierProgressPercent(data: EngagementAnalyticsResponse) {
 
 const MEMBER_PROGRESS_PLACEHOLDERS = [
   {
-    icon: Ticket,
-    iconBg: "bg-primary/10",
-    iconColor: "text-primary",
-    title: "Vouchers Redeemed",
-    current: 14,
-    goal: 20,
-  },
-  {
-    icon: PartyPopper,
-    iconBg: "bg-blue-50",
-    iconColor: "text-blue-600",
-    title: "Events Attended",
-    current: 8,
-    goal: 12,
-  },
-  {
     icon: Users,
     iconBg: "bg-green-50",
     iconColor: "text-green-600",
@@ -121,16 +105,12 @@ const PARTNER_PROGRESS_PLACEHOLDERS = [
   },
 ] as const;
 
-const PROVIDER_PROGRESS_PLACEHOLDERS = [
-  {
-    icon: Ticket,
-    iconBg: "bg-primary/10",
-    iconColor: "text-primary",
-    title: "Vouchers Honored",
-    current: 18,
-    goal: 24,
-  },
-] as const;
+const PROVIDER_VOUCHER_HONORED_METRIC = {
+  icon: Ticket,
+  iconBg: "bg-primary/10",
+  iconColor: "text-primary",
+  title: "Vouchers Honored",
+} as const;
 
 const ScoreRing = ({
   points,
@@ -254,7 +234,7 @@ const ProviderCapacityMetric = ({
     : 0;
 
   return (
-    <div className="space-y-2.5 rounded-xl border border-border bg-background px-4 py-3">
+    <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className="shrink-0 rounded-lg bg-primary/10 p-2.5">
@@ -262,19 +242,12 @@ const ProviderCapacityMetric = ({
           </div>
           <span className="truncate text-sm font-medium">Active Providers</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-sm font-semibold">
-            {currentProviders}{" "}
-            <span className="font-normal text-muted-foreground">
-              / {hasLimit ? maxProviders : "unlimited"}
-            </span>
+        <span className="shrink-0 text-sm font-semibold">
+          {currentProviders}{" "}
+          <span className="font-normal text-muted-foreground">
+            / {hasLimit ? maxProviders : "unlimited"}
           </span>
-          {!hasLimit ? (
-            <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-              Unlimited
-            </Badge>
-          ) : null}
-        </div>
+        </span>
       </div>
 
       {hasLimit ? (
@@ -502,6 +475,30 @@ const EngagementScorePage = () => {
   const copy = ROLE_COPY[role];
 
   const tierProgressPercent = analytics ? getTierProgressPercent(analytics) : 0;
+  const providerStanding = React.useMemo(() => {
+    if (role !== "provider" || !analytics) {
+      return null;
+    }
+
+    const totalProviders = analytics.partnerProviders.length;
+    const currentProvider = analytics.partnerProviders.find((provider) => provider.userId === user?.id);
+
+    if (!currentProvider) {
+      return null;
+    }
+
+    const averagePoints =
+      totalProviders > 0
+        ? Math.round(analytics.partnerProviders.reduce((sum, provider) => sum + provider.points, 0) / totalProviders)
+        : 0;
+
+    return {
+      rank: currentProvider.rank,
+      totalProviders,
+      averagePoints,
+      partnerName: analytics.providerNetwork?.partnerName ?? null,
+    };
+  }, [analytics, role, user?.id]);
 
   return (
     <DashboardLayout>
@@ -541,24 +538,19 @@ const EngagementScorePage = () => {
                     />
 
                     <div className="w-full flex-1 space-y-5">
-                      {PROVIDER_PROGRESS_PLACEHOLDERS.map((metric) => (
-                        <ProgressMetric
-                          key={metric.title}
-                          icon={metric.icon}
-                          iconBg={metric.iconBg}
-                          iconColor={metric.iconColor}
-                          title={metric.title}
-                          current={metric.current}
-                          goal={metric.goal}
-                        />
-                      ))}
+                      <ProgressMetric
+                        icon={PROVIDER_VOUCHER_HONORED_METRIC.icon}
+                        iconBg={PROVIDER_VOUCHER_HONORED_METRIC.iconBg}
+                        iconColor={PROVIDER_VOUCHER_HONORED_METRIC.iconColor}
+                        title={PROVIDER_VOUCHER_HONORED_METRIC.title}
+                        current={analytics.providerVoucherHonoredCount}
+                      />
                       <ProgressMetric
                         icon={PartyPopper}
                         iconBg="bg-blue-50"
                         iconColor="text-blue-600"
                         title="Events Hosted"
                         current={analytics.providerHostedCompletedEvents}
-                        helperText="Completed events you accepted an invite for"
                       />
                       <div className="pt-1">
                         <StreakDisplay
@@ -576,11 +568,11 @@ const EngagementScorePage = () => {
                       <Crown className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold">Tier Standing — {analytics.points.tier.name}</p>
+                      <p className="text-sm font-semibold">Tier Standing - {analytics.points.tier.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {analytics.partnerStanding
-                          ? `Rank #${analytics.partnerStanding.rank} of ${analytics.partnerStanding.totalPartners} partners · Average score: ${analytics.partnerStanding.averagePoints}`
-                          : "Rank and average score will populate once partner comparison data is available."}
+                        {providerStanding
+                          ? `Rank #${providerStanding.rank} of ${providerStanding.totalProviders} providers${providerStanding.partnerName ? ` under ${providerStanding.partnerName}` : ""} · Average score: ${providerStanding.averagePoints}`
+                          : "Rank and average score will populate once provider comparison data is available."}
                       </p>
                     </div>
                   </div>
@@ -643,7 +635,7 @@ const EngagementScorePage = () => {
                       <Crown className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold">Tier Standing — {analytics.points.tier.name}</p>
+                      <p className="text-sm font-semibold">Tier Standing - {analytics.points.tier.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {analytics.partnerStanding
                           ? `Rank #${analytics.partnerStanding.rank} of ${analytics.partnerStanding.totalPartners} partners · Average score: ${analytics.partnerStanding.averagePoints}`
@@ -679,6 +671,13 @@ const EngagementScorePage = () => {
                     />
 
                     <div className="w-full flex-1 space-y-5">
+                      <ProgressMetric
+                        icon={Ticket}
+                        iconBg="bg-primary/10"
+                        iconColor="text-primary"
+                        title="Vouchers Redeemed"
+                        current={analytics.memberVoucherRedeemedCount}
+                      />
                       {MEMBER_PROGRESS_PLACEHOLDERS.map((metric) => (
                         <ProgressMetric
                           key={metric.title}

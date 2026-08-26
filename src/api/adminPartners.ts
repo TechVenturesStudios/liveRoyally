@@ -16,7 +16,7 @@ export type AdminPendingPartner = {
   organizationZip: string | null;
   networkName: string | null;
   networkCode: string | null;
-  plan: "spotlight" | "standard" | "premium";
+  plan: "starter" | "spotlight" | "standard" | "premium" | "enterprise";
   planLabel: string;
   monthlyPriceCents: number;
   currency: string;

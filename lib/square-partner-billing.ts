@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
-import { PartnerSubscriptionPlan, PartnerSubscriptionStatus } from "@prisma/client";
+import { PartnerSubscriptionStatus } from "@prisma/client";
+import { PARTNER_SUBSCRIPTION_PLANS, type PartnerSubscriptionPlan } from "../src/config/subscriptionPlans";
 
 const squareApiVersion = process.env.SQUARE_VERSION ?? "2026-07-15";
 const squareEnvironment = (process.env.SQUARE_ENVIRONMENT ?? "sandbox").toLowerCase();
@@ -11,10 +12,40 @@ const squareBaseUrl =
     ? "https://connect.squareup.com"
     : "https://connect.squareupsandbox.com";
 
+function readFirstEnv(...keys: Array<string | undefined>) {
+  for (const key of keys) {
+    if (!key) continue;
+
+    const value = String(process.env[key] || "").trim();
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
 const squarePlanVariationIds: Record<PartnerSubscriptionPlan, string | undefined> = {
-  spotlight: process.env.SQUARE_PLAN_VARIATION_SPOTLIGHT_ID,
-  standard: process.env.SQUARE_PLAN_VARIATION_STANDARD_ID,
-  premium: process.env.SQUARE_PLAN_VARIATION_PREMIUM_ID,
+  starter: readFirstEnv(
+    PARTNER_SUBSCRIPTION_PLANS.starter.squarePlanVariationEnvVar,
+    "SQUARE_PLAN_VARIATION_STARTER_ID"
+  ),
+  spotlight: readFirstEnv(
+    PARTNER_SUBSCRIPTION_PLANS.spotlight.squarePlanVariationEnvVar,
+    "SQUARE_PLAN_VARIATION_SPOTLIGHT_ID"
+  ),
+  standard: readFirstEnv(
+    PARTNER_SUBSCRIPTION_PLANS.standard.squarePlanVariationEnvVar,
+    "SQUARE_PLAN_VARIATION_STANDARD_ID"
+  ),
+  premium: readFirstEnv(
+    PARTNER_SUBSCRIPTION_PLANS.premium.squarePlanVariationEnvVar,
+    "SQUARE_PLAN_VARIATION_PREMIUM_ID"
+  ),
+  enterprise: readFirstEnv(
+    PARTNER_SUBSCRIPTION_PLANS.enterprise.squarePlanVariationEnvVar,
+    "SQUARE_PLAN_VARIATION_ENTERPRISE_ID"
+  ),
 };
 
 type SquareCustomerResponse = {

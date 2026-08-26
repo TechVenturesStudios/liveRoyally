@@ -60,7 +60,9 @@ export type EngagementAnalyticsResponse = {
   partnerProviderCapacity: EngagementAnalyticsPartnerCapacity;
   providerNetwork: EngagementAnalyticsPartnerInfo;
   partnerProviders: EngagementAnalyticsProviderRanking[];
+  memberVoucherRedeemedCount: number;
   providerHostedCompletedEvents: number;
+  providerVoucherHonoredCount: number;
 };
 
 async function readJsonOrThrow(response: Response, fallbackMessage: string) {

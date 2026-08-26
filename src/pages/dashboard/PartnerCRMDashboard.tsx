@@ -16,18 +16,10 @@ import CampaignManagementTab from "@/components/crm/CampaignManagementTab";
 import AccountManagementTab from "@/components/crm/AccountManagementTab";
 import EventAnalyticsTab from "@/components/crm/EventAnalyticsTab";
 import { fetchPartnerDashboardEvents, type PartnerDashboardEvent } from "@/api/partnerEvents";
-import { fetchPartnerProviders } from "@/api/myProviders";
+import { fetchPartnerAccountOverview, type PartnerSubscriptionSummary } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
+import { PARTNER_SUBSCRIPTION_PLANS } from "@/config/subscriptionPlans";
 import MobileFolderTabs from "@/components/ui/MobileFolderTabs";
-
-const partnerPlans = [
-  { name: "Starter", maxProviders: 5, price: 29 },
-  { name: "Growth", maxProviders: 15, price: 79 },
-  { name: "Professional", maxProviders: 50, price: 149 },
-  { name: "Enterprise", maxProviders: -1, price: 299 },
-];
-
-const currentPlan = partnerPlans[1];
 
 interface ManagedProvider {
   id: string;
@@ -62,6 +54,7 @@ const PartnerCRMDashboard = () => {
   const [providersLoading, setProvidersLoading] = useState(true);
   const [partnerEvents, setPartnerEvents] = useState<PartnerDashboardEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [subscription, setSubscription] = useState<PartnerSubscriptionSummary | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: "remove"; provider: ManagedProvider } | null>(null);
   const { toast } = useToast();
 
@@ -72,8 +65,8 @@ const PartnerCRMDashboard = () => {
       try {
         setProvidersLoading(true);
         const user = getUserFromStorage();
-        const loadedProviders = await fetchPartnerProviders(user?.cognitoId);
-        const mappedProviders = loadedProviders.map((provider, index) => ({
+        const accountOverview = await fetchPartnerAccountOverview(user?.cognitoId);
+        const mappedProviders = accountOverview.providers.map((provider, index) => ({
           id: provider.id,
           displayId: provider.displayId ?? null,
           name: provider.businessName,
@@ -98,6 +91,7 @@ const PartnerCRMDashboard = () => {
 
         if (isMounted) {
           setProviders(mappedProviders);
+          setSubscription(accountOverview.subscription);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to load providers";
@@ -148,9 +142,25 @@ const PartnerCRMDashboard = () => {
     };
   }, [toast]);
 
-  const maxProviders = currentPlan.maxProviders;
-  const usagePercent = maxProviders === -1 ? 0 : (providers.length / maxProviders) * 100;
-  const remainingSlots = maxProviders === -1 ? Infinity : maxProviders - providers.length;
+  const currentPlanKey = (subscription?.plan as keyof typeof PARTNER_SUBSCRIPTION_PLANS | null) ?? null;
+  const currentPlan =
+    (currentPlanKey && PARTNER_SUBSCRIPTION_PLANS[currentPlanKey]) ||
+    Object.values(PARTNER_SUBSCRIPTION_PLANS).find((plan) => plan.maxProviders === subscription?.maxProviders) ||
+    null;
+  const maxProviders = currentPlan?.maxProviders ?? subscription?.maxProviders ?? null;
+  const usagePercent = typeof maxProviders === "number" && maxProviders > 0 ? (providers.length / maxProviders) * 100 : 0;
+  const remainingSlots = typeof maxProviders === "number" ? maxProviders - providers.length : Infinity;
+  const annualPrice = currentPlan?.price ?? (subscription?.monthlyPriceCents !== null && subscription?.monthlyPriceCents !== undefined
+    ? new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: (subscription.currency || "USD").toUpperCase(),
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(subscription.monthlyPriceCents / 100)
+    : null);
+  const planDescription = currentPlan?.description ?? "Annual subscription plan";
+  const planLabel = currentPlan?.label ?? subscription?.plan ?? "Unknown";
+  const providerLimitText = typeof maxProviders === "number" ? maxProviders : "unlimited";
 
   const activeEvents = useMemo(
     () => partnerEvents.filter((event) => event.stage !== "past"),
@@ -435,13 +445,17 @@ const PartnerCRMDashboard = () => {
             <div className="flex items-center justify-between text-xs">
               <span className="flex items-center gap-1 text-muted-foreground">
                 <Crown className="h-3.5 w-3.5 text-primary" />
-                {currentPlan.name} Plan
+                {planLabel} Plan
               </span>
               <span className="text-muted-foreground">
-                {providers.length} / {maxProviders === -1 ? "unlimited" : maxProviders}
+                {providers.length} / {providerLimitText}
               </span>
             </div>
-            {maxProviders !== -1 && <Progress value={usagePercent} className="h-1.5" />}
+            <p className="text-[11px] text-muted-foreground">
+              {planDescription}
+              {annualPrice ? ` · ${annualPrice} billed yearly` : ""}
+            </p>
+            {typeof maxProviders === "number" && <Progress value={usagePercent} className="h-1.5" />}
             {remainingSlots !== Infinity && remainingSlots <= 3 && (
               <p className="text-[11px] text-amber-600 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
@@ -458,7 +472,7 @@ const PartnerCRMDashboard = () => {
               <ul className="text-amber-800 list-disc list-inside space-y-0.5 text-[11px]">
                 <li>Remove only when <strong>no active campaign</strong>.</li>
                 <li>30-day cooldown on add/remove.</li>
-                <li><strong>{currentPlan.name}</strong> plan: up to <strong>{maxProviders === -1 ? "unlimited" : maxProviders}</strong> providers.</li>
+                <li><strong>{planLabel}</strong> plan: up to <strong>{providerLimitText}</strong> providers.</li>
               </ul>
             </div>
           )}

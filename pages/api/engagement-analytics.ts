@@ -65,7 +65,9 @@ type EngagementAnalyticsResponse =
       partnerProviderCapacity: EngagementAnalyticsPartnerCapacity;
       providerNetwork: EngagementAnalyticsPartnerInfo;
       partnerProviders: EngagementAnalyticsProviderRanking[];
+      memberVoucherRedeemedCount: number;
       providerHostedCompletedEvents: number;
+      providerVoucherHonoredCount: number;
     }
   | {
       error: string;
@@ -155,6 +157,7 @@ export default async function handler(
     }
 
     const year = new Date().getFullYear();
+    const isMember = account.actingUserType === "member";
     const isProvider = account.actingUserType === "provider";
     const isPartner = account.actingUserType === "partner";
 
@@ -166,7 +169,9 @@ export default async function handler(
       providerProfile,
       partnerSubscription,
       partnerProviderCount,
+      memberVoucherRedeemedCount,
       providerHostedEvents,
+      providerVoucherHonoredCount,
     ] = await Promise.all([
       prisma.reward_accounts.findFirst({
         where: {
@@ -270,6 +275,18 @@ export default async function handler(
             },
           })
         : Promise.resolve(0),
+      isMember
+        ? prisma.$queryRaw<Array<{ count: number }>>`
+            SELECT COUNT(*)::int AS count
+            FROM purchases p
+            INNER JOIN vouchers v
+              ON v.voucher_id = p.voucher_id
+            WHERE p.member_id = ${account.actingUserId}::uuid
+              AND LOWER(TRIM(COALESCE(p.status, ''))) IN ('used', 'redeemed', 'completed')
+              AND p.purchase_date >= ${new Date(year, 0, 1)}
+              AND p.purchase_date < ${new Date(year + 1, 0, 1)};
+          `
+        : Promise.resolve([{ count: 0 }]),
       isProvider
         ? prisma.event_provider_invites.findMany({
             where: {
@@ -293,6 +310,18 @@ export default async function handler(
             },
           })
         : Promise.resolve([]),
+      isProvider
+        ? prisma.$queryRaw<Array<{ count: number }>>`
+            SELECT COUNT(*)::int AS count
+            FROM purchases p
+            INNER JOIN vouchers v
+              ON v.voucher_id = p.voucher_id
+            WHERE v.provider_id = ${account.actingUserId}::uuid
+              AND LOWER(TRIM(COALESCE(p.status, ''))) IN ('used', 'redeemed', 'completed')
+              AND p.purchase_date >= ${new Date(year, 0, 1)}
+              AND p.purchase_date < ${new Date(year + 1, 0, 1)};
+          `
+        : Promise.resolve([{ count: 0 }]),
     ]);
 
     const sortedTiers = [...tiers];
@@ -478,6 +507,8 @@ export default async function handler(
     const providerHostedCompletedEvents = providerHostedEvents.filter((invite) =>
       isCompletedHostedEvent(invite.events.status, invite.events.start_date)
     ).length;
+    const memberVoucherRedeemedTotal = memberVoucherRedeemedCount[0]?.count ?? 0;
+    const providerVoucherHonoredTotal = providerVoucherHonoredCount[0]?.count ?? 0;
 
     return res.status(200).json({
       year,
@@ -505,7 +536,9 @@ export default async function handler(
       partnerProviderCapacity,
       providerNetwork,
       partnerProviders,
+      memberVoucherRedeemedCount: memberVoucherRedeemedTotal,
       providerHostedCompletedEvents,
+      providerVoucherHonoredCount: providerVoucherHonoredTotal,
     });
   } catch (error) {
     console.error("engagement-analytics error:", error);

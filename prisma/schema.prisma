@@ -50,9 +50,11 @@ enum UserType {
 }
 
 enum PartnerSubscriptionPlan {
+  starter
   spotlight
   standard
   premium
+  enterprise
 }
 
 enum PartnerSubscriptionStatus {

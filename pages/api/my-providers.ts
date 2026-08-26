@@ -33,9 +33,12 @@ type MyProvidersResponse =
       };
       providers: ProviderEntry[];
       subscription: {
+        plan: string | null;
         status: string | null;
         maxProviders: number | null;
         currentProviders: number;
+        monthlyPriceCents: number | null;
+        currency: string | null;
       };
     }
   | {
@@ -120,8 +123,11 @@ export default async function handler(
       },
       orderBy: { created_at: "desc" },
       select: {
+        plan: true,
         status: true,
         max_providers: true,
+        monthly_price_cents: true,
+        currency: true,
       },
     });
 
@@ -193,9 +199,12 @@ export default async function handler(
         partnerId: provider.partner_id,
       })),
       subscription: {
+        plan: activeSubscription?.plan ?? null,
         status: activeSubscription?.status ?? null,
         maxProviders: activeSubscription?.max_providers ?? null,
         currentProviders: providers.length,
+        monthlyPriceCents: activeSubscription?.monthly_price_cents ?? null,
+        currency: activeSubscription?.currency ?? null,
       },
     });
   } catch (error) {
