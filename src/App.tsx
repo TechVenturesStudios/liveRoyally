@@ -123,6 +123,7 @@ const App = () => (
           <Route path="/dashboard/admin/partners" element={<RoleRoute allowed={["admin"]}><AdminPartnersListPage /></RoleRoute>} />
           <Route path="/dashboard/admin/network/:networkCode" element={<RoleRoute allowed={["admin"]}><AdminNetworkDetailPage /></RoleRoute>} />
           <Route path="/dashboard/admin/history" element={<RoleRoute allowed={["admin"]}><AdminHistoricalEventsPage /></RoleRoute>} />
+          <Route path="/dashboard/admin/representatives" element={<RoleRoute allowed={["admin"]}><ProviderRepresentativesPage ownerType="admin" /></RoleRoute>} />
           <Route path="/dashboard/admin/*" element={<RoleRoute allowed={["admin"]}><AdminDashboard /></RoleRoute>} />
           
           {/* Utility routes (admin-only) */}
