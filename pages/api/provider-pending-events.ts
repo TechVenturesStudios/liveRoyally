@@ -41,12 +41,13 @@ function formatDate(value: Date | string | null | undefined) {
 async function syncEventLifecycleStatus(eventId: string) {
   const event = await prisma.events.findUnique({
     where: { event_id: eventId },
-    select: {
-      event_id: true,
-      status: true,
-      start_date: true,
-      response_deadline: true,
-      event_provider_invites: {
+      select: {
+        event_id: true,
+        status: true,
+        start_date: true,
+        end_date: true,
+        response_deadline: true,
+        event_provider_invites: {
         select: {
           status: true,
         },
@@ -60,6 +61,7 @@ async function syncEventLifecycleStatus(eventId: string) {
 
   const nextStatus = deriveEventLifecycleStatus({
     startDate: event.start_date,
+    endDate: event.end_date,
     responseDeadline: event.response_deadline,
     inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
   });
@@ -115,6 +117,7 @@ export default async function handler(
             title: true,
             description: true,
             start_date: true,
+            end_date: true,
             event_time: true,
             location: true,
             network_points: true,

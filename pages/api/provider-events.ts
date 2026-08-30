@@ -81,6 +81,7 @@ export default async function handler(
             title: true,
             description: true,
             start_date: true,
+            end_date: true,
             event_time: true,
             location: true,
             network_points: true,
@@ -110,6 +111,7 @@ export default async function handler(
       const status = deriveEventLifecycleStatus({
         startDate: invite.events.start_date,
         responseDeadline: invite.events.response_deadline,
+        endDate: invite.events.end_date,
         inviteStatuses: invite.events.event_provider_invites.map((eventInvite) => eventInvite.status),
       });
 

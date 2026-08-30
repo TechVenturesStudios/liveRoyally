@@ -80,6 +80,7 @@ export default async function handler(
         network_points: true,
         response_deadline: true,
         start_date: true,
+        end_date: true,
         status: true,
         created_at: true,
         event_provider_invites: {
@@ -110,6 +111,7 @@ export default async function handler(
     const eventSnapshots = await Promise.all(events.map(async (event) => {
       const status = deriveEventLifecycleStatus({
         startDate: event.start_date,
+        endDate: event.end_date,
         responseDeadline: event.response_deadline,
         inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
       });

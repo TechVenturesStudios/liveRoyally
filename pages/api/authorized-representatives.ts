@@ -27,7 +27,7 @@ type AuthorizedRepresentativesResponse =
   | {
       organization: {
         id: string;
-        type: "provider" | "partner";
+        type: "provider" | "partner" | "admin";
         networkCode: string | null;
         networkName: string | null;
       };
@@ -65,7 +65,7 @@ export default async function handler(
 
   try {
     if (req.method === "GET") {
-      const account = await resolveDashboardAccount(req, ["partner", "provider"]);
+      const account = await resolveDashboardAccount(req, ["admin", "partner", "provider"]);
       if (!account) {
         return res.status(500).json({ error: "Failed to resolve account" });
       }
@@ -84,7 +84,10 @@ export default async function handler(
         FROM users u
         INNER JOIN member_profiles m ON m.user_id = u.user_id
         WHERE u.user_type = 'member'
-          AND m.network_code = ${account.actingNetworkCode}
+          AND (
+            ${account.actingUserType === "admin"}
+            OR m.network_code = ${account.actingNetworkCode}
+          )
         ORDER BY COALESCE(u.first_name, u.email) ASC
       `;
 
@@ -114,7 +117,7 @@ export default async function handler(
       return res.status(200).json({
         organization: {
           id: account.actingUserId,
-          type: account.actingUserType as "provider" | "partner",
+          type: account.actingUserType as "provider" | "partner" | "admin",
           networkCode: account.actingNetworkCode,
           networkName: account.actingNetworkName,
         },
@@ -130,7 +133,7 @@ export default async function handler(
     }
 
     if (req.method === "POST") {
-      const account = await resolveDashboardAccount(req, ["partner", "provider"]);
+      const account = await resolveDashboardAccount(req, ["admin", "partner", "provider"]);
       if (!account) {
         return res.status(500).json({ error: "Failed to resolve account" });
       }
@@ -157,7 +160,10 @@ export default async function handler(
         INNER JOIN member_profiles m ON m.user_id = u.user_id
         WHERE u.user_id = ${memberId}::uuid
           AND u.user_type = 'member'
-          AND m.network_code = ${account.actingNetworkCode}
+          AND (
+            ${account.actingUserType === "admin"}
+            OR m.network_code = ${account.actingNetworkCode}
+          )
         LIMIT 1
       `;
 
@@ -204,14 +210,16 @@ export default async function handler(
 
         const assignment = inserted[0];
 
-        await awardRewardTask(tx, {
-          userId: account.actingUserId,
-          taskKey:
-            account.actingUserType === "partner"
-              ? "partner_add_representative"
-              : "provider_add_representative",
-          description: "Representative added",
-        });
+        if (account.actingUserType !== "admin") {
+          await awardRewardTask(tx, {
+            userId: account.actingUserId,
+            taskKey:
+              account.actingUserType === "partner"
+                ? "partner_add_representative"
+                : "provider_add_representative",
+            description: "Representative added",
+          });
+        }
 
         return {
           assignment: {
@@ -234,7 +242,7 @@ export default async function handler(
     }
 
     if (req.method === "DELETE") {
-      const account = await resolveDashboardAccount(req, ["partner", "provider"]);
+      const account = await resolveDashboardAccount(req, ["admin", "partner", "provider"]);
       if (!account) {
         return res.status(500).json({ error: "Failed to resolve account" });
       }

@@ -13,7 +13,7 @@ type RepAssignmentResponse =
       assignments: Array<{
         assignmentId: string;
         representedUserId: string;
-        representedUserType: "partner" | "provider";
+        representedUserType: "partner" | "provider" | "admin";
         representedName: string;
         representedNetworkName: string | null;
         representedNetworkCode: string | null;
@@ -69,7 +69,7 @@ export default async function handler(
       Array<{
         assignmentId: string;
         representedUserId: string;
-        representedUserType: "partner" | "provider";
+        representedUserType: "partner" | "provider" | "admin";
         representedName: string;
         representedNetworkName: string | null;
         representedNetworkCode: string | null;

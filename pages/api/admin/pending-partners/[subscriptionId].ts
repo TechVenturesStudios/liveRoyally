@@ -102,6 +102,39 @@ export default async function handler(
         });
       }
 
+      const approvedAt = new Date();
+      const isFreePlan = subscription.monthly_price_cents === 0;
+
+      if (isFreePlan) {
+        const updated = await prisma.partner_subscriptions.update({
+          where: { subscription_id: subscription.subscription_id },
+          data: {
+            status: PartnerSubscriptionStatus.active,
+            billing_provider_subscription_id: null,
+            current_period_start: approvedAt,
+            current_period_end: null,
+            approved_at: approvedAt,
+            canceled_at: null,
+            updated_at: approvedAt,
+          },
+          select: {
+            subscription_id: true,
+            status: true,
+            approved_at: true,
+            canceled_at: true,
+            billing_provider_subscription_id: true,
+          },
+        });
+
+        return res.status(200).json({
+          subscriptionId: updated.subscription_id,
+          status: updated.status,
+          approvedAt: updated.approved_at?.toISOString() ?? null,
+          canceledAt: updated.canceled_at?.toISOString() ?? null,
+          squareSubscriptionId: updated.billing_provider_subscription_id ?? null,
+        });
+      }
+
       if (!subscription.billing_provider_customer_id) {
         return res.status(400).json({ error: "Missing Square customer ID for this partner" });
       }
@@ -117,7 +150,6 @@ export default async function handler(
         });
       }
 
-      const approvedAt = new Date();
       const squareSubscription = await createSquareSubscription({
         customerId: subscription.billing_provider_customer_id,
         cardId: subscription.billing_provider_card_id,

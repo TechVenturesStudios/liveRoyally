@@ -16,8 +16,8 @@ type RegisterPartnerResponse =
       displayId: string;
       partnerCode: string;
       subscriptionId: string;
-      squareCustomerId: string;
-      squareCardId: string;
+      squareCustomerId: string | null;
+      squareCardId: string | null;
       subscriptionStatus: PartnerSubscriptionStatus;
     }
   | {
@@ -65,12 +65,13 @@ export default async function handler(
     const selectedPlan = String(body.membershipPlan || "");
     const plan = PARTNER_SUBSCRIPTION_PLANS[selectedPlan as keyof typeof PARTNER_SUBSCRIPTION_PLANS];
     const paymentToken = String(body.paymentToken || body.cardToken || "").trim();
+    const isFreePlan = plan?.monthlyPriceCents === 0;
 
     if (!plan) {
       return res.status(400).json({ error: "A valid membershipPlan is required" });
     }
 
-    if (!paymentToken) {
+    if (!isFreePlan && !paymentToken) {
       return res.status(400).json({ error: "paymentToken is required" });
     }
 
@@ -82,36 +83,39 @@ export default async function handler(
 
     const displayId = `PT-${randomInt(100000000, 999999999)}`;
     const partnerCode = `PTR-${randomInt(100000, 999999)}`;
-    const referenceId = squareIdempotencyKey(
-      "partner-registration",
-      `${email}:${selectedPlan}:${paymentToken}`
-    );
+    const referenceSeed = `${email}:${selectedPlan}:${paymentToken || "starter"}`;
+    const referenceId = squareIdempotencyKey("partner-registration", referenceSeed);
     const cardholderName = normalizeCardholderName(
       body.agentFirstName,
       body.agentLastName,
       body.organizationName
     );
 
-    const squareCustomerId = await createSquareCustomer({
-      email,
-      firstName: body.agentFirstName,
-      lastName: body.agentLastName,
-      organizationName: body.organizationName,
-      organizationPhone: body.organizationPhone,
-      organizationAddress: body.organizationAddress,
-      organizationCity: body.organizationCity,
-      organizationState: body.organizationState,
-      organizationZip: body.organizationZip,
-      referenceId,
-    });
+    let squareCustomerId: string | null = null;
+    let squareCardId: string | null = null;
 
-    const squareCardId = await createSquareCard({
-      paymentToken,
-      customerId: squareCustomerId,
-      cardholderName,
-      referenceId,
-    });
-    createdCardId = squareCardId;
+    if (!isFreePlan) {
+      squareCustomerId = await createSquareCustomer({
+        email,
+        firstName: body.agentFirstName,
+        lastName: body.agentLastName,
+        organizationName: body.organizationName,
+        organizationPhone: body.organizationPhone,
+        organizationAddress: body.organizationAddress,
+        organizationCity: body.organizationCity,
+        organizationState: body.organizationState,
+        organizationZip: body.organizationZip,
+        referenceId,
+      });
+
+      squareCardId = await createSquareCard({
+        paymentToken,
+        customerId: squareCustomerId,
+        cardholderName,
+        referenceId,
+      });
+      createdCardId = squareCardId;
+    }
 
     const cognitoUser = await createOrGetCognitoUser({
       email,

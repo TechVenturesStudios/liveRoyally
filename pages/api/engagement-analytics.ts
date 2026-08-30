@@ -427,9 +427,11 @@ export default async function handler(
       };
     }
 
-    if (providerProfile?.partner_id) {
+    const rankingPartnerId = isPartner ? account.actingUserId : providerProfile?.partner_id;
+
+    if (rankingPartnerId) {
       const partnerProfile = await prisma.partner_profiles.findUnique({
-        where: { user_id: providerProfile.partner_id },
+        where: { user_id: rankingPartnerId },
         select: {
           org_name: true,
           partner_code: true,
@@ -437,14 +439,14 @@ export default async function handler(
       });
 
       providerNetwork = {
-        partnerId: providerProfile.partner_id,
-        partnerName: partnerProfile?.org_name ?? providerProfile.network_name ?? null,
-        partnerCode: partnerProfile?.partner_code ?? providerProfile.network_code ?? null,
+        partnerId: rankingPartnerId,
+        partnerName: partnerProfile?.org_name ?? providerProfile?.network_name ?? null,
+        partnerCode: partnerProfile?.partner_code ?? providerProfile?.network_code ?? null,
       };
 
       const partnerProviderRows = await prisma.provider_profiles.findMany({
         where: {
-          partner_id: providerProfile.partner_id,
+          partner_id: rankingPartnerId,
           users: {
             user_type: "provider",
           },

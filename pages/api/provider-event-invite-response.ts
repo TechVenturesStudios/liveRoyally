@@ -62,12 +62,13 @@ function parseVoucherType(value: unknown) {
 async function syncEventLifecycleStatus(tx: any, eventId: string) {
   const event = await tx.events.findUnique({
     where: { event_id: eventId },
-    select: {
-      event_id: true,
-      status: true,
-      start_date: true,
-      response_deadline: true,
-      event_provider_invites: {
+      select: {
+        event_id: true,
+        status: true,
+        start_date: true,
+        end_date: true,
+        response_deadline: true,
+        event_provider_invites: {
         select: {
           status: true,
         },
@@ -81,6 +82,7 @@ async function syncEventLifecycleStatus(tx: any, eventId: string) {
 
   const nextStatus = deriveEventLifecycleStatus({
     startDate: event.start_date,
+    endDate: event.end_date,
     responseDeadline: event.response_deadline,
     inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
   });
@@ -141,6 +143,7 @@ export default async function handler(
         events: {
           select: {
             response_deadline: true,
+            end_date: true,
           },
         },
       },
