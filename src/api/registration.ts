@@ -54,8 +54,8 @@ export async function registerPartner(input: Record<string, unknown>) {
     displayId: string;
     partnerCode: string;
     subscriptionId: string;
-    squareCustomerId: string;
-    squareCardId: string;
+    squareCustomerId: string | null;
+    squareCardId: string | null;
     subscriptionStatus: "pending" | "active" | "past_due" | "canceled" | "expired";
   };
 }

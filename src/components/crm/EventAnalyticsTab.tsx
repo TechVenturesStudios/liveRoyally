@@ -239,12 +239,6 @@ const EventAnalyticsTab = ({ events, loading = false }: EventAnalyticsTabProps) 
 
   return (
     <div className="space-y-6">
-      {showLiveDataNote && (
-        <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-          Event, provider, attendance, and revenue data are sourced from the database.
-        </div>
-      )}
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         {view === "events" ? (
           <Select value={providerFilter} onValueChange={setProviderFilter}>

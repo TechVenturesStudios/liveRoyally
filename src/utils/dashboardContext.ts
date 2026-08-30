@@ -1,5 +1,5 @@
 export type DashboardContextMode = "member" | "rep";
-export type DashboardContextTarget = "member" | "provider" | "partner";
+export type DashboardContextTarget = "member" | "provider" | "partner" | "admin";
 
 export interface DashboardContext {
   mode: DashboardContextMode;

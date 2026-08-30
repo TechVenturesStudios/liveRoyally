@@ -88,7 +88,13 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
       ownerCognitoId: user.cognitoId,
     });
 
-    navigate(assignment.representedUserType === "partner" ? "/dashboard/crm" : "/dashboard/providers");
+    navigate(
+      assignment.representedUserType === "partner"
+        ? "/dashboard/crm"
+        : assignment.representedUserType === "admin"
+          ? "/dashboard/admin"
+          : "/dashboard/providers"
+    );
   };
 
   const currentViewValue = currentContext?.mode === "rep" && currentContext.assignmentId ? currentContext.assignmentId : "member";
@@ -154,7 +160,7 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
                       <SwitchCamera className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">
                         {currentContext?.mode === "rep" && currentAssignment
-                          ? `${currentAssignment.representedUserType === "partner" ? "Partner" : "Provider"} View`
+                          ? `${currentAssignment.representedUserType === "partner" ? "Partner" : currentAssignment.representedUserType === "admin" ? "Admin" : "Provider"} View`
                           : "Member View"}
                       </span>
                     </span>
@@ -175,7 +181,7 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
                       <DropdownMenuRadioItem key={assignment.assignmentId} value={assignment.assignmentId}>
                         <div className="flex flex-col items-start">
                           <span>
-                            {assignment.representedUserType === "partner" ? "Partner" : "Provider"} View
+                            {assignment.representedUserType === "partner" ? "Partner" : assignment.representedUserType === "admin" ? "Admin" : "Provider"} View
                           </span>
                           <span className="text-[10px] text-muted-foreground">{assignment.representedName}</span>
                         </div>

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useAuthCheck } from "@/hooks/useAuthCheck";
@@ -10,32 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import ViewToggle from "@/components/ui/ViewToggle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
+import { fetchAdminDirectory, type AdminPartner } from "@/api/adminDirectory";
+import { getUserFromStorage } from "@/utils/userStorage";
 import { ArrowLeft, Building, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
-interface PartnerEntry {
-  id: string;
-  organizationName: string;
-  organizationCategory: string;
-  agentFirstName: string;
-  agentLastName: string;
-  organizationEmail: string;
-  organizationPhone: string;
-  organizationCity: string;
-  organizationState: string;
-  plan: string;
-  joinDate: string;
-  publishedEvents: number;
-  pendingEvents: number;
-  totalProviders: number;
-}
-
-const mockPartners: PartnerEntry[] = [
-  { id: "PTR001", organizationName: "City Community Foundation", organizationCategory: "Nonprofit", agentFirstName: "John", agentLastName: "Smith", organizationEmail: "info@citycf.org", organizationPhone: "555-100-0001", organizationCity: "Metropolis", organizationState: "NY", plan: "Growth", joinDate: "2024-06-15", publishedEvents: 12, pendingEvents: 2, totalProviders: 8 },
-  { id: "PTR002", organizationName: "Downtown Business Alliance", organizationCategory: "Business Association", agentFirstName: "Emma", agentLastName: "Johnson", organizationEmail: "info@downtownba.org", organizationPhone: "555-100-0002", organizationCity: "Springfield", organizationState: "IL", plan: "Enterprise", joinDate: "2024-03-10", publishedEvents: 24, pendingEvents: 3, totalProviders: 15 },
-  { id: "PTR003", organizationName: "Heritage Arts Council", organizationCategory: "Arts & Culture", agentFirstName: "Linda", agentLastName: "Nguyen", organizationEmail: "hello@heritagearts.org", organizationPhone: "555-100-0003", organizationCity: "Fitsville", organizationState: "CA", plan: "Starter", joinDate: "2025-01-20", publishedEvents: 4, pendingEvents: 1, totalProviders: 3 },
-  { id: "PTR004", organizationName: "Westside Community Foundation", organizationCategory: "Nonprofit", agentFirstName: "James", agentLastName: "Lee", organizationEmail: "contact@westsidecf.org", organizationPhone: "555-100-0004", organizationCity: "Lakewood", organizationState: "OH", plan: "Growth", joinDate: "2024-09-05", publishedEvents: 9, pendingEvents: 0, totalProviders: 6 },
-  { id: "PTR005", organizationName: "Riverfront Chamber of Commerce", organizationCategory: "Business Association", agentFirstName: "Maria", agentLastName: "Garcia", organizationEmail: "info@riverfrontcc.org", organizationPhone: "555-100-0005", organizationCity: "Portland", organizationState: "OR", plan: "Free", joinDate: "2025-02-01", publishedEvents: 1, pendingEvents: 2, totalProviders: 2 },
-];
+type PartnerEntry = AdminPartner;
 
 const planColors: Record<string, string> = {
   Free: "bg-muted text-muted-foreground",
@@ -51,11 +30,33 @@ const AdminPartnersListPage = () => {
   const location = useLocation();
   const from = (location.state as any)?.from || "/dashboard/admin/analytics";
   const backLabel = from.includes("analytics") ? "Back to Analytics" : "Back to Home";
-  const { isLoading } = useAuthCheck();
+  const { user, isLoading } = useAuthCheck();
+  const [partners, setPartners] = useState<PartnerEntry[]>([]);
+  const [directoryLoading, setDirectoryLoading] = useState(true);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [selectedPartner, setSelectedPartner] = useState<PartnerEntry | null>(null);
   const [sortKey, setSortKey] = useState<keyof PartnerEntry | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  useEffect(() => {
+    if (isLoading || !user) return;
+
+    let cancelled = false;
+    setDirectoryLoading(true);
+    fetchAdminDirectory(getUserFromStorage()?.cognitoId)
+      .then((data) => {
+        if (!cancelled) setPartners(data.partners);
+      })
+      .catch((error) => {
+        if (!cancelled) setDirectoryError(error instanceof Error ? error.message : "Failed to load partners");
+      })
+      .finally(() => {
+        if (!cancelled) setDirectoryLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [isLoading, user]);
 
   const handleSort = (key: keyof PartnerEntry) => {
     if (sortKey === key) {
@@ -67,8 +68,8 @@ const AdminPartnersListPage = () => {
   };
 
   const sortedPartners = useMemo(() => {
-    if (!sortKey) return mockPartners;
-    return [...mockPartners].sort((a, b) => {
+    if (!sortKey) return partners;
+    return [...partners].sort((a, b) => {
       if (sortKey === "plan") {
         const diff = planOrder[a.plan] - planOrder[b.plan];
         return sortDir === "asc" ? diff : -diff;
@@ -82,7 +83,7 @@ const AdminPartnersListPage = () => {
         ? String(aVal).localeCompare(String(bVal))
         : String(bVal).localeCompare(String(aVal));
     });
-  }, [sortKey, sortDir]);
+  }, [partners, sortKey, sortDir]);
 
   const SortIcon = ({ column }: { column: keyof PartnerEntry }) => {
     if (sortKey !== column) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
@@ -91,7 +92,7 @@ const AdminPartnersListPage = () => {
       : <ArrowDown className="h-3 w-3 ml-1" />;
   };
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading || directoryLoading) return <LoadingSpinner />;
 
   const getDetailRows = (p: PartnerEntry) => [
     { label: "Organization", value: p.organizationName },
@@ -128,13 +129,15 @@ const AdminPartnersListPage = () => {
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 border border-purple-100">
               <Building className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-700">{mockPartners.length} partners</span>
+              <span className="text-sm font-medium text-purple-700">{partners.length} partners</span>
             </div>
             <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
           </div>
         </div>
 
-        {viewMode === "grid" ? (
+        {directoryError ? (
+          <Card><CardContent className="py-10 text-center text-sm text-destructive">{directoryError}</CardContent></Card>
+        ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {sortedPartners.map((p) => (
               <Card key={p.id} className="flex flex-col cursor-pointer hover:shadow-md transition-all" onClick={() => setSelectedPartner(p)}>

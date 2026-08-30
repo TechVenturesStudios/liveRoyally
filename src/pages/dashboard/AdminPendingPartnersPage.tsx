@@ -87,6 +87,8 @@ const AdminPendingPartnersPage = () => {
   const pendingCount = partners.length;
 
   const handleAction = async (partner: AdminPendingPartner, action: "approve" | "decline") => {
+    const isFreePlan = partner.monthlyPriceCents === 0;
+
     try {
       setActionInFlight(partner.subscriptionId);
       await updatePendingPartnerApplication({
@@ -99,10 +101,12 @@ const AdminPendingPartnersPage = () => {
 
       if (action === "approve") {
         toast.success(
-          `${partner.organizationName} approved and charged ${formatMoney(
-            partner.monthlyPriceCents,
-            partner.currency
-          )}`
+          isFreePlan
+            ? `${partner.organizationName} approved and activated`
+            : `${partner.organizationName} approved and charged ${formatMoney(
+                partner.monthlyPriceCents,
+                partner.currency
+              )}`
         );
       } else {
         toast.error(`${partner.organizationName} has been declined`);
@@ -118,6 +122,7 @@ const AdminPendingPartnersPage = () => {
     const planLabel = resolvePlanLabel(partner);
     const planPrice = formatMoney(partner.monthlyPriceCents, partner.currency);
     const contactName = `${partner.agentFirstName || ""} ${partner.agentLastName || ""}`.trim();
+    const isFreePlan = partner.monthlyPriceCents === 0;
 
     return [
       { label: "Organization", value: partner.organizationName },
@@ -141,7 +146,11 @@ const AdminPendingPartnersPage = () => {
       { label: "Yearly Price", value: planPrice },
       {
         label: "Card on File",
-        value: <Badge variant="outline" className="bg-emerald-50 text-emerald-700">Stored for later charge</Badge>,
+        value: isFreePlan ? (
+          <Badge variant="outline" className="bg-slate-50 text-slate-700">Not required for free plan</Badge>
+        ) : (
+          <Badge variant="outline" className="bg-emerald-50 text-emerald-700">Stored for later charge</Badge>
+        ),
       },
       {
         label: "Submitted",
@@ -350,7 +359,9 @@ const AdminPendingPartnersPage = () => {
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CreditCard className="h-3.5 w-3.5" />
-                Approving will charge the stored Square card and activate the subscription.
+                {selectedPartner.monthlyPriceCents === 0
+                  ? "Approving will activate the free subscription."
+                  : "Approving will charge the stored Square card and activate the subscription."}
               </div>
               <div className="flex gap-2">
                 <Button

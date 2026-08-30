@@ -23,7 +23,7 @@ export type NetworkMember = {
 export type RepresentativeAssignment = {
   assignmentId: string;
   representedUserId: string;
-  representedUserType: "partner" | "provider";
+  representedUserType: "partner" | "provider" | "admin";
   representedName: string;
   representedNetworkName: string | null;
   representedNetworkCode: string | null;
@@ -48,7 +48,7 @@ export async function fetchAuthorizedRepresentatives(cognitoId?: string) {
   return (await readJsonOrThrow(response, "Failed to fetch authorized representatives")) as {
     organization: {
       id: string;
-      type: "provider" | "partner";
+      type: "provider" | "partner" | "admin";
       networkCode: string | null;
       networkName: string | null;
     };
@@ -100,4 +100,3 @@ export async function fetchRepresentativeAssignments() {
     assignments: RepresentativeAssignment[];
   };
 }
-

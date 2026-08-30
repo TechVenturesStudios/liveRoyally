@@ -88,7 +88,13 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
       ownerCognitoId: user.cognitoId,
     });
 
-    navigate(assignment.representedUserType === "partner" ? "/dashboard/crm" : "/dashboard/providers");
+    navigate(
+      assignment.representedUserType === "partner"
+        ? "/dashboard/crm"
+        : assignment.representedUserType === "admin"
+          ? "/dashboard/admin"
+          : "/dashboard/providers"
+    );
   };
 
   return (
@@ -158,7 +164,7 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
                         >
                           <span className="flex flex-col items-start">
                             <span>
-                              {assignment.representedUserType === "partner" ? "Partner" : "Provider"} View
+                              {assignment.representedUserType === "partner" ? "Partner" : assignment.representedUserType === "admin" ? "Admin" : "Provider"} View
                             </span>
                             <span className="text-[11px] text-muted-foreground">{assignment.representedName}</span>
                           </span>

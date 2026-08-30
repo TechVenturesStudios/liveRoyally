@@ -17,47 +17,12 @@ import {
 import ViewToggle from "@/components/ui/ViewToggle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
 import { Users, Clock, Building, CalendarDays, BarChart3, Globe, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { fetchPendingPartnerApplications } from "@/api/adminPartners";
+import { fetchAdminAnalytics, type AdminAnalyticsNetwork, type AdminAnalyticsPartner } from "@/api/adminAnalytics";
+import { getUserFromStorage } from "@/utils/userStorage";
 
-interface PartnerAnalytics {
-  id: string;
-  organizationName: string;
-  organizationCategory: string;
-  plan: "Free" | "Starter" | "Growth" | "Enterprise";
-  joinDate: string;
-  publishedEvents: number;
-  pendingEvents: number;
-  totalProviders: number;
-  city: string;
-  state: string;
-}
+type PartnerAnalytics = AdminAnalyticsPartner;
 
-const mockPartnerAnalytics: PartnerAnalytics[] = [
-  { id: "PTR001", organizationName: "City Community Foundation", organizationCategory: "Nonprofit", plan: "Growth", joinDate: "2024-06-15", publishedEvents: 12, pendingEvents: 2, totalProviders: 8, city: "Metropolis", state: "NY" },
-  { id: "PTR002", organizationName: "Downtown Business Alliance", organizationCategory: "Business Association", plan: "Enterprise", joinDate: "2024-03-10", publishedEvents: 24, pendingEvents: 3, totalProviders: 15, city: "Springfield", state: "IL" },
-  { id: "PTR003", organizationName: "Heritage Arts Council", organizationCategory: "Arts & Culture", plan: "Starter", joinDate: "2025-01-20", publishedEvents: 4, pendingEvents: 1, totalProviders: 3, city: "Fitsville", state: "CA" },
-  { id: "PTR004", organizationName: "Westside Community Foundation", organizationCategory: "Nonprofit", plan: "Growth", joinDate: "2024-09-05", publishedEvents: 9, pendingEvents: 0, totalProviders: 6, city: "Lakewood", state: "OH" },
-  { id: "PTR005", organizationName: "Riverfront Chamber of Commerce", organizationCategory: "Business Association", plan: "Free", joinDate: "2025-02-01", publishedEvents: 1, pendingEvents: 2, totalProviders: 2, city: "Portland", state: "OR" },
-];
-
-interface NetworkData {
-  network: string;
-  code: string;
-  activeMembers: number;
-  totalMembers: number;
-  topPartner: string;
-  totalProviders: number;
-  totalEvents: number;
-  launchDate: string;
-}
-
-const mockNetworkMembers: NetworkData[] = [
-  { network: "Royal Network", code: "ROYAL1", activeMembers: 124, totalMembers: 150, topPartner: "City Community Foundation", totalProviders: 23, totalEvents: 36, launchDate: "2023-09-01" },
-  { network: "Metro Alliance", code: "METRO1", activeMembers: 87, totalMembers: 102, topPartner: "Downtown Business Alliance", totalProviders: 15, totalEvents: 24, launchDate: "2024-01-15" },
-  { network: "Westside Connect", code: "WEST1", activeMembers: 45, totalMembers: 58, topPartner: "Heritage Arts Council", totalProviders: 7, totalEvents: 10, launchDate: "2024-11-01" },
-];
-
-const totalMembers = mockNetworkMembers.reduce((s, n) => s + n.totalMembers, 0);
+type NetworkData = AdminAnalyticsNetwork;
 
 const planColors: Record<string, string> = {
   Free: "bg-muted text-muted-foreground",
@@ -65,45 +30,57 @@ const planColors: Record<string, string> = {
   Growth: "bg-green-100 text-green-700",
   Enterprise: "bg-purple-100 text-purple-700",
 };
+const planOrder: Record<string, number> = { Enterprise: 0, Growth: 1, Starter: 2, Free: 3 };
 
 const AdminPartnerAnalyticsPage = () => {
   const navigate = useNavigate();
-  const { isLoading } = useAuthCheck();
+  const { user, isLoading } = useAuthCheck();
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [selectedPartner, setSelectedPartner] = useState<PartnerAnalytics | null>(null);
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkData | null>(null);
   const [sortKey, setSortKey] = useState<keyof PartnerAnalytics | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [pendingPartnerCount, setPendingPartnerCount] = useState<number | null>(null);
+  const [partnerAnalytics, setPartnerAnalytics] = useState<PartnerAnalytics[]>([]);
+  const [networkMembers, setNetworkMembers] = useState<NetworkData[]>([]);
+  const [totalMembers, setTotalMembers] = useState<number | null>(null);
+  const [totalProviders, setTotalProviders] = useState<number | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadPendingCount = async () => {
+    const loadAnalytics = async () => {
       try {
-        const result = await fetchPendingPartnerApplications();
+        const result = await fetchAdminAnalytics(getUserFromStorage()?.cognitoId);
 
         if (!cancelled) {
-          setPendingPartnerCount(result.pendingCount);
+          setPendingPartnerCount(result.totals.pendingPartners);
+          setPartnerAnalytics(result.partners);
+          setNetworkMembers(result.networks);
+          setTotalMembers(result.totals.members);
+          setTotalProviders(result.totals.providers);
         }
       } catch (error) {
         if (!cancelled) {
-          setPendingPartnerCount(0);
-          console.error("Failed to load pending partner count", error);
+          setAnalyticsError(error instanceof Error ? error.message : "Failed to load analytics");
         }
+      } finally {
+        if (!cancelled) setAnalyticsLoading(false);
       }
     };
 
-    loadPendingCount();
+    if (!isLoading && user) loadAnalytics();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLoading, user]);
 
   
 
-  const totals = mockPartnerAnalytics.reduce(
+  const totals = partnerAnalytics.reduce(
     (acc, p) => ({
       partners: acc.partners + 1,
       published: acc.published + p.publishedEvents,
@@ -122,11 +99,9 @@ const AdminPartnerAnalyticsPage = () => {
     }
   };
 
-  const planOrder: Record<string, number> = { Enterprise: 0, Growth: 1, Starter: 2, Free: 3 };
-
   const sortedPartners = useMemo(() => {
-    if (!sortKey) return mockPartnerAnalytics;
-    return [...mockPartnerAnalytics].sort((a, b) => {
+    if (!sortKey) return partnerAnalytics;
+    return [...partnerAnalytics].sort((a, b) => {
       if (sortKey === "plan") {
         const diff = planOrder[a.plan] - planOrder[b.plan];
         return sortDir === "asc" ? diff : -diff;
@@ -140,7 +115,7 @@ const AdminPartnerAnalyticsPage = () => {
         ? String(aVal).localeCompare(String(bVal))
         : String(bVal).localeCompare(String(aVal));
     });
-  }, [sortKey, sortDir]);
+  }, [partnerAnalytics, sortKey, sortDir]);
 
   const SortIcon = ({ column }: { column: keyof PartnerAnalytics }) => {
     if (sortKey !== column) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
@@ -149,12 +124,12 @@ const AdminPartnerAnalyticsPage = () => {
       : <ArrowDown className="h-3 w-3 ml-1" />;
   };
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading || analyticsLoading) return <LoadingSpinner />;
 
   const systemCards = [
     { label: "Total Partners", value: totals.partners, icon: Building, color: "text-purple-600 bg-purple-100", path: "/dashboard/admin/partners" },
-    { label: "Total Providers", value: totals.providers, icon: Users, color: "text-blue-600 bg-blue-100", path: "/dashboard/admin/providers" },
-    { label: "Total Members", value: totalMembers, icon: Globe, color: "text-cyan-600 bg-cyan-100", path: "/dashboard/admin/members" },
+    { label: "Total Providers", value: totalProviders ?? totals.providers, icon: Users, color: "text-blue-600 bg-blue-100", path: "/dashboard/admin/providers" },
+    { label: "Total Members", value: totalMembers ?? 0, icon: Globe, color: "text-cyan-600 bg-cyan-100", path: "/dashboard/admin/members" },
     { label: "Pending Partners", value: pendingPartnerCount === null ? "..." : pendingPartnerCount, icon: Clock, color: "text-amber-600 bg-amber-100", path: "/dashboard/admin/pending-partners" },
   ];
 
@@ -174,7 +149,7 @@ const AdminPartnerAnalyticsPage = () => {
     { label: "Network Code", value: n.code },
     { label: "Active Members", value: String(n.activeMembers) },
     { label: "Total Members", value: String(n.totalMembers) },
-    { label: "Activity Rate", value: `${Math.round((n.activeMembers / n.totalMembers) * 100)}%` },
+    { label: "Activity Rate", value: `${n.totalMembers ? Math.round((n.activeMembers / n.totalMembers) * 100) : 0}%` },
     { label: "Top Partner", value: n.topPartner },
     { label: "Total Providers", value: String(n.totalProviders) },
     { label: "Total Events", value: String(n.totalEvents) },
@@ -184,6 +159,9 @@ const AdminPartnerAnalyticsPage = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {analyticsError && (
+          <Card><div className="py-4 px-5 text-sm text-destructive">{analyticsError}</div></Card>
+        )}
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
@@ -197,7 +175,7 @@ const AdminPartnerAnalyticsPage = () => {
           <div className="flex items-center gap-3 shrink-0">
             <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1 border-primary/30 bg-primary/5">
               <BarChart3 className="h-3.5 w-3.5 text-primary" />
-              <span className="font-medium text-primary">{totalMembers + totals.partners + totals.providers} total users</span>
+              <span className="font-medium text-primary">{(totalMembers ?? 0) + totals.partners + (totalProviders ?? totals.providers)} total users</span>
             </Badge>
             <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
           </div>
@@ -228,7 +206,7 @@ const AdminPartnerAnalyticsPage = () => {
         <div>
           <h2 className="font-barlow font-bold text-lg mb-3">Members by Network</h2>
           <div className="flex gap-4 overflow-x-auto pb-2">
-            {mockNetworkMembers.map((n) => (
+            {networkMembers.map((n) => (
               <Card
                 key={n.code}
                 className="p-4 cursor-pointer hover:shadow-md transition-all min-w-[280px] flex-shrink-0"
@@ -256,12 +234,12 @@ const AdminPartnerAnalyticsPage = () => {
                 <div className="mt-3 pt-3 border-t">
                   <div className="flex justify-between text-xs text-muted-foreground mb-1">
                     <span>Activity rate</span>
-                    <span>{Math.round((n.activeMembers / n.totalMembers) * 100)}%</span>
+                    <span>{n.totalMembers ? Math.round((n.activeMembers / n.totalMembers) * 100) : 0}%</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
                     <div
                       className="bg-primary rounded-full h-2 transition-all"
-                      style={{ width: `${(n.activeMembers / n.totalMembers) * 100}%` }}
+                      style={{ width: `${n.totalMembers ? (n.activeMembers / n.totalMembers) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
@@ -275,7 +253,7 @@ const AdminPartnerAnalyticsPage = () => {
 
         {viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockPartnerAnalytics.map((p) => (
+            {partnerAnalytics.map((p) => (
               <Card
                 key={p.id}
                 className="p-4 cursor-pointer hover:shadow-md transition-all"

@@ -112,16 +112,21 @@ const PartnerForm = () => {
     setShowCheckout(true);
   };
 
-  const handlePay = async (paymentToken: string) => {
+  const handlePay = async (paymentToken?: string) => {
     setIsSubmitting(true);
     setSubmitError("");
 
     try {
-      await registerPartner({
+      const payload: Record<string, unknown> = {
         ...formData,
         membershipPlan,
-        paymentToken,
-      });
+      };
+
+      if (paymentToken) {
+        payload.paymentToken = paymentToken;
+      }
+
+      await registerPartner(payload);
 
       navigate("/dashboard");
     } catch (error) {
@@ -132,6 +137,7 @@ const PartnerForm = () => {
   };
 
   const selectedPlan = PARTNER_SUBSCRIPTION_PLAN_LIST.find((p) => p.value === membershipPlan);
+  const isFreePlan = selectedPlan?.monthlyPrice === 0;
 
   // ── Checkout / Summary View ──
   if (showCheckout && selectedPlan) {
@@ -151,7 +157,9 @@ const PartnerForm = () => {
 
         <h2 className="text-2xl font-barlow font-bold mb-2 royal-header">Order Summary</h2>
         <p className="text-sm text-muted-foreground mb-8">
-          Review your membership details before submitting your card for approval.
+          {isFreePlan
+            ? "Review your membership details before submitting your free starter application."
+            : "Review your membership details before submitting your card for approval."}
         </p>
 
         {/* Account Info */}
@@ -203,30 +211,54 @@ const PartnerForm = () => {
           </div>
           <Separator />
           <div className="flex justify-between text-base font-bold">
-            <span className="text-foreground">Total due on approval</span>
+            <span className="text-foreground">{isFreePlan ? "Total due today" : "Total due on approval"}</span>
             <span className="text-primary">${total.toFixed(2)}</span>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Your card will be stored securely today and charged only after admin approval. Billed yearly thereafter.
+            {isFreePlan
+              ? "No card information is required for the Starter plan."
+              : "Your card will be stored securely today and charged only after admin approval. Billed yearly thereafter."}
           </p>
         </div>
 
-        <SquareCardCheckout
-          total={total}
-          isSubmitting={isSubmitting}
-          billingContact={{
-            givenName: String(formData.agentFirstName || "").trim(),
-            familyName: String(formData.agentLastName || "").trim(),
-            email: String(formData.organizationEmail || "").trim(),
-            phone: String(formData.organizationPhone || formData.agentPhone || "").trim(),
-            addressLines: [String(formData.organizationAddress || "").trim()].filter(Boolean),
-            city: String(formData.organizationCity || "").trim(),
-            state: String(formData.organizationState || "").trim(),
-            countryCode: "US",
-          }}
-          onSubmitToken={handlePay}
-          submitError={submitError}
-        />
+        {isFreePlan ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/20 p-4">
+              <h3 className="text-sm font-semibold text-foreground">Starter plan</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                No credit card is needed to submit the free starter application.
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => void handlePay()}
+              disabled={isSubmitting}
+              className="w-full bg-royal hover:bg-royal-dark text-white h-12 text-base font-semibold gap-2"
+            >
+              {isSubmitting ? "Submitting..." : "Submit Free Application"}
+            </Button>
+
+            {submitError && <p className="text-sm text-destructive text-center">{submitError}</p>}
+          </div>
+        ) : (
+          <SquareCardCheckout
+            total={total}
+            isSubmitting={isSubmitting}
+            billingContact={{
+              givenName: String(formData.agentFirstName || "").trim(),
+              familyName: String(formData.agentLastName || "").trim(),
+              email: String(formData.organizationEmail || "").trim(),
+              phone: String(formData.organizationPhone || formData.agentPhone || "").trim(),
+              addressLines: [String(formData.organizationAddress || "").trim()].filter(Boolean),
+              city: String(formData.organizationCity || "").trim(),
+              state: String(formData.organizationState || "").trim(),
+              countryCode: "US",
+            }}
+            onSubmitToken={handlePay}
+            submitError={submitError}
+          />
+        )}
       </Card>
     );
   }
@@ -349,7 +381,7 @@ const PartnerForm = () => {
             Cancel
           </Button>
           <Button type="submit" className="bg-royal hover:bg-royal-dark text-white px-8">
-            Review &amp; Pay
+            Review &amp; Submit
           </Button>
         </div>
       </form>

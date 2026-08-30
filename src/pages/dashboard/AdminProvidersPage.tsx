@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useAuthCheck } from "@/hooks/useAuthCheck";
@@ -12,48 +12,46 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ViewToggle from "@/components/ui/ViewToggle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
+import { fetchAdminDirectory, type AdminProvider } from "@/api/adminDirectory";
+import { getUserFromStorage } from "@/utils/userStorage";
 import { ArrowLeft, Users, Building, ChevronDown } from "lucide-react";
 
-interface ProviderEntry {
-  id: string;
-  businessName: string;
-  businessCategory: string;
-  agentFirstName: string;
-  agentLastName: string;
-  agentPhone: string;
-  businessEmail: string;
-  businessPhone: string;
-  businessAddress: string;
-  businessCity: string;
-  businessState: string;
-  businessZip: string;
-  partnerName: string;
-  networkCode: string;
-}
-
-const mockAllProviders: ProviderEntry[] = [
-  { id: "PRV001", businessName: "Smith's Merchandise", businessCategory: "Retail", agentFirstName: "John", agentLastName: "Smith", agentPhone: "555-123-4567", businessEmail: "info@smithmerch.com", businessPhone: "555-987-6543", businessAddress: "123 Commerce St", businessCity: "Metropolis", businessState: "NY", businessZip: "10001", partnerName: "City Community Foundation", networkCode: "ROYAL1" },
-  { id: "PRV002", businessName: "Johnson Cafe", businessCategory: "Food & Beverage", agentFirstName: "Emma", agentLastName: "Johnson", agentPhone: "555-234-5678", businessEmail: "info@johnsoncafe.com", businessPhone: "555-876-5432", businessAddress: "456 Main St", businessCity: "Springfield", businessState: "IL", businessZip: "62701", partnerName: "Downtown Business Alliance", networkCode: "ROYAL1" },
-  { id: "PRV003", businessName: "Williams Fitness", businessCategory: "Health & Wellness", agentFirstName: "Michael", agentLastName: "Williams", agentPhone: "555-345-6789", businessEmail: "info@williamsfitness.com", businessPhone: "555-765-4321", businessAddress: "789 Gym Ave", businessCity: "Fitsville", businessState: "CA", businessZip: "90210", partnerName: "City Community Foundation", networkCode: "ROYAL1" },
-  { id: "PRV004", businessName: "Garcia Auto", businessCategory: "Automotive", agentFirstName: "Maria", agentLastName: "Garcia", agentPhone: "555-456-7890", businessEmail: "info@garciaauto.com", businessPhone: "555-654-3210", businessAddress: "321 Motor Ln", businessCity: "Springfield", businessState: "IL", businessZip: "62702", partnerName: "Downtown Business Alliance", networkCode: "METRO1" },
-  { id: "PRV005", businessName: "Lee's Electronics", businessCategory: "Retail", agentFirstName: "James", agentLastName: "Lee", agentPhone: "555-567-8901", businessEmail: "info@leeselectronics.com", businessPhone: "555-543-2109", businessAddress: "555 Tech Blvd", businessCity: "Metropolis", businessState: "NY", businessZip: "10002", partnerName: "Heritage Arts Council", networkCode: "ROYAL1" },
-  { id: "PRV006", businessName: "Nguyen Bakery", businessCategory: "Food & Beverage", agentFirstName: "Linda", agentLastName: "Nguyen", agentPhone: "555-678-9012", businessEmail: "info@nguyenbakery.com", businessPhone: "555-432-1098", businessAddress: "88 Baker St", businessCity: "Lakewood", businessState: "OH", businessZip: "44107", partnerName: "Westside Community Foundation", networkCode: "WEST1" },
-  { id: "PRV007", businessName: "Chen Design Studio", businessCategory: "Creative Services", agentFirstName: "Michael", agentLastName: "Chen", agentPhone: "555-789-0123", businessEmail: "hello@chendesign.com", businessPhone: "555-321-0987", businessAddress: "42 Art Way", businessCity: "Portland", businessState: "OR", businessZip: "97201", partnerName: "Riverfront Chamber of Commerce", networkCode: "WEST1" },
-  { id: "PRV008", businessName: "Turner Hardware", businessCategory: "Home & Garden", agentFirstName: "Alex", agentLastName: "Turner", agentPhone: "555-890-1234", businessEmail: "info@turnerhw.com", businessPhone: "555-210-9876", businessAddress: "99 Fix-It Rd", businessCity: "Metropolis", businessState: "NY", businessZip: "10003", partnerName: "City Community Foundation", networkCode: "ROYAL1" },
-];
+type ProviderEntry = AdminProvider;
 
 const AdminProvidersPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as any)?.from || "/dashboard/admin/analytics";
   const backLabel = from.includes("analytics") ? "Back to Analytics" : "Back to Home";
-  const { isLoading } = useAuthCheck();
+  const { user, isLoading } = useAuthCheck();
+  const [providers, setProviders] = useState<ProviderEntry[]>([]);
+  const [directoryLoading, setDirectoryLoading] = useState(true);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry | null>(null);
   const [gridSort, setGridSort] = useState<string>("businessName");
 
+  useEffect(() => {
+    if (isLoading || !user) return;
+
+    let cancelled = false;
+    setDirectoryLoading(true);
+    fetchAdminDirectory(getUserFromStorage()?.cognitoId)
+      .then((data) => {
+        if (!cancelled) setProviders(data.providers);
+      })
+      .catch((error) => {
+        if (!cancelled) setDirectoryError(error instanceof Error ? error.message : "Failed to load providers");
+      })
+      .finally(() => {
+        if (!cancelled) setDirectoryLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [isLoading, user]);
+
   const sortedGridProviders = useMemo(() => {
-    return [...mockAllProviders].sort((a, b) => {
+    return [...providers].sort((a, b) => {
       switch (gridSort) {
         case "businessCategory":
           return a.businessCategory.localeCompare(b.businessCategory);
@@ -66,17 +64,17 @@ const AdminProvidersPage = () => {
           return a.businessName.localeCompare(b.businessName);
       }
     });
-  }, [gridSort]);
+  }, [gridSort, providers]);
 
   // List view: group by partner
-  const groupedByPartner = mockAllProviders.reduce<Record<string, ProviderEntry[]>>((acc, p) => {
+  const groupedByPartner = providers.reduce<Record<string, ProviderEntry[]>>((acc, p) => {
     if (!acc[p.partnerName]) acc[p.partnerName] = [];
     acc[p.partnerName].push(p);
     return acc;
   }, {});
   const sortedPartnerNames = Object.keys(groupedByPartner).sort();
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading || directoryLoading) return <LoadingSpinner />;
 
   const getDetailRows = (p: ProviderEntry) => [
     { label: "Business Name", value: p.businessName },
@@ -113,13 +111,15 @@ const AdminProvidersPage = () => {
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
               <Users className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-700">{mockAllProviders.length} providers</span>
+              <span className="text-sm font-medium text-blue-700">{providers.length} providers</span>
             </div>
             <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
           </div>
         </div>
 
-        {viewMode === "grid" ? (
+        {directoryError ? (
+          <Card><CardContent className="py-10 text-center text-sm text-destructive">{directoryError}</CardContent></Card>
+        ) : viewMode === "grid" ? (
           <>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Sort by:</span>

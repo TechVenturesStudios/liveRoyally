@@ -12,7 +12,7 @@ import {
 } from "@/api/authorizedRepresentatives";
 
 interface ProviderRepresentativesPageProps {
-  ownerType?: "provider" | "partner";
+  ownerType?: "provider" | "partner" | "admin";
 }
 
 type RepresentativeRow = {
@@ -128,7 +128,7 @@ const ProviderRepresentativesPage = ({ ownerType = "provider" }: ProviderReprese
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-3xl font-bold royal-header">Representatives</h1>
         <p className="text-muted-foreground text-xs sm:text-base mt-1 sm:mt-2">
-          Manage authorized representatives for your {ownerType === "partner" ? "partner organization" : "business"}
+          Manage authorized representatives for your {ownerType === "partner" ? "partner organization" : ownerType === "admin" ? "admin account" : "business"}
         </p>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
 import ViewToggle from "@/components/ui/ViewToggle";
 import { ArrowLeft, ChevronDown, Globe, Building, Users, Calendar, Clock } from "lucide-react";
+import { fetchAdminHistoricalEvents } from "@/api/adminHistoricalEvents";
 
 interface HistoricalEvent {
   id: string;
@@ -172,8 +173,26 @@ const AdminHistoricalEventsPage = () => {
   const [selectedEvent, setSelectedEvent] = useState<HistoricalEvent | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [networkData, setNetworkData] = useState<Network[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const totalEvents = mockNetworkData.reduce((sum, n) => sum + getTotalEvents(n), 0);
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdminHistoricalEvents()
+      .then((data) => {
+        if (!cancelled) setNetworkData(data.networks as Network[]);
+      })
+      .catch((loadError) => {
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Failed to load historical events");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const totalEvents = networkData.reduce((sum, n) => sum + getTotalEvents(n), 0);
 
   return (
     <DashboardLayout>
@@ -202,10 +221,16 @@ const AdminHistoricalEventsPage = () => {
           </div>
         </div>
 
-        {viewMode === "list" ? (
+        {loading ? (
+          <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">Loading historical events...</div>
+        ) : error ? (
+          <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-destructive">{error}</div>
+        ) : networkData.length === 0 ? (
+          <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">No historical events found.</div>
+        ) : viewMode === "list" ? (
           /* List view - collapsible drill-down */
           <div className="space-y-4">
-            {mockNetworkData.map((network) => (
+            {networkData.map((network) => (
               <Collapsible key={network.code}>
                 <Card>
                   <CollapsibleTrigger className="w-full">
@@ -313,7 +338,7 @@ const AdminHistoricalEventsPage = () => {
         ) : (
           /* Grid view - partner cards with providers underneath */
           <div className="space-y-8">
-            {mockNetworkData.map((network) => (
+            {networkData.map((network) => (
               <div key={network.code}>
                 <div className="flex items-center gap-2 mb-4">
                   <Globe className="h-4 w-4 text-primary" />
