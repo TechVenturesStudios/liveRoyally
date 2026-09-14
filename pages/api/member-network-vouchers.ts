@@ -94,10 +94,11 @@ export default async function handler(
       FROM vouchers v
       JOIN provider_profiles pp
         ON pp.user_id = v.provider_id
-      LEFT JOIN events e
+      JOIN events e
         ON e.event_id = v.event_id
       WHERE pp.network_code = ${member.member_profiles.network_code}
         AND LOWER(TRIM(COALESCE(v.status, ''))) = 'active'
+        AND e.published = TRUE
         AND (v.expiration_date IS NULL OR v.expiration_date >= CURRENT_DATE)
         AND NOT EXISTS (
           SELECT 1

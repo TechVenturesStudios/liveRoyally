@@ -51,6 +51,22 @@ function parseNumber(value: unknown) {
   return Math.trunc(parsed);
 }
 
+function parseMemberPrice(value: unknown) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) throw new Error("memberPrice must be a valid non-negative number");
+  return parsed;
+}
+
+function parseVoucherAvailability(value: unknown) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error("totalVouchersAvailable must be a positive whole number");
+  }
+  return parsed;
+}
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -89,6 +105,8 @@ export default async function handler(
     const endDate = parseDate(body.endDate, "endDate");
     const responseDeadline = parseDate(body.responseDeadline, "responseDeadline");
     const networkPoints = parseNumber(body.networkPoints);
+    const memberPrice = parseMemberPrice(body.memberPrice);
+    const totalVouchersAvailable = parseVoucherAvailability(body.totalVouchersAvailable);
 
     if (!partnerId || !title || !startDate || !location || providerIds.length === 0) {
       return res.status(400).json({
@@ -126,10 +144,13 @@ export default async function handler(
           location,
           event_time: eventTime || null,
           network_points: networkPoints,
+          member_price: memberPrice,
+          total_vouchers_available: totalVouchersAvailable,
           response_deadline: responseDeadline,
           start_date: startDate,
           end_date: endDate,
           status: "pending",
+          published: false,
         },
         select: {
           event_id: true,

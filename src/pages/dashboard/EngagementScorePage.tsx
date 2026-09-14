@@ -83,17 +83,6 @@ function getTierProgressPercent(data: EngagementAnalyticsResponse) {
   return Math.max(0, Math.min(100, Math.round(progress)));
 }
 
-const MEMBER_PROGRESS_PLACEHOLDERS = [
-  {
-    icon: Users,
-    iconBg: "bg-green-50",
-    iconColor: "text-green-600",
-    title: "Active Networks",
-    current: 3,
-    goal: 5,
-  },
-] as const;
-
 const PARTNER_PROGRESS_PLACEHOLDERS = [
   {
     icon: Ticket,
@@ -678,17 +667,13 @@ const EngagementScorePage = () => {
                         title="Vouchers Redeemed"
                         current={analytics.memberVoucherRedeemedCount}
                       />
-                      {MEMBER_PROGRESS_PLACEHOLDERS.map((metric) => (
-                        <ProgressMetric
-                          key={metric.title}
-                          icon={metric.icon}
-                          iconBg={metric.iconBg}
-                          iconColor={metric.iconColor}
-                          title={metric.title}
-                          current={metric.current}
-                          goal={metric.goal}
-                        />
-                      ))}
+                      <ProgressMetric
+                        icon={Users}
+                        iconBg="bg-green-50"
+                        iconColor="text-green-600"
+                        title="Active Networks"
+                        current={analytics.memberActiveNetworkCount}
+                      />
                     </div>
                   </div>
                 </Card>

@@ -218,11 +218,6 @@ export default async function handler(
           description: "Organization profile created",
         });
 
-        // await awardRewardTask(tx, {
-        //   userId: user.user_id,
-        //   taskKey: "partner_complete_organization_profile",
-        //   description: "Organization profile completed",
-        // });
       }
 
       const subscriptionData = {

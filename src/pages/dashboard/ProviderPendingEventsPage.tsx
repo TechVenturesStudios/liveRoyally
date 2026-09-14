@@ -31,7 +31,6 @@ const ProviderPendingEventsPage = () => {
   const { toast } = useToast();
 
   const [pricingData, setPricingData] = useState({
-    memberPrice: "",
     maxRedemptions: "",
     discountType: "none" as "none" | "percent" | "dollar" | "free_item",
     discountValue: "",
@@ -39,7 +38,7 @@ const ProviderPendingEventsPage = () => {
   });
 
   const resetPricing = () => {
-    setPricingData({ memberPrice: "", maxRedemptions: "", discountType: "none", discountValue: "", freeItemDescription: "" });
+    setPricingData({ maxRedemptions: "", discountType: "none", discountValue: "", freeItemDescription: "" });
   };
 
   useEffect(() => {
@@ -115,16 +114,6 @@ const ProviderPendingEventsPage = () => {
       return;
     }
 
-    if (pricingData.discountType === "none" && !pricingData.memberPrice.trim()) {
-      toast({ title: "Member price required", description: "Enter a member price when no discount is selected.", variant: "destructive" });
-      return;
-    }
-
-    if (pricingData.discountType !== "none" && pricingData.memberPrice.trim()) {
-      toast({ title: "Remove member price", description: "Member price should only be entered when no discount is selected.", variant: "destructive" });
-      return;
-    }
-
     const voucherType =
       pricingData.discountType === "none"
         ? "N"
@@ -143,7 +132,6 @@ const ProviderPendingEventsPage = () => {
           type: voucherType,
           value: pricingData.discountValue,
           promoItem: pricingData.freeItemDescription,
-          memberPrice: pricingData.memberPrice,
           maxRedemptions: pricingData.maxRedemptions,
         },
       });
@@ -396,24 +384,15 @@ const ProviderPendingEventsPage = () => {
                     <h3 className="font-semibold">Your Pricing & Offer</h3>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="memberPrice">Member Price ($)</Label>
-                      <Input
-                        id="memberPrice"
-                        name="memberPrice"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={pricingData.memberPrice}
-                        onChange={handlePricingChange}
-                        placeholder="0.00"
-                        disabled={pricingData.discountType !== "none"}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="maxRedemptions">Max Redemptions</Label>
-                      <Input id="maxRedemptions" name="maxRedemptions" type="number" min="1" value={pricingData.maxRedemptions} onChange={handlePricingChange} placeholder="Unlimited" />
-                      <p className="text-xs text-muted-foreground">Leave blank for unlimited</p>
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm sm:col-span-2">
+                          {selectedEvent.memberPrice === null
+                            ? "This event allows free vouchers."
+                            : `Members will pay $${selectedEvent.memberPrice.toFixed(2)} for every voucher you create for this event.`}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="maxRedemptions">Max Uses per Member</Label>
+                          <Input id="maxRedemptions" name="maxRedemptions" type="number" min="1" value={pricingData.maxRedemptions} onChange={handlePricingChange} placeholder="Unlimited" />
+                          <p className="text-xs text-muted-foreground">How many times each member may redeem their claimed voucher. Leave blank for unlimited.</p>
                     </div>
                   </div>
 
@@ -426,7 +405,6 @@ const ProviderPendingEventsPage = () => {
                         discountType: value as typeof prev.discountType,
                         discountValue: "",
                         freeItemDescription: "",
-                        memberPrice: value === "none" ? prev.memberPrice : "",
                       }))}
                       className="grid grid-cols-2 gap-3"
                     >

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Mail, Search, UserPlus, UserMinus } from "lucide-react";
+import { Mail, Search, UserPlus, UserMinus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Representative {
@@ -24,6 +24,7 @@ interface NetworkMember {
   name: string;
   email: string;
   memberSince: string;
+  authorizedRepresentativePartners: string[];
 }
 
 interface RepresentativesTabProps {
@@ -41,23 +42,45 @@ const RepresentativesTab = ({
   onRemoveRepresentative,
   loading = false,
 }: RepresentativesTabProps) => {
+  const PAGE_SIZE = 10;
   const [addMode, setAddMode] = useState<"search" | "email">("search");
   const [memberSearch, setMemberSearch] = useState("");
+  const [memberPage, setMemberPage] = useState(1);
   const [inviteEmail, setInviteEmail] = useState("");
   const { toast } = useToast();
 
-  // Filter network members by search term (same network only)
+  // Search only within the same network and rank exact/prefix matches ahead of loose matches.
   const filteredMembers = useMemo(() => {
-    if (!memberSearch.trim()) return networkMembers;
-    const q = memberSearch.toLowerCase();
-    return networkMembers.filter(
-      (m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
-    );
+    const q = memberSearch.trim().toLowerCase();
+    if (!q) return [];
+
+    const getMatchScore = (value: string) => {
+      const normalized = value.toLowerCase();
+      if (normalized === q) return 0;
+      if (normalized.startsWith(q)) return 1;
+      if (normalized.split(/[\s.@_-]+/).some((part) => part.startsWith(q))) return 2;
+      if (normalized.includes(q)) return 3;
+      return Infinity;
+    };
+
+    return networkMembers
+      .map((member, index) => ({
+        member,
+        score: Math.min(getMatchScore(member.name), getMatchScore(member.email)),
+        index,
+      }))
+      .filter(({ score }) => score !== Infinity)
+      .sort((a, b) => a.score - b.score || a.member.name.localeCompare(b.member.name) || a.index - b.index)
+      .map(({ member }) => member);
   }, [networkMembers, memberSearch]);
+
+  const totalMemberPages = Math.ceil(filteredMembers.length / PAGE_SIZE);
+  const pagedMembers = filteredMembers.slice((memberPage - 1) * PAGE_SIZE, memberPage * PAGE_SIZE);
 
   const handleSelectMember = (memberId: string) => {
     onAddRepresentative(memberId);
     setMemberSearch("");
+    setMemberPage(1);
   };
 
   const handleInviteByEmail = () => {
@@ -160,12 +183,19 @@ const RepresentativesTab = ({
               <Input
                 placeholder="Search by name or email…"
                 value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
+                onChange={(e) => {
+                  setMemberSearch(e.target.value);
+                  setMemberPage(1);
+                }}
                 className="mb-3"
               />
               <div className="border rounded-md max-h-[240px] overflow-y-auto">
                 {loading ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Loading network members...</p>
+                ) : !memberSearch.trim() ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    Search by name or email to find network members
+                  </p>
                 ) : filteredMembers.length > 0 ? (
                   <Table>
                     <TableHeader>
@@ -173,17 +203,23 @@ const RepresentativesTab = ({
                         <TableHead className="text-xs">Name</TableHead>
                         <TableHead className="text-xs">Email</TableHead>
                         <TableHead className="text-xs">Member Since</TableHead>
+                        <TableHead className="text-xs">Also Represents</TableHead>
                         <TableHead className="text-xs text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredMembers.map((member) => {
+                      {pagedMembers.map((member) => {
                         const alreadyAdded = representatives.some((r) => r.memberId === member.id || r.id === member.id);
                         return (
                           <TableRow key={member.id}>
                             <TableCell className="text-sm font-medium">{member.name}</TableCell>
                             <TableCell className="text-sm">{member.email}</TableCell>
                             <TableCell className="text-sm">{member.memberSince}</TableCell>
+                            <TableCell className="text-sm">
+                              {member.authorizedRepresentativePartners.length > 0
+                                ? member.authorizedRepresentativePartners.join(", ")
+                                : "—"}
+                            </TableCell>
                             <TableCell className="text-right">
                               {alreadyAdded ? (
                                 <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
@@ -202,10 +238,42 @@ const RepresentativesTab = ({
                   </Table>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-6">
-                    {memberSearch ? "No members found matching your search" : "No network members available"}
+                    No members found matching your search
                   </p>
                 )}
               </div>
+              {!loading && memberSearch.trim() && totalMemberPages > 1 && (
+                <div className="flex items-center justify-between pt-3 text-xs text-muted-foreground">
+                  <span>
+                    Showing {(memberPage - 1) * PAGE_SIZE + 1}–{Math.min(memberPage * PAGE_SIZE, filteredMembers.length)} of {filteredMembers.length}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-2"
+                      disabled={memberPage === 1}
+                      onClick={() => setMemberPage((page) => Math.max(1, page - 1))}
+                      aria-label="Previous page"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="px-2">Page {memberPage} of {totalMemberPages}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-2"
+                      disabled={memberPage === totalMemberPages}
+                      onClick={() => setMemberPage((page) => Math.min(totalMemberPages, page + 1))}
+                      aria-label="Next page"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             {/* Email Invite Tab */}

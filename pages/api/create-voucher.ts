@@ -92,21 +92,12 @@ export default async function handler(
       maxRedemptions = parsedMaxRedemptions;
     }
 
-    if (hasDiscount && hasValue(body.memberPrice)) {
-      return res.status(400).json({
-        error: "memberPrice should only be entered when no discount is selected",
-      });
-    }
-
-    if (!hasDiscount) {
-      const parsedMemberPrice = Number(body.memberPrice);
-      if (!Number.isFinite(parsedMemberPrice) || parsedMemberPrice < 0) {
-        return res.status(400).json({
-          error: "memberPrice is required when no discount is selected",
-        });
-      }
-      memberPrice = parsedMemberPrice;
-    }
+    const event = await prisma.events.findUnique({
+      where: { event_id: eventId },
+      select: { member_price: true },
+    });
+    if (!event) return res.status(404).json({ error: "Event not found" });
+    memberPrice = event.member_price;
 
     if (uiType === "P") {
       const percent = Number(body.value);

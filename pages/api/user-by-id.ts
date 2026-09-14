@@ -156,6 +156,7 @@ export default async function handler(
         ethnicity: memberProfile?.ethnicity ?? null,
         ageGroup: memberProfile?.age_group ?? null,
         gender: memberProfile?.gender ?? null,
+        birthday: memberProfile?.birthday ?? null,
 
         partnerId: providerProfile?.partner_id ?? null,
         partnerName: providerPartnerProfile?.org_name ?? null,

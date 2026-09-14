@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { fetchEngagementAnalytics } from "@/api/engagementAnalytics";
 import { fetchAuthorizedRepresentatives, type AuthorizedRepresentative } from "@/api/authorizedRepresentatives";
 import { fetchPartnerDashboardEvents, type PartnerDashboardEvent } from "@/api/partnerEvents";
-import { createEvent } from "@/api/events";
+import { createEvent, publishEvent } from "@/api/events";
 import { fetchPartnerProviders, type PartnerProvider } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
 import { getDashboardContext } from "@/utils/dashboardContext";
@@ -75,6 +75,7 @@ type DashboardEventRow = {
   date: string;
   deadline: string;
   status: "pending" | "active" | "completed";
+  published: boolean;
   purchaseCount: number;
   contacts: DashboardEventContact[];
 };
@@ -87,7 +88,8 @@ const mapPartnerEventToDashboardRow = (event: PartnerDashboardEvent): DashboardE
   date: event.date,
   deadline: event.responseDeadline || event.date,
   status: event.status === "active" ? "active" : event.status === "completed" ? "completed" : "pending",
-  purchaseCount: event.providerCount,
+  published: event.published,
+  purchaseCount: event.purchaseCount,
   contacts: event.providers.map((provider) => ({
     id: provider.inviteId,
     name: provider.providerName,
@@ -113,6 +115,8 @@ const PartnersDashboard = () => {
     time: "",
     location: "",
     networkPoints: "",
+    memberPrice: "",
+    totalVouchersAvailable: "",
     deadline: "",
   });
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
@@ -123,6 +127,7 @@ const PartnersDashboard = () => {
   const [providersLoading, setProvidersLoading] = useState(false);
   const [providersError, setProvidersError] = useState("");
   const [submittingEvent, setSubmittingEvent] = useState(false);
+  const [publishingEventId, setPublishingEventId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -349,6 +354,25 @@ const sortedProviders = useMemo(() => {
     [sortedEvents]
   );
 
+  const handlePublishEvent = async (eventId: string) => {
+    try {
+      setPublishingEventId(eventId);
+      await publishEvent(eventId);
+      setEvents((previous) => previous.map((event) => (
+        event.id === eventId ? { ...event, published: true } : event
+      )));
+      toast({ title: "Event published", description: "Members can now see and claim its active vouchers." });
+    } catch (error) {
+      toast({
+        title: "Could not publish event",
+        description: error instanceof Error ? error.message : "Failed to publish event",
+        variant: "destructive",
+      });
+    } finally {
+      setPublishingEventId(null);
+    }
+  };
+
   const handleCreateEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -380,6 +404,8 @@ const sortedProviders = useMemo(() => {
         location: createEventForm.location,
         eventTime: createEventForm.time,
         networkPoints: createEventForm.networkPoints,
+        memberPrice: createEventForm.memberPrice,
+        totalVouchersAvailable: createEventForm.totalVouchersAvailable,
         responseDeadline: createEventForm.deadline,
         providerIds: selectedProviders,
       });
@@ -401,6 +427,8 @@ const sortedProviders = useMemo(() => {
         time: "",
         location: "",
         networkPoints: "",
+        memberPrice: "",
+        totalVouchersAvailable: "",
         deadline: "",
       });
       setSelectedProviders([]);
@@ -424,6 +452,8 @@ const sortedProviders = useMemo(() => {
       time: "",
       location: "",
       networkPoints: "",
+      memberPrice: "",
+      totalVouchersAvailable: "",
       deadline: "",
     });
     setSelectedProviders([]);
@@ -590,7 +620,14 @@ const sortedProviders = useMemo(() => {
                             <TableCell>
                               <div className="flex gap-2">
                                 <Button variant="outline" size="sm">Edit</Button>
-                                <Button size="sm" className="bg-green-600 hover:bg-green-700">Publish</Button>
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700"
+                                  onClick={() => void handlePublishEvent(event.id)}
+                                  disabled={publishingEventId === event.id || event.published}
+                                >
+                                  {publishingEventId === event.id ? "Publishing..." : event.published ? "Published" : "Publish"}
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -678,15 +715,20 @@ const sortedProviders = useMemo(() => {
                             <TableCell className="font-medium">{event.title}</TableCell>
                             <TableCell>{new Date(event.date).toLocaleDateString()}</TableCell>
                             <TableCell>
-                              <Badge className={
-                                event.status === "pending" 
-                                  ? "bg-amber-100 text-amber-800 border-amber-200" 
-                                  : event.status === "active" 
-                                    ? "bg-blue-100 text-blue-800 border-blue-200"
-                                    : "bg-green-100 text-green-800 border-green-200"
-                              }>
-                                {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
-                              </Badge>
+                              <div className="flex flex-wrap gap-1">
+                                <Badge className={
+                                  event.status === "pending"
+                                    ? "bg-amber-100 text-amber-800 border-amber-200"
+                                    : event.status === "active"
+                                      ? "bg-blue-100 text-blue-800 border-blue-200"
+                                      : "bg-green-100 text-green-800 border-green-200"
+                                }>
+                                  {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                                </Badge>
+                                <Badge variant="outline" className={event.published ? "bg-green-50 text-green-700 border-green-200" : "bg-muted text-muted-foreground"}>
+                                  {event.published ? "Published" : "Unpublished"}
+                                </Badge>
+                              </div>
                             </TableCell>
                             <TableCell>{event.purchaseCount}</TableCell>
                           </TableRow>
@@ -816,6 +858,25 @@ const sortedProviders = useMemo(() => {
                             onChange={handleCreateEventChange}
                             placeholder="e.g. 200"
                           />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="create-event-member-price">Member Price ($) <span className="font-normal text-muted-foreground">(Optional)</span></Label>
+                          <Input
+                            id="create-event-member-price"
+                            name="memberPrice"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={createEventForm.memberPrice}
+                            onChange={handleCreateEventChange}
+                            placeholder="Leave blank for free vouchers"
+                          />
+                          <p className="text-xs text-muted-foreground">Applied to every voucher providers create for this event.</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="create-event-voucher-availability">Total Vouchers Available per Provider <span className="font-normal text-muted-foreground">(Optional)</span></Label>
+                          <Input id="create-event-voucher-availability" name="totalVouchersAvailable" type="number" min="1" step="1" value={createEventForm.totalVouchersAvailable} onChange={handleCreateEventChange} placeholder="Unlimited claims" />
+                          <p className="text-xs text-muted-foreground">How many members can claim each provider’s voucher.</p>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="create-event-deadline">Provider Response Deadline</Label>

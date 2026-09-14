@@ -33,6 +33,14 @@ const GENDER_OPTIONS = [
   { label: "Other", value: "other" }
 ];
 
+const getSixteenYearsAgo = () => {
+  const today = new Date();
+  const cutoff = new Date(today.getFullYear() - 16, today.getMonth(), today.getDate());
+  return [cutoff.getFullYear(), cutoff.getMonth() + 1, cutoff.getDate()]
+    .map((part, index) => index === 0 ? String(part) : String(part).padStart(2, "0"))
+    .join("-");
+};
+
 const MemberForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<Partial<MemberUser>>({
@@ -43,6 +51,7 @@ const MemberForm = () => {
     zipCode: "",
     email: "",
     phoneNumber: "",
+    birthday: "",
     ethnicity: "",
     ageGroup: "",
     gender: "",
@@ -105,11 +114,16 @@ const MemberForm = () => {
 
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.birthday || formData.birthday > getSixteenYearsAgo()) {
+      window.alert("You must be at least 16 years old to create an account.");
+      return;
+    }
     const data1 = await createCognitoUser({
       email: formData.email,
       firstName: formData.firstName,
       lastName: formData.lastName,
       phoneNumber: formData.phoneNumber,
+      birthday: formData.birthday,
       userType: USER_TYPES.member,
     });
 
@@ -176,6 +190,15 @@ const MemberForm = () => {
               required
               value={formData.zipCode}
               onChange={handleInputChange}
+            />
+            <FormField
+              label="Birthday"
+              name="birthday"
+              type="date"
+              required
+              value={formData.birthday}
+              onChange={handleInputChange}
+              max={getSixteenYearsAgo()}
             />
           </div>
         </div>

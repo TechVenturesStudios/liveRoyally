@@ -11,6 +11,7 @@ interface FormFieldProps {
   name: string;
   type: string;
   placeholder?: string;
+  max?: string;
   required?: boolean;
   options?: { label: string; value: string }[];
   value?: string;
@@ -26,6 +27,7 @@ const FormField = ({
   name,
   type,
   placeholder,
+  max,
   required = false,
   options = [],
   value,
@@ -74,6 +76,7 @@ const FormField = ({
           id={name}
           name={name}
           placeholder={placeholder}
+          max={max}
           required={required}
           value={value}
           onChange={onChange}

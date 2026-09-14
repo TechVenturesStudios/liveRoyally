@@ -66,6 +66,7 @@ type EngagementAnalyticsResponse =
       providerNetwork: EngagementAnalyticsPartnerInfo;
       partnerProviders: EngagementAnalyticsProviderRanking[];
       memberVoucherRedeemedCount: number;
+      memberActiveNetworkCount: number;
       providerHostedCompletedEvents: number;
       providerVoucherHonoredCount: number;
     }
@@ -170,6 +171,7 @@ export default async function handler(
       partnerSubscription,
       partnerProviderCount,
       memberVoucherRedeemedCount,
+      memberActiveNetworkCount,
       providerHostedEvents,
       providerVoucherHonoredCount,
     ] = await Promise.all([
@@ -281,6 +283,20 @@ export default async function handler(
             FROM purchases p
             INNER JOIN vouchers v
               ON v.voucher_id = p.voucher_id
+            WHERE p.member_id = ${account.actingUserId}::uuid
+              AND LOWER(TRIM(COALESCE(p.status, ''))) IN ('used', 'redeemed', 'completed')
+              AND p.purchase_date >= ${new Date(year, 0, 1)}
+              AND p.purchase_date < ${new Date(year + 1, 0, 1)};
+          `
+        : Promise.resolve([{ count: 0 }]),
+      isMember
+        ? prisma.$queryRaw<Array<{ count: number }>>`
+            SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(pp.network_code), ''), NULLIF(TRIM(pp.network_name), '')))::int AS count
+            FROM purchases p
+            INNER JOIN vouchers v
+              ON v.voucher_id = p.voucher_id
+            INNER JOIN provider_profiles pp
+              ON pp.user_id = v.provider_id
             WHERE p.member_id = ${account.actingUserId}::uuid
               AND LOWER(TRIM(COALESCE(p.status, ''))) IN ('used', 'redeemed', 'completed')
               AND p.purchase_date >= ${new Date(year, 0, 1)}
@@ -510,6 +526,7 @@ export default async function handler(
       isCompletedHostedEvent(invite.events.status, invite.events.start_date)
     ).length;
     const memberVoucherRedeemedTotal = memberVoucherRedeemedCount[0]?.count ?? 0;
+    const memberActiveNetworkTotal = memberActiveNetworkCount[0]?.count ?? 0;
     const providerVoucherHonoredTotal = providerVoucherHonoredCount[0]?.count ?? 0;
 
     return res.status(200).json({
@@ -539,6 +556,7 @@ export default async function handler(
       providerNetwork,
       partnerProviders,
       memberVoucherRedeemedCount: memberVoucherRedeemedTotal,
+      memberActiveNetworkCount: memberActiveNetworkTotal,
       providerHostedCompletedEvents,
       providerVoucherHonoredCount: providerVoucherHonoredTotal,
     });

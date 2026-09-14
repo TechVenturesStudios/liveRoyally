@@ -70,6 +70,8 @@ export default async function handler(
       provider_network_code: string | null;
       expiration_date: Date | null;
       status: string | null;
+      event_published: boolean;
+      total_vouchers_available: number | null;
     }>>`
       SELECT
         v.voucher_id,
@@ -77,10 +79,14 @@ export default async function handler(
         v.type,
         pp.network_code AS provider_network_code,
         v.expiration_date,
-        v.status
+        v.status,
+        e.published AS event_published,
+        e.total_vouchers_available
       FROM vouchers v
       JOIN provider_profiles pp
         ON pp.user_id = v.provider_id
+      JOIN events e
+        ON e.event_id = v.event_id
       WHERE v.voucher_id = ${voucherId}
       LIMIT 1;
     `;
@@ -102,11 +108,18 @@ export default async function handler(
       return res.status(400).json({ error: "This voucher is not active" });
     }
 
+    if (!voucherRecord.event_published) {
+      return res.status(400).json({ error: "This event has not been published" });
+    }
+
     if (voucherRecord.expiration_date && voucherRecord.expiration_date < new Date()) {
       return res.status(400).json({ error: "This voucher has expired" });
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      // Serialize claims for this voucher so the event-level cap cannot be exceeded by concurrent claims.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${voucherId}, 0));`;
+
       const existingClaim = await tx.member_vouchers.findFirst({
         where: {
           member_id: member.user_id,
@@ -117,6 +130,13 @@ export default async function handler(
           voucher_id: true,
         },
       });
+
+      if (!existingClaim && voucherRecord.total_vouchers_available !== null) {
+        const claimCount = await tx.member_vouchers.count({ where: { voucher_id: voucherId } });
+        if (claimCount >= voucherRecord.total_vouchers_available) {
+          throw new Error("This voucher has reached its claim limit");
+        }
+      }
 
       const qrCodeData = buildMemberVoucherQrCodeData({
         voucherId,
@@ -154,6 +174,9 @@ export default async function handler(
     return res.status(200).json(result);
   } catch (error) {
     console.error("claim-member-voucher error:", error);
+    if (error instanceof Error && error.message === "This voucher has reached its claim limit") {
+      return res.status(400).json({ error: error.message });
+    }
     return res.status(500).json({
       error: error instanceof Error ? error.message : "Failed to claim voucher",
     });

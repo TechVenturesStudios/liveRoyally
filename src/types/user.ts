@@ -24,6 +24,7 @@ export interface MemberUser extends BaseUser {
   lastName: string;
   zipCode: string;
   phoneNumber?: string;
+  birthday: string;
   ethnicity?: string;
   ageGroup?: string;
   gender?: string;

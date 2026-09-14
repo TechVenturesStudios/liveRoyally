@@ -16,8 +16,10 @@ type PartnerEventsResponse =
         createdDate: string;
         responseDeadline: string;
         status: "pending" | "active" | "completed";
+        published: boolean;
         stage: "needs_approval" | "upcoming" | "past";
         providerCount: number;
+        purchaseCount: number;
         pendingProviderCount: number;
         acceptedProviderCount: number;
         declinedProviderCount: number;
@@ -87,6 +89,7 @@ export default async function handler(
         start_date: true,
         end_date: true,
         status: true,
+        published: true,
         created_at: true,
         event_provider_invites: {
           orderBy: [{ invited_at: "desc" }],
@@ -133,6 +136,15 @@ export default async function handler(
         const acceptedProviderCount = event.event_provider_invites.filter((invite) => invite.status === "accepted").length;
         const declinedProviderCount = event.event_provider_invites.filter((invite) => invite.status === "declined").length;
         const stage = normalizeEventStage(status);
+        const purchaseCountRows = await prisma.$queryRaw<Array<{ count: bigint | number | string | null }>>`
+          SELECT COUNT(DISTINCT p.purchase_id) FILTER (
+            WHERE LOWER(TRIM(COALESCE(p.status, ''))) IN ('used', 'redeemed', 'completed')
+          ) AS count
+          FROM purchases p
+          INNER JOIN vouchers v ON v.voucher_id = p.voucher_id
+          WHERE v.event_id = ${event.event_id}
+        `;
+        const purchaseCount = Number(purchaseCountRows[0]?.count ?? 0);
 
         return {
           id: event.event_id,
@@ -145,8 +157,10 @@ export default async function handler(
           createdDate: formatDate(event.created_at),
           responseDeadline: formatDate(event.response_deadline),
           status,
+          published: event.published,
           stage,
           providerCount: event.event_provider_invites.length,
+          purchaseCount: Number.isFinite(purchaseCount) ? purchaseCount : 0,
           pendingProviderCount,
           acceptedProviderCount,
           declinedProviderCount,

@@ -85,10 +85,14 @@ model events {
   location           String?                   @db.VarChar(255)
   event_time         String?                   @db.VarChar(50)
   network_points     Int?
+  member_price      Float?
+  total_vouchers_available Int?
   response_deadline  DateTime?                 @db.Date
   start_date         DateTime?                 @db.Date
   end_date           DateTime?                 @db.Date
   status             String?                   @db.VarChar(50)
+  published          Boolean                   @default(false)
+  published_at       DateTime?                 @db.Timestamp(6)
   created_at         DateTime?                 @default(now()) @db.Timestamp(6)
   users              users?                    @relation(fields: [partner_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
   vouchers           vouchers[]
@@ -105,6 +109,7 @@ model member_profiles {
   ethnicity            String?   @db.VarChar(50)
   age_group            String?   @db.VarChar(20)
   gender               String?   @db.VarChar(20)
+  birthday             DateTime? @db.Date
   notification_enabled Boolean?
   terms_accepted       Boolean?
   created_at           DateTime? @default(now()) @db.Timestamp(6)
@@ -253,7 +258,6 @@ model purchases {
   users         users?    @relation(fields: [member_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
   vouchers      vouchers? @relation(fields: [voucher_id], references: [voucher_id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([member_id, voucher_id], map: "purchases_member_voucher_unique")
   @@index([member_id], map: "idx_purchases_member")
   @@index([voucher_id], map: "idx_purchases_voucher")
 }

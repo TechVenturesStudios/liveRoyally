@@ -43,61 +43,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
 
-    const networks = new Map<string, { name: string; code: string; partners: Map<string, { name: string; providers: Map<string, any> }> }>();
+    const networks = new Map<string, { name: string; code: string; partners: Map<string, { name: string; events: any[] }> }>();
 
     for (const partner of partners) {
       const profile = partner.partner_profiles;
       const code = networkKey(profile?.network_code, profile?.network_name);
       const network = networks.get(code) ?? { name: profile?.network_name?.trim() || code, code, partners: new Map() };
       const partnerName = profile?.org_name?.trim() || "Unnamed partner";
-      const partnerData = network.partners.get(partner.user_id) ?? { name: partnerName, providers: new Map() };
-
-      for (const provider of partner.partner_providers) {
-        const providerProfile = provider;
-        partnerData.providers.set(provider.user_id, {
-          id: provider.user_id,
-          businessName: providerProfile?.business_name?.trim() || "Unnamed provider",
-          businessCategory: providerProfile?.business_category?.trim() || "Other",
-          agentName: [providerProfile?.agent_first_name, providerProfile?.agent_last_name].filter(Boolean).join(" "),
-          participated: false,
-          events: [],
-        });
-      }
+      const partnerData = network.partners.get(partner.user_id) ?? { name: partnerName, events: [] };
 
       for (const event of partner.events) {
         const status = deriveEventLifecycleStatus({ startDate: event.start_date, endDate: event.end_date, responseDeadline: event.response_deadline, inviteStatuses: event.event_provider_invites.map((invite) => invite.status) });
         if (status !== "completed") continue;
 
-        const invite = event.event_provider_invites.find((item) => item.status === "accepted") ?? event.event_provider_invites[0];
-        const providerId = invite?.provider_id ?? `${partner.user_id}:unassigned`;
-        const providerProfile = invite?.provider.provider_profiles;
-        const provider = partnerData.providers.get(providerId) ?? {
-          id: providerId,
-          businessName: providerProfile?.business_name?.trim() || "Unassigned provider",
-          businessCategory: providerProfile?.business_category?.trim() || "Other",
-          agentName: [providerProfile?.agent_first_name, providerProfile?.agent_last_name].filter(Boolean).join(" "),
-          participated: false,
-          events: [],
-        };
         const metrics = await prisma.$queryRaw<MetricRow[]>`
           WITH voucher_base AS (SELECT voucher_id, COALESCE(member_price, 0) AS member_price FROM vouchers WHERE event_id = ${event.event_id}),
           claims AS (SELECT mv.voucher_id, COUNT(DISTINCT mv.member_id) AS count FROM member_vouchers mv INNER JOIN voucher_base vb ON vb.voucher_id = mv.voucher_id GROUP BY mv.voucher_id),
-          purchase_counts AS (SELECT p.voucher_id, COUNT(DISTINCT p.purchase_id) FILTER (WHERE LOWER(COALESCE(p.status, 'completed')) NOT IN ('refunded', 'cancelled', 'canceled')) AS count FROM purchases p INNER JOIN voucher_base vb ON vb.voucher_id = p.voucher_id GROUP BY p.voucher_id)
+          purchase_counts AS (SELECT p.voucher_id, COUNT(DISTINCT p.purchase_id) FILTER (WHERE LOWER(TRIM(COALESCE(p.status, ''))) IN ('used', 'redeemed', 'completed')) AS count FROM purchases p INNER JOIN voucher_base vb ON vb.voucher_id = p.voucher_id GROUP BY p.voucher_id)
           SELECT COALESCE(SUM(c.count), 0)::bigint AS members_invited, COALESCE(SUM(p.count), 0)::bigint AS members_attended,
             COALESCE(SUM(vb.member_price * COALESCE(p.count, 0)), 0)::numeric AS revenue
           FROM voucher_base vb LEFT JOIN claims c ON c.voucher_id = vb.voucher_id LEFT JOIN purchase_counts p ON p.voucher_id = vb.voucher_id
         `;
         const metric = metrics[0];
-        provider.events.push({ id: event.event_id, title: event.title || "Untitled Event", date: formatDate(event.start_date), time: event.event_time || "", location: event.location || "", description: event.description || "", membersInvited: toNumber(metric?.members_invited), membersAttended: toNumber(metric?.members_attended), revenue: toNumber(metric?.revenue) });
-        provider.participated = provider.participated || invite?.status === "accepted";
-        partnerData.providers.set(providerId, provider);
+        const acceptedProviderCount = new Set(
+          event.event_provider_invites
+            .filter((invite) => invite.status === "accepted")
+            .map((invite) => invite.provider_id),
+        ).size;
+        partnerData.events.push({ id: event.event_id, title: event.title || "Untitled Event", date: formatDate(event.start_date), time: event.event_time || "", location: event.location || "", description: event.description || "", membersInvited: toNumber(metric?.members_invited), membersAttended: toNumber(metric?.members_attended), revenue: toNumber(metric?.revenue), acceptedProviderCount });
       }
 
-      if (partnerData.providers.size > 0) network.partners.set(partner.user_id, partnerData);
+      if (partnerData.events.length > 0) network.partners.set(partner.user_id, partnerData);
       networks.set(code, network);
     }
 
-    return res.status(200).json({ networks: Array.from(networks.values()).map((network) => ({ name: network.name, code: network.code, partners: Array.from(network.partners.values()).map((partner) => ({ name: partner.name, providers: Array.from(partner.providers.values()) })) })) });
+    return res.status(200).json({ networks: Array.from(networks.values()).map((network) => ({ name: network.name, code: network.code, partners: Array.from(network.partners.values()) })) });
   } catch (error) {
     console.error("admin historical events error:", error);
     return res.status(500).json({ error: error instanceof Error ? error.message : "Failed to load historical events" });

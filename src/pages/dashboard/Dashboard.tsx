@@ -51,7 +51,12 @@ const Dashboard = () => {
               }).length
             : 0;
 
-        const purchaseCount = purchaseResult.status === "fulfilled" ? purchaseResult.value.purchases.length : 0;
+        const purchaseCount = purchaseResult.status === "fulfilled"
+          ? purchaseResult.value.purchases.filter((purchase) => {
+              const status = String(purchase.status || "").trim().toLowerCase();
+              return status === "used" || status === "redeemed" || status === "completed";
+            }).length
+          : 0;
 
         setMemberCardStats({
           "Upcoming Vouchers": `${activeVoucherCount} Active`,

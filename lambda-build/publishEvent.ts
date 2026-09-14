@@ -37,11 +37,11 @@ export const handler = async (event: any = {}) => {
     // If you want to enforce ownership, require partnerId and include it in WHERE.
     const sql = partnerId
       ? `UPDATE events
-         SET status = 'published'
+         SET published = TRUE, published_at = NOW()
          WHERE event_id = $1 AND partner_id = $2
          RETURNING event_id, status;`
       : `UPDATE events
-         SET status = 'published'
+         SET published = TRUE, published_at = NOW()
          WHERE event_id = $1
          RETURNING event_id, status;`;
 

@@ -161,12 +161,6 @@ export default async function handler(
         description: "Business profile created",
       });
 
-      // await awardRewardTask(tx, {
-      //   userId: user.user_id,
-      //   taskKey: "provider_complete_business_profile",
-      //   description: "Business profile completed",
-      // });
-
       return { user, partner };
     });
 

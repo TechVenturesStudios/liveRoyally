@@ -83,6 +83,7 @@ const ProviderRepresentativesPage = ({ ownerType = "provider" }: ProviderReprese
         name: member.name,
         email: member.email,
         memberSince: member.memberSince,
+        authorizedRepresentativePartners: member.authorizedRepresentativePartners,
       })),
     [networkMembers]
   );

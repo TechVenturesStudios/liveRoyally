@@ -17,6 +17,15 @@ type RegisterMemberResponse =
 
 const normalizeZip = (value: unknown) => String(value || "").replace(/\D/g, "").slice(0, 5);
 
+function parseEligibleBirthday(value: unknown) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const birthday = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(birthday.getTime()) || birthday.toISOString().slice(0, 10) !== value) return null;
+  const today = new Date();
+  const cutoff = new Date(Date.UTC(today.getUTCFullYear() - 16, today.getUTCMonth(), today.getUTCDate()));
+  return birthday <= cutoff ? birthday : null;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<RegisterMemberResponse>
@@ -41,6 +50,11 @@ export default async function handler(
 
     const displayId = `M-${randomInt(100000000, 999999999)}`;
     const zipCode = normalizeZip(body.zipCode);
+    const birthday = parseEligibleBirthday(body.birthday);
+
+    if (!birthday) {
+      return res.status(400).json({ error: "You must be at least 16 years old to create an account" });
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const network =
@@ -82,6 +96,7 @@ export default async function handler(
           ethnicity: body.ethnicity || null,
           age_group: body.ageGroup || null,
           gender: body.gender || null,
+          birthday,
           notification_enabled: Boolean(body.notificationEnabled),
           terms_accepted: Boolean(body.termsAccepted),
         },

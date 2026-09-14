@@ -84,6 +84,7 @@ export default async function handler(
         start_date: true,
         end_date: true,
         status: true,
+        published: true,
         created_at: true,
         event_provider_invites: {
           orderBy: [{ invited_at: "desc" }],
@@ -158,10 +159,11 @@ export default async function handler(
           SELECT
             p.voucher_id,
             COUNT(DISTINCT p.purchase_id) FILTER (
-              WHERE LOWER(COALESCE(p.status, 'completed')) NOT IN ('refunded', 'cancelled', 'canceled')
+              WHERE LOWER(TRIM(COALESCE(p.status, ''))) IN ('used', 'redeemed', 'completed')
             ) AS purchase_count
           FROM purchases p
           INNER JOIN voucher_base vb ON vb.voucher_id = p.voucher_id
+          INNER JOIN vouchers v ON v.voucher_id = p.voucher_id
           GROUP BY p.voucher_id
         )
         SELECT
@@ -192,6 +194,7 @@ export default async function handler(
         createdDate: formatDate(event.created_at),
         responseDeadline: formatDate(event.response_deadline),
         status,
+        published: event.published,
         stage,
         providerCount: event.event_provider_invites.length,
         pendingProviderCount,
@@ -215,6 +218,7 @@ export default async function handler(
           primaryInvite?.provider.provider_profiles?.business_name ??
           primaryInvite?.provider.email ??
           "Unnamed Provider",
+        purchaseCount: toNumber(analytics.members_attended),
         membersAttended: toNumber(analytics.members_attended),
         membersInvited: toNumber(analytics.members_invited),
         revenue: toNumber(analytics.revenue),

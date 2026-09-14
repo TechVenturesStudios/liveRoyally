@@ -144,6 +144,7 @@ export default async function handler(
           select: {
             response_deadline: true,
             end_date: true,
+            member_price: true,
           },
         },
       },
@@ -201,18 +202,6 @@ export default async function handler(
 
     if (hasDiscount && !["P", "A", "F"].includes(uiType)) {
       return res.status(400).json({ error: "Invalid voucher type. Use N, P, A, or F." });
-    }
-
-    if (hasDiscount && hasValue(body.voucher?.memberPrice)) {
-      return res.status(400).json({
-        error: "memberPrice should only be entered when no discount is selected",
-      });
-    }
-
-    if (!hasDiscount && !hasValue(body.voucher?.memberPrice)) {
-      return res.status(400).json({
-        error: "memberPrice is required when no discount is selected",
-      });
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -301,13 +290,7 @@ export default async function handler(
         maxRedemptions = parsedMaxRedemptions;
       }
 
-      if (!hasDiscount) {
-        const parsedMemberPrice = Number(body.voucher?.memberPrice);
-        if (!Number.isFinite(parsedMemberPrice) || parsedMemberPrice < 0) {
-          throw new Error("memberPrice is required when no discount is selected");
-        }
-        memberPrice = parsedMemberPrice;
-      }
+      memberPrice = invite.events.member_price;
 
       if (uiType === "P") {
         const percent = Number(body.voucher?.value);

@@ -8,7 +8,16 @@ type CreateCognitoUserResponse =
     }
   | {
       error: string;
-    };
+};
+
+function isAtLeastSixteen(birthday: unknown) {
+  if (typeof birthday !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) return false;
+  const date = new Date(`${birthday}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== birthday) return false;
+  const today = new Date();
+  const cutoff = new Date(Date.UTC(today.getUTCFullYear() - 16, today.getUTCMonth(), today.getUTCDate()));
+  return date <= cutoff;
+}
 
 function setCorsHeaders(res: NextApiResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -36,6 +45,10 @@ export default async function handler(
 
     if (!email) {
       return res.status(400).json({ error: "email is required" });
+    }
+
+    if (!isAtLeastSixteen(body.birthday)) {
+      return res.status(400).json({ error: "You must be at least 16 years old to create an account" });
     }
 
     const { cognitoSub, username } = await createOrGetCognitoUser({

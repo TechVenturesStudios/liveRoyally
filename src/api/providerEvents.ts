@@ -9,6 +9,8 @@ export type ProviderPendingInvite = {
   eventTime: string;
   location: string;
   networkPoints: number;
+  memberPrice: number | null;
+  totalVouchersAvailable: number | null;
   deadline: string;
   partnerName: string;
   status: "pending" | "accepted" | "declined" | "expired";

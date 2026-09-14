@@ -59,6 +59,7 @@ export const handler = async (event: any = {}) => {
           'ethnicity', mp.ethnicity,
           'ageGroup', mp.age_group,
           'gender', mp.gender,
+          'birthday', mp.birthday,
 
           -- provider-specific
           'agentFirstName', pvp.agent_first_name,

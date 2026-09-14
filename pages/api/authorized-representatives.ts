@@ -21,6 +21,7 @@ type NetworkMember = {
   email: string;
   phone: string;
   memberSince: string;
+  authorizedRepresentativePartners: string[];
 };
 
 type AuthorizedRepresentativesResponse =
@@ -80,7 +81,23 @@ export default async function handler(
           TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS name,
           u.email,
           COALESCE(u.phone_number, '') AS phone,
-          COALESCE(m.created_at, u.created_at) AS "memberSince"
+          COALESCE(m.created_at, u.created_at) AS "memberSince",
+          COALESCE(
+            (
+              SELECT ARRAY_AGG(partner_name ORDER BY partner_name)
+              FROM (
+                SELECT DISTINCT COALESCE(pp.org_name, partner.email) AS partner_name
+                FROM authorized_representative_assignments a
+                INNER JOIN users partner ON partner.user_id = a.represented_user_id
+                LEFT JOIN partner_profiles pp ON pp.user_id = partner.user_id
+                WHERE a.principal_user_id = u.user_id
+                  AND a.represented_user_id <> ${account.actingUserId}::uuid
+                  AND a.is_active = true
+                  AND partner.user_type = 'partner'
+              ) partner_assignments
+            ),
+            ARRAY[]::text[]
+          ) AS "authorizedRepresentativePartners"
         FROM users u
         INNER JOIN member_profiles m ON m.user_id = u.user_id
         WHERE u.user_type = 'member'
@@ -155,7 +172,8 @@ export default async function handler(
           TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS name,
           u.email,
           COALESCE(u.phone_number, '') AS phone,
-          COALESCE(m.created_at, u.created_at) AS "memberSince"
+          COALESCE(m.created_at, u.created_at) AS "memberSince",
+          ARRAY[]::text[] AS "authorizedRepresentativePartners"
         FROM users u
         INNER JOIN member_profiles m ON m.user_id = u.user_id
         WHERE u.user_id = ${memberId}::uuid

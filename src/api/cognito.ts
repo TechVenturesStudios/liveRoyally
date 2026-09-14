@@ -5,6 +5,7 @@ type CreateCognitoUserInput = {
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
+  birthday?: string;
   userType: UserType;
 };
 

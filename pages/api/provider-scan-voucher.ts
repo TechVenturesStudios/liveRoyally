@@ -205,14 +205,32 @@ export default async function handler(
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`
-        INSERT INTO purchases (member_id, voucher_id, purchase_date, status)
-        VALUES (${scan.member_id}::uuid, ${scan.voucher_id}, NOW(), 'used')
-        ON CONFLICT (member_id, voucher_id)
-        DO UPDATE SET
-          purchase_date = EXCLUDED.purchase_date,
-          status = EXCLUDED.status;
-      `;
+      // Serialize scans for this member/voucher pair so a redemption limit
+      // cannot be bypassed by simultaneous scans.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${scan.member_id}:${scan.voucher_id}`}, 0));`;
+
+      if (scan.max_redemptions !== null) {
+        const redemptionCount = await tx.purchases.count({
+          where: {
+            member_id: scan.member_id,
+            voucher_id: scan.voucher_id,
+            status: { in: ["used", "redeemed", "completed"] },
+          },
+        });
+
+        if (redemptionCount >= scan.max_redemptions) {
+          throw new Error("This member has reached the redemption limit for this voucher");
+        }
+      }
+
+      await tx.purchases.create({
+        data: {
+          member_id: scan.member_id,
+          voucher_id: scan.voucher_id,
+          purchase_date: new Date(),
+          status: "used",
+        },
+      });
 
       await awardRewardTask(tx, {
         userId: account.actingUserId,
@@ -249,6 +267,9 @@ export default async function handler(
     });
   } catch (error) {
     console.error("provider-scan-voucher error:", error);
+    if (error instanceof Error && error.message === "This member has reached the redemption limit for this voucher") {
+      return res.status(400).json({ error: error.message });
+    }
     return res.status(500).json({
       error: error instanceof Error ? error.message : "Failed to scan voucher",
     });

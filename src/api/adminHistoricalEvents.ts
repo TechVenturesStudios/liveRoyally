@@ -8,18 +8,10 @@ export type AdminHistoricalEvent = {
   membersAttended: number;
   membersInvited: number;
   revenue: number;
+  acceptedProviderCount: number;
 };
 
-export type AdminHistoricalProvider = {
-  id: string;
-  businessName: string;
-  businessCategory: string;
-  agentName: string;
-  participated: boolean;
-  events: AdminHistoricalEvent[];
-};
-
-export type AdminHistoricalPartner = { name: string; providers: AdminHistoricalProvider[] };
+export type AdminHistoricalPartner = { name: string; events: AdminHistoricalEvent[] };
 export type AdminHistoricalNetwork = { name: string; code: string; partners: AdminHistoricalPartner[] };
 
 export async function fetchAdminHistoricalEvents(cognitoId?: string) {

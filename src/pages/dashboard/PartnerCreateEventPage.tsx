@@ -26,6 +26,8 @@ const PartnerCreateEventPage = () => {
     time: "",
     location: "",
     networkPoints: "",
+    memberPrice: "",
+    totalVouchersAvailable: "",
     deadline: "",
   });
 
@@ -136,6 +138,8 @@ const PartnerCreateEventPage = () => {
         location: formData.location,
         eventTime: formData.time,
         networkPoints: formData.networkPoints,
+        memberPrice: formData.memberPrice,
+        totalVouchersAvailable: formData.totalVouchersAvailable,
         responseDeadline: formData.deadline,
         providerIds: selectedProviders,
       });
@@ -266,41 +270,17 @@ const PartnerCreateEventPage = () => {
             </CardContent>
           </Card>
 
-          {/* Step 2: Pricing & Offers (Greyed out for partners) */}
-          <Card className="relative overflow-hidden">
-            <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center p-4">
-              <div className="bg-muted border rounded-lg px-4 py-3 text-center max-w-[280px]">
-                <Tag className="h-5 w-5 text-muted-foreground mx-auto mb-1.5" />
-                <p className="text-sm font-medium text-foreground">Provider Responsibility</p>
-                <p className="text-xs text-muted-foreground mt-1">Pricing & offers will be filled in by providers after they receive the event invitation.</p>
-              </div>
-            </div>
-            <div className="opacity-40 pointer-events-none">
-              <StepHeader step={2} icon={Tag} title="Pricing & Offers" description="Providers add member pricing and optional discounts" />
-              <CardContent className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Member Price ($)</Label>
-                    <Input disabled placeholder="0.00" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Max Redemptions</Label>
-                    <Input disabled placeholder="Unlimited" />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Label>Discount / Offer Type</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {["No Discount", "% Off", "$ Amount Off", "Free Item"].map((label) => (
-                      <div key={label} className="flex items-center gap-2 p-3 rounded-lg border border-border text-sm font-medium text-muted-foreground">
-                        {label}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </div>
+          {/* Step 2: Event-level member pricing */}
+          <Card>
+            <StepHeader step={2} icon={Tag} title="Member Pricing" description="Set the price members will pay for vouchers at this event" />
+            <CardContent className="space-y-2">
+              <Label htmlFor="memberPrice">Member Price ($) <span className="text-muted-foreground font-normal">(Optional)</span></Label>
+              <Input id="memberPrice" name="memberPrice" type="number" min="0" step="0.01" value={formData.memberPrice} onChange={handleChange} placeholder="Leave blank for free vouchers" />
+              <p className="text-xs text-muted-foreground">This price applies to every voucher providers create for this event. Leave blank to allow free vouchers.</p>
+              <Label htmlFor="totalVouchersAvailable" className="pt-3">Total Vouchers Available per Provider <span className="text-muted-foreground font-normal">(Optional)</span></Label>
+              <Input id="totalVouchersAvailable" name="totalVouchersAvailable" type="number" min="1" step="1" value={formData.totalVouchersAvailable} onChange={handleChange} placeholder="Leave blank for unlimited claims" />
+              <p className="text-xs text-muted-foreground">Each provider’s voucher can be claimed by this many members. This is separate from the provider’s per-member redemption limit.</p>
+            </CardContent>
           </Card>
 
           {/* Step 3: Select Providers */}

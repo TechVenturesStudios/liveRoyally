@@ -17,6 +17,8 @@ type ProviderPendingEventsResponse =
         eventTime: string;
         location: string;
         networkPoints: number;
+        memberPrice: number | null;
+        totalVouchersAvailable: number | null;
         deadline: string;
         partnerName: string;
         status: string;
@@ -121,6 +123,8 @@ export default async function handler(
             event_time: true,
             location: true,
             network_points: true,
+            member_price: true,
+            total_vouchers_available: true,
             response_deadline: true,
             users: {
               select: {
@@ -177,6 +181,8 @@ export default async function handler(
         eventTime: invite.events.event_time ?? "",
         location: invite.events.location ?? "",
         networkPoints: invite.events.network_points ?? 0,
+        memberPrice: invite.events.member_price ?? null,
+        totalVouchersAvailable: invite.events.total_vouchers_available ?? null,
         deadline: formatDate(invite.events.response_deadline),
         partnerName: invite.events.users.partner_profiles?.org_name ?? invite.events.users.email ?? "Partner",
         status: invite.status,

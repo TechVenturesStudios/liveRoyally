@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock, CalendarCheck, TrendingUp, Users, DollarSign } from "lucide-react";
+import { Clock, CalendarCheck, TrendingUp, Users } from "lucide-react";
 import EventAnalyticsTab from "@/components/crm/EventAnalyticsTab";
 import {
   fetchPartnerDashboardEvents,
@@ -129,10 +129,6 @@ const EventAnalyticsDashboard = () => {
   const totalInvited = analyticsEvents.reduce((sum, event) => sum + event.membersInvited, 0);
   const engagementPercent = totalInvited > 0 ? Math.round((totalAttended / totalInvited) * 100) : 0;
 
-  const totalRevenue = analyticsEvents.reduce((sum, event) => sum + event.revenue, 0);
-  const totalTargetRevenue = analyticsEvents.reduce((sum, event) => sum + event.targetRevenue, 0);
-  const revenuePercent = totalTargetRevenue > 0 ? Math.round((totalRevenue / totalTargetRevenue) * 100) : 0;
-
   const participatingProviders = new Set(analyticsEvents.filter((event) => event.providerParticipated).map((event) => event.providerId)).size;
   const totalProviders = new Set(analyticsEvents.map((event) => event.providerId)).size;
   const participationPercent = totalProviders > 0 ? Math.round((participatingProviders / totalProviders) * 100) : 0;
@@ -146,7 +142,7 @@ const EventAnalyticsDashboard = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-6">
         <Card
           className="bg-blue-50 border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
           onClick={() => setActiveTab("analytics")}
@@ -160,24 +156,6 @@ const EventAnalyticsDashboard = () => {
               </div>
               <div className="rounded-full p-2 bg-blue-100">
                 <Users className="h-4 w-4 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="bg-green-50 border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
-          onClick={() => setActiveTab("analytics")}
-        >
-          <CardContent className="pt-4 pb-3 px-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-green-800">Total % of Money Made</p>
-                <p className="text-xl font-bold text-green-900">{revenuePercent}%</p>
-                <p className="text-[11px] text-green-600">${totalRevenue.toLocaleString()} / ${totalTargetRevenue.toLocaleString()}</p>
-              </div>
-              <div className="rounded-full p-2 bg-green-100">
-                <DollarSign className="h-4 w-4 text-green-600" />
               </div>
             </div>
           </CardContent>

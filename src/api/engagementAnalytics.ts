@@ -61,6 +61,7 @@ export type EngagementAnalyticsResponse = {
   providerNetwork: EngagementAnalyticsPartnerInfo;
   partnerProviders: EngagementAnalyticsProviderRanking[];
   memberVoucherRedeemedCount: number;
+  memberActiveNetworkCount: number;
   providerHostedCompletedEvents: number;
   providerVoucherHonoredCount: number;
 };

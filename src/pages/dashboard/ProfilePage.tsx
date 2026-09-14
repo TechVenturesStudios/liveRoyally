@@ -32,6 +32,22 @@ const formatAddress = (
   return [address, cityStateZip].filter(Boolean).join(", ") || "Not provided";
 };
 
+const formatDateInput = (value: unknown) => {
+  if (typeof value !== "string") return "";
+  return value.slice(0, 10);
+};
+
+const formatBirthday = (value: unknown) => {
+  const date = formatDateInput(value);
+  if (!date) return "Not provided";
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
 const ProfilePage = () => {
   const [user, setUser] = useState<UserType | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -75,6 +91,7 @@ const ProfilePage = () => {
           displayId: data.display_id,
           ...(data.user_type === "member" && {
             zipCode: data.profile.zipCode,
+            birthday: formatDateInput(data.profile.birthday),
             ethnicity: data.profile.ethnicity,
             ageGroup: data.profile.ageGroup,
             gender: data.profile.gender
@@ -197,6 +214,20 @@ const ProfilePage = () => {
             <Input id="lastName" value={formData.lastName || ""} onChange={(e) => handleInputChange("lastName", e.target.value)} />
           ) : (
             <p className="py-2 px-3 bg-muted rounded-md">{user.lastName}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="birthday">Birthday</Label>
+          {isEditing ? (
+            <Input
+              id="birthday"
+              type="date"
+              value={formData.birthday || ""}
+              onChange={(e) => handleInputChange("birthday", e.target.value)}
+              className="brand-input"
+            />
+          ) : (
+            <p className="py-2 px-3 bg-muted rounded-md">{formatBirthday(user.birthday)}</p>
           )}
         </div>
       </div>
@@ -505,8 +536,8 @@ const ProfilePage = () => {
     }
   };
 
-  const getProfileRows = (): { label: string; value: string; editable?: boolean; field?: string }[] => {
-    const rows: { label: string; value: string; editable?: boolean; field?: string }[] = [
+  const getProfileRows = (): { label: string; value: string; editable?: boolean; field?: string; inputType?: string }[] => {
+    const rows: { label: string; value: string; editable?: boolean; field?: string; inputType?: string }[] = [
       { label: "User Type", value: user.userType },
       { label: "Network Name", value: user.networkName },
       { label: "Network Code", value: user.networkCode },
@@ -518,6 +549,7 @@ const ProfilePage = () => {
         rows.push(
           { label: "First Name", value: m.firstName, editable: true, field: "firstName" },
           { label: "Last Name", value: m.lastName, editable: true, field: "lastName" },
+          { label: "Birthday", value: formatBirthday(m.birthday), editable: true, field: "birthday", inputType: "date" },
           { label: "Zip Code", value: m.zipCode, editable: true, field: "zipCode" },
           { label: "Phone", value: m.phoneNumber || "Not provided", editable: true, field: "phoneNumber" }
         );
@@ -732,6 +764,7 @@ const ProfilePage = () => {
                               />
                             ) : (
                               <Input
+                                type={row.inputType || "text"}
                                 value={formData[row.field] || ""}
                                 onChange={(e) => handleInputChange(row.field!, e.target.value)}
                                 className="h-7 text-xs"

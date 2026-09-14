@@ -18,6 +18,7 @@ export type NetworkMember = {
   email: string;
   phone: string;
   memberSince: string;
+  authorizedRepresentativePartners: string[];
 };
 
 export type RepresentativeAssignment = {

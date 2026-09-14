@@ -144,6 +144,13 @@ export default async function handler(
         ? await prisma.purchases.count({
             where: {
               voucher_id: voucher.voucher_id,
+              status: "used",
+              vouchers: {
+                is: {
+                  event_id: invite.events.event_id,
+                  status: "used",
+                },
+              },
             },
           })
         : 0;

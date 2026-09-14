@@ -37,8 +37,10 @@ export type PartnerDashboardEvent = {
   createdDate: string;
   responseDeadline: string;
   status: string;
+  published: boolean;
   stage: "needs_approval" | "upcoming" | "past";
   providerCount: number;
+  purchaseCount: number;
   pendingProviderCount: number;
   acceptedProviderCount: number;
   declinedProviderCount: number;

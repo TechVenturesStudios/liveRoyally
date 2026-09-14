@@ -9,6 +9,15 @@ function headers() {
   };
 }
 
+function parseEligibleBirthday(value: unknown) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const birthday = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(birthday.getTime()) || birthday.toISOString().slice(0, 10) !== value) return null;
+  const today = new Date();
+  const cutoff = new Date(Date.UTC(today.getUTCFullYear() - 16, today.getUTCMonth(), today.getUTCDate()));
+  return birthday <= cutoff ? birthday : null;
+}
+
 export const handler = async (event: any = {}) => {
   const h = headers();
 
@@ -24,6 +33,11 @@ export const handler = async (event: any = {}) => {
 
     if (!body.cognitoSub) {
       return { statusCode: 400, headers: h, body: JSON.stringify({ error: "cognitoSub is required" }) };
+    }
+
+    const birthday = parseEligibleBirthday(body.birthday);
+    if (!birthday) {
+      return { statusCode: 400, headers: h, body: JSON.stringify({ error: "You must be at least 16 years old to create an account" }) };
     }
 
     const client = new Client({
@@ -68,9 +82,9 @@ export const handler = async (event: any = {}) => {
     const profileInsert = `
       INSERT INTO member_profiles (
         user_id, network_name, network_code, zip_code, ethnicity,
-        age_group, gender, notification_enabled, terms_accepted
+        age_group, gender, birthday, notification_enabled, terms_accepted
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9);
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);
     `;
 
     await client.query(profileInsert, [
@@ -81,6 +95,7 @@ export const handler = async (event: any = {}) => {
       body.ethnicity ?? null,
       body.ageGroup ?? null,
       body.gender ?? null,
+      birthday,
       !!body.notificationEnabled,
       !!body.termsAccepted,
     ]);
