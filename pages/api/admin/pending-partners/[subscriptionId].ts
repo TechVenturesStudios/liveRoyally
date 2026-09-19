@@ -91,7 +91,10 @@ export default async function handler(
     }
 
     if (action === "approve") {
-      if (subscription.status !== PartnerSubscriptionStatus.pending) {
+      if (
+        subscription.status !== PartnerSubscriptionStatus.pending ||
+        subscription.billing_provider_subscription_id
+      ) {
         return res.status(200).json({
           subscriptionId: subscription.subscription_id,
           status: subscription.status,

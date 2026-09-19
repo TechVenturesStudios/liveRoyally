@@ -81,9 +81,55 @@ export default async function handler(
       return res.status(400).json({ error: "organizationEmail is required" });
     }
 
+    // Registration requests can be retried by the browser or a reverse proxy.
+    // Reuse an existing live application instead of creating another Square
+    // customer/card or resetting an already-created subscription.
+    const existingPartner = await prisma.users.findUnique({
+      where: { email },
+      select: {
+        user_id: true,
+        user_type: true,
+        display_id: true,
+        partner_profiles: { select: { partner_code: true } },
+        partner_subscriptions: {
+          orderBy: { created_at: "desc" },
+          take: 1,
+          select: {
+            subscription_id: true,
+            status: true,
+            billing_provider_customer_id: true,
+            billing_provider_card_id: true,
+          },
+        },
+      },
+    });
+
+    const existingSubscription = existingPartner?.partner_subscriptions[0];
+    const isLiveSubscription =
+      existingSubscription &&
+      (existingSubscription.status === PartnerSubscriptionStatus.pending ||
+        existingSubscription.status === PartnerSubscriptionStatus.active ||
+        existingSubscription.status === PartnerSubscriptionStatus.past_due);
+
+    if (existingPartner?.user_type === UserType.partner && existingSubscription && isLiveSubscription) {
+      return res.status(200).json({
+        message: "Partner registration already exists",
+        userId: existingPartner.user_id,
+        displayId: existingPartner.display_id || "",
+        partnerCode: existingPartner.partner_profiles?.partner_code || "",
+        subscriptionId: existingSubscription.subscription_id,
+        squareCustomerId: existingSubscription.billing_provider_customer_id,
+        squareCardId: existingSubscription.billing_provider_card_id,
+        subscriptionStatus: existingSubscription.status,
+      });
+    }
+
     const displayId = `PT-${randomInt(100000000, 999999999)}`;
     const partnerCode = `PTR-${randomInt(100000, 999999)}`;
-    const referenceSeed = `${email}:${selectedPlan}:${paymentToken || "starter"}`;
+    // Keep this stable across retries, including retries with a different
+    // client-supplied payment token. Square's idempotency keys then prevent
+    // duplicate customer/card creation for the same partner registration.
+    const referenceSeed = email;
     const referenceId = squareIdempotencyKey("partner-registration", referenceSeed);
     const cardholderName = normalizeCardholderName(
       body.agentFirstName,

@@ -22,7 +22,8 @@ const PartnerCreateEventPage = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    date: "",
+    startDate: "",
+    endDate: "",
     time: "",
     location: "",
     networkPoints: "",
@@ -114,7 +115,7 @@ const PartnerCreateEventPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.date || !formData.location || selectedProviders.length === 0) {
+    if (!formData.title || !formData.startDate || !formData.endDate || !formData.location || selectedProviders.length === 0) {
       toast({ title: "Missing Fields", description: "Please fill all required fields and select at least one provider.", variant: "destructive" });
       return;
     }
@@ -133,8 +134,8 @@ const PartnerCreateEventPage = () => {
         partnerId,
         title: formData.title,
         description: formData.description,
-        startDate: formData.date,
-        endDate: formData.deadline,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
         location: formData.location,
         eventTime: formData.time,
         networkPoints: formData.networkPoints,
@@ -163,7 +164,7 @@ const PartnerCreateEventPage = () => {
 
   // Progress calculation
   const filledSteps = [
-    formData.title && formData.date && formData.location,
+    formData.title && formData.startDate && formData.endDate && formData.location,
     true, // pricing is optional
     selectedProviders.length > 0,
   ].filter(Boolean).length;
@@ -211,7 +212,7 @@ const PartnerCreateEventPage = () => {
           </div>
           <Progress value={progressPercent} className="h-2" />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span className={formData.title && formData.date && formData.location ? "text-primary font-medium" : ""}>
+            <span className={formData.title && formData.startDate && formData.endDate && formData.location ? "text-primary font-medium" : ""}>
               ① Event Details
             </span>
             <span className="text-muted-foreground/50">② Pricing (Provider)</span>
@@ -236,18 +237,25 @@ const PartnerCreateEventPage = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="date" className="flex items-center gap-1.5">
+                  <Label htmlFor="startDate" className="flex items-center gap-1.5">
                     <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                    Event Date <span className="text-destructive">*</span>
+                    Start Date <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="date" name="date" type="date" value={formData.date} onChange={handleChange} />
+                  <Input id="startDate" name="startDate" type="date" value={formData.startDate} onChange={handleChange} />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate" className="flex items-center gap-1.5">
+                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                    End Date <span className="text-destructive">*</span>
+                  </Label>
+                  <Input id="endDate" name="endDate" type="date" value={formData.endDate} onChange={handleChange} min={formData.startDate || undefined} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="time">Time</Label>
                   <Input id="time" name="time" value={formData.time} onChange={handleChange} placeholder="e.g. 10:00 AM - 4:00 PM" />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="location" className="flex items-center gap-1.5">
                     <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
@@ -452,7 +460,7 @@ const PartnerCreateEventPage = () => {
                 </div>
                 <div className="flex gap-3 w-full sm:w-auto">
                   <Button type="button" variant="outline" onClick={() => navigate(-1)} className="flex-1 sm:flex-none">Cancel</Button>
-                  <Button type="submit" disabled={submitting || !formData.title || !formData.date || !formData.location || selectedProviders.length === 0} className="flex-1 sm:flex-none">
+                  <Button type="submit" disabled={submitting || !formData.title || !formData.startDate || !formData.endDate || !formData.location || selectedProviders.length === 0} className="flex-1 sm:flex-none">
                     <Send className="h-4 w-4 mr-2" />
                     {submitting ? "Creating..." : "Create & Send"}
                   </Button>
