@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { getCognitoIdFromRequest } from "../../lib/api-auth";
+import { awardRewardTask } from "../../lib/rewards";
 
 type RepAssignmentResponse =
   | {
@@ -17,15 +18,20 @@ type RepAssignmentResponse =
         representedName: string;
         representedNetworkName: string | null;
         representedNetworkCode: string | null;
+        status: "pending" | "accepted" | "declined";
+        invitedAt: string | null;
       }>;
     }
   | {
       error: string;
+    }
+  | {
+      ok: true;
     };
 
 function setCorsHeaders(res: NextApiResponse) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
-  res.setHeader("Access-Control-Allow-Methods", "OPTIONS,GET");
+  res.setHeader("Access-Control-Allow-Methods", "OPTIONS,GET,POST");
 }
 
 export default async function handler(
@@ -38,7 +44,7 @@ export default async function handler(
     return res.status(200).end();
   }
 
-  if (req.method !== "GET") {
+  if (req.method !== "GET" && req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -65,6 +71,53 @@ export default async function handler(
       return res.status(404).json({ error: "Current user not found" });
     }
 
+    if (req.method === "POST") {
+      const assignmentId = String(req.body?.assignmentId || "").trim();
+      const action = String(req.body?.action || "").trim().toLowerCase();
+      if (!assignmentId || !["accept", "decline"].includes(action)) {
+        return res.status(400).json({ error: "assignmentId and a valid action are required" });
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        const pending = await tx.$queryRaw<Array<{ representedUserId: string; representedUserType: string }>>`
+          SELECT a.represented_user_id AS "representedUserId", u.user_type AS "representedUserType"
+          FROM authorized_representative_assignments a
+          INNER JOIN users u ON u.user_id = a.represented_user_id
+          WHERE a.assignment_id = ${assignmentId}::uuid
+            AND a.principal_user_id = ${member.user_id}::uuid
+            AND a.invite_status = 'pending'
+          LIMIT 1
+        `;
+        if (!pending[0]) return false;
+
+        const accepted = action === "accept";
+        await tx.$executeRaw`
+          UPDATE authorized_representative_assignments
+          SET invite_status = ${accepted ? "accepted" : "declined"},
+              is_active = ${accepted},
+              responded_at = CURRENT_TIMESTAMP,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE assignment_id = ${assignmentId}::uuid
+            AND principal_user_id = ${member.user_id}::uuid
+            AND invite_status = 'pending'
+        `;
+
+        if (accepted && pending[0].representedUserType !== "admin") {
+          await awardRewardTask(tx, {
+            userId: pending[0].representedUserId,
+            taskKey: pending[0].representedUserType === "partner"
+              ? "partner_add_representative"
+              : "provider_add_representative",
+            description: "Representative accepted invite",
+          });
+        }
+        return true;
+      });
+
+      if (!result) return res.status(404).json({ error: "Pending representative invite not found" });
+      return res.status(200).json({ ok: true });
+    }
+
     const assignments = await prisma.$queryRaw<
       Array<{
         assignmentId: string;
@@ -73,6 +126,8 @@ export default async function handler(
         representedName: string;
         representedNetworkName: string | null;
         representedNetworkCode: string | null;
+        status: "pending" | "accepted" | "declined";
+        invitedAt: string | null;
       }>
     >`
       SELECT
@@ -82,12 +137,14 @@ export default async function handler(
         COALESCE(pp.org_name, pr.business_name, ru.email) AS "representedName",
         COALESCE(pp.network_name, pr.network_name) AS "representedNetworkName",
         COALESCE(pp.network_code, pr.network_code) AS "representedNetworkCode"
+        ,a.invite_status AS status
+        ,a.created_at AS "invitedAt"
       FROM authorized_representative_assignments a
       INNER JOIN users ru ON ru.user_id = a.represented_user_id
       LEFT JOIN partner_profiles pp ON pp.user_id = ru.user_id
       LEFT JOIN provider_profiles pr ON pr.user_id = ru.user_id
       WHERE a.principal_user_id = ${member.user_id}::uuid
-        AND a.is_active = true
+        AND a.invite_status IN ('pending', 'accepted')
       ORDER BY a.created_at DESC
     `;
 

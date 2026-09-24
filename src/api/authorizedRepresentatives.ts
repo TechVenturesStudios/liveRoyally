@@ -28,6 +28,8 @@ export type RepresentativeAssignment = {
   representedName: string;
   representedNetworkName: string | null;
   representedNetworkCode: string | null;
+  status: "pending" | "accepted" | "declined";
+  invitedAt: string | null;
 };
 
 async function readJsonOrThrow(response: Response, fallbackMessage: string) {
@@ -100,4 +102,15 @@ export async function fetchRepresentativeAssignments() {
     };
     assignments: RepresentativeAssignment[];
   };
+}
+
+export async function respondToRepresentativeInvite(assignmentId: string, action: "accept" | "decline") {
+  const response = await fetch("/api/rep-assignments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ assignmentId, action }),
+  });
+
+  return (await readJsonOrThrow(response, "Failed to respond to representative invite")) as { ok: true };
 }

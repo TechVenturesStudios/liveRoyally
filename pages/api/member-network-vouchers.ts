@@ -10,6 +10,10 @@ type MemberNetworkVouchersResponse =
         networkName: string | null;
         networkCode: string | null;
       };
+      networks: Array<{
+        code: string;
+        name: string;
+      }>;
       vouchers: Array<Record<string, unknown>>;
     }
   | {
@@ -65,6 +69,33 @@ export default async function handler(
       return res.status(404).json({ error: "Member network is not configured" });
     }
 
+    const requestedNetworkCode = String(req.query.networkCode || "").trim();
+
+    const networks = await prisma.$queryRaw<Array<{ code: string; name: string }>>`
+      SELECT DISTINCT
+        pp.network_code AS code,
+        COALESCE(NULLIF(TRIM(pp.network_name), ''), pp.network_code) AS name
+      FROM vouchers v
+      JOIN provider_profiles pp ON pp.user_id = v.provider_id
+      JOIN events e ON e.event_id = v.event_id
+      WHERE pp.network_code IS NOT NULL
+        AND LOWER(TRIM(COALESCE(v.status, ''))) = 'active'
+        AND e.published = TRUE
+        AND (v.expiration_date IS NULL OR v.expiration_date >= CURRENT_DATE)
+        AND NOT EXISTS (
+          SELECT 1 FROM member_vouchers mv
+          WHERE mv.member_id = ${member.user_id}::uuid
+            AND mv.voucher_id = v.voucher_id
+        )
+      ORDER BY name ASC;
+    `;
+
+    const networkCode = requestedNetworkCode || member.member_profiles.network_code;
+    const canViewRequestedNetwork = networks.some((network) => network.code === networkCode);
+    if (requestedNetworkCode && !canViewRequestedNetwork) {
+      return res.status(400).json({ error: "Selected network is not available" });
+    }
+
     const vouchers = await prisma.$queryRaw<Array<Record<string, unknown>>>`
       SELECT
         v.voucher_id,
@@ -96,7 +127,7 @@ export default async function handler(
         ON pp.user_id = v.provider_id
       JOIN events e
         ON e.event_id = v.event_id
-      WHERE pp.network_code = ${member.member_profiles.network_code}
+      WHERE pp.network_code = ${networkCode}
         AND LOWER(TRIM(COALESCE(v.status, ''))) = 'active'
         AND e.published = TRUE
         AND (v.expiration_date IS NULL OR v.expiration_date >= CURRENT_DATE)
@@ -116,6 +147,12 @@ export default async function handler(
         networkName: member.member_profiles.network_name ?? null,
         networkCode: member.member_profiles.network_code ?? null,
       },
+      networks: [
+        ...(!networks.some((network) => network.code === member.member_profiles.network_code)
+          ? [{ code: member.member_profiles.network_code, name: member.member_profiles.network_name || member.member_profiles.network_code }]
+          : []),
+        ...networks,
+      ],
       vouchers,
     });
   } catch (error) {

@@ -77,6 +77,19 @@ enum EventProviderInviteStatus {
   expired
 }
 
+enum EmailJobStatus {
+  queued
+  processing
+  sent
+  failed
+  canceled
+}
+
+enum EmailJobPriority {
+  normal
+  high
+}
+
 model events {
   event_id           String                    @id @db.VarChar(50)
   partner_id         String?                   @db.Uuid
@@ -99,6 +112,35 @@ model events {
   event_provider_invites event_provider_invites[]
   reward_completions        reward_task_completions[]
   @@index([partner_id], map: "idx_events_partner")
+}
+
+model email_jobs {
+  job_id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  idempotency_key     String          @unique @db.VarChar(255)
+  template_key        String          @db.VarChar(100)
+  status              EmailJobStatus  @default(queued)
+  priority            EmailJobPriority @default(normal)
+  to_email            String          @db.VarChar(255)
+  subject             String          @db.VarChar(255)
+  text_body           String          @db.Text
+  html_body           String          @db.Text
+  payload             Json?
+  user_id             String?         @db.Uuid
+  related_entity_type String?         @db.VarChar(50)
+  related_entity_id   String?         @db.VarChar(100)
+  scheduled_at        DateTime        @default(now()) @db.Timestamp(6)
+  processing_started_at DateTime?      @db.Timestamp(6)
+  sent_at             DateTime?       @db.Timestamp(6)
+  provider_message_id String?          @db.VarChar(255)
+  attempt_count       Int             @default(0)
+  last_error          String?         @db.Text
+  created_at          DateTime        @default(now()) @db.Timestamp(6)
+  updated_at          DateTime        @updatedAt
+
+  @@index([status, scheduled_at], map: "idx_email_jobs_delivery")
+  @@index([template_key], map: "idx_email_jobs_template")
+  @@index([created_at], map: "idx_email_jobs_created")
+  @@index([user_id], map: "idx_email_jobs_user")
 }
 
 model member_profiles {
@@ -174,10 +216,14 @@ model partner_subscriptions {
   monthly_price_cents               Int
   currency                          String                    @default("usd") @db.VarChar(3)
   max_providers                     Int?
+  pending_plan                     PartnerSubscriptionPlan?
+  pending_change_effective_at      DateTime?                 @db.Timestamp(6)
+  cancel_at_period_end              Boolean                   @default(false)
   current_period_start              DateTime?                 @db.Timestamp(6)
   current_period_end                DateTime?                 @db.Timestamp(6)
   trial_ends_at                     DateTime?                 @db.Timestamp(6)
   approved_at                       DateTime?                 @db.Timestamp(6)
+  approval_email_sent_at            DateTime?                 @db.Timestamp(6)
   canceled_at                       DateTime?                 @db.Timestamp(6)
   created_at                        DateTime?                 @default(now()) @db.Timestamp(6)
   updated_at                        DateTime?                 @default(now()) @db.Timestamp(6)
@@ -192,6 +238,8 @@ model authorized_representative_assignments {
   principal_user_id   String    @db.Uuid
   represented_user_id String    @db.Uuid
   is_active          Boolean   @default(true)
+  invite_status      String    @default("accepted") @db.VarChar(20)
+  responded_at       DateTime? @db.Timestamp(6)
   created_at         DateTime? @default(now()) @db.Timestamp(6)
   updated_at         DateTime? @default(now()) @db.Timestamp(6)
   principal          users     @relation("AuthorizedRepPrincipal", fields: [principal_user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)

@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
-import { awardRewardTask } from "../../lib/rewards";
+import { queueAuthorizedRepresentativeInviteEmail } from "../../lib/notification-templates";
+import { getAppBaseUrl } from "../../lib/app-url";
 
 type AuthorizedRepresentative = {
   assignmentId: string;
@@ -116,18 +117,17 @@ export default async function handler(
           u.email,
           COALESCE(u.phone_number, '') AS phone,
           CASE
-            WHEN a.is_active THEN 'Assistant Representative'
+            WHEN a.invite_status = 'pending' THEN 'Assistant Representative'
+            WHEN a.invite_status = 'accepted' THEN 'Assistant Representative'
             ELSE 'Inactive'
           END AS role,
-          CASE
-            WHEN a.is_active THEN 'active'
-            ELSE 'inactive'
-          END AS status,
+          a.invite_status AS status,
           COALESCE(m.created_at, u.created_at) AS "memberSince"
         FROM authorized_representative_assignments a
         INNER JOIN users u ON u.user_id = a.principal_user_id
         LEFT JOIN member_profiles m ON m.user_id = u.user_id
         WHERE a.represented_user_id = ${account.actingUserId}::uuid
+          AND a.invite_status IN ('pending', 'accepted')
         ORDER BY a.created_at DESC
       `;
 
@@ -197,8 +197,8 @@ export default async function handler(
             TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')) AS name,
             u.email,
             COALESCE(u.phone_number, '') AS phone,
-            CASE WHEN a.is_active THEN 'Assistant Representative' ELSE 'Inactive' END AS role,
-            CASE WHEN a.is_active THEN 'active' ELSE 'inactive' END AS status,
+            CASE WHEN a.invite_status IN ('pending', 'accepted') THEN 'Assistant Representative' ELSE 'Inactive' END AS role,
+            a.invite_status AS status,
             COALESCE(m.created_at, u.created_at) AS "memberSince"
           FROM authorized_representative_assignments a
           INNER JOIN users u ON u.user_id = a.principal_user_id
@@ -209,35 +209,37 @@ export default async function handler(
         `;
 
         if (existing[0]) {
-          return { assignment: existing[0], awarded: false };
+          if (existing[0].status === "declined") {
+            await tx.$executeRaw`
+              UPDATE authorized_representative_assignments
+              SET invite_status = 'pending',
+                  is_active = false,
+                  responded_at = NULL,
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE assignment_id = ${existing[0].assignmentId}::uuid
+            `;
+            return { assignment: { ...existing[0], status: "pending" }, shouldSendInvite: true };
+          }
+          return { assignment: existing[0], shouldSendInvite: false };
         }
 
         const inserted = await tx.$queryRaw<AuthorizedRepresentative[]>`
           INSERT INTO authorized_representative_assignments (
             principal_user_id,
             represented_user_id,
-            is_active
+            is_active,
+            invite_status
           )
           VALUES (
             ${memberId}::uuid,
             ${account.actingUserId}::uuid,
-            true
+            false,
+            'pending'
           )
           RETURNING assignment_id AS "assignmentId"
         `;
 
         const assignment = inserted[0];
-
-        if (account.actingUserType !== "admin") {
-          await awardRewardTask(tx, {
-            userId: account.actingUserId,
-            taskKey:
-              account.actingUserType === "partner"
-                ? "partner_add_representative"
-                : "provider_add_representative",
-            description: "Representative added",
-          });
-        }
 
         return {
           assignment: {
@@ -247,12 +249,37 @@ export default async function handler(
             email: eligibleMember[0].email,
             phone: eligibleMember[0].phone || "",
             role: "Assistant Representative",
-            status: "active",
+            status: "pending",
             memberSince: eligibleMember[0].memberSince,
           },
-          awarded: true,
+          shouldSendInvite: true,
         };
       });
+
+      if (result.shouldSendInvite) {
+        const inviter = await prisma.users.findUnique({
+          where: { user_id: account.actingUserId },
+          select: { email: true, first_name: true, last_name: true, user_type: true },
+        });
+        const inviterName = [inviter?.first_name, inviter?.last_name].filter(Boolean).join(" ").trim() || inviter?.email || "Your account owner";
+        const inviterRole = account.actingUserType.charAt(0).toUpperCase() + account.actingUserType.slice(1);
+        const acceptRepInviteLink = new URL("/dashboard", getAppBaseUrl(req)).toString();
+
+        try {
+          await queueAuthorizedRepresentativeInviteEmail({
+            assignmentId: result.assignment.assignmentId,
+            memberId: eligibleMember[0].id,
+            toEmail: eligibleMember[0].email,
+            firstName: eligibleMember[0].name.split(" ")[0],
+            inviterName,
+            inviterRole,
+            acceptRepInviteLink,
+            inviteToken: `${result.assignment.assignmentId}:${Date.now()}`,
+          });
+        } catch (emailError) {
+          console.error("failed to queue authorized representative invite email:", emailError);
+        }
+      }
 
       return res.status(200).json({
         assignment: result.assignment,
@@ -289,7 +316,7 @@ export default async function handler(
           email: "",
           phone: "",
           role: "Assistant Representative",
-          status: "inactive",
+          status: "declined",
           memberSince: "",
         },
       });

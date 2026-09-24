@@ -100,13 +100,17 @@ function squareErrorMessage(
     : "Unknown Square error";
 }
 
-async function squareRequest<T>(path: string, body: Record<string, unknown>): Promise<T> {
+async function squareRequest<T>(
+  path: string,
+  body: Record<string, unknown>,
+  method: "POST" | "PUT" = "POST"
+): Promise<T> {
   if (!squareAccessToken) {
     throw new Error("Missing env var SQUARE_ACCESS_TOKEN");
   }
 
   const response = await fetch(`${squareBaseUrl}${path}`, {
-    method: "POST",
+    method,
     headers: {
       Authorization: `Bearer ${squareAccessToken}`,
       "Content-Type": "application/json",
@@ -221,6 +225,7 @@ export async function createSquareSubscription(params: {
   planVariationId: string;
   referenceId: string;
   startDate?: string;
+  priceOverrideCents?: number;
 }) {
   if (!squareLocationId) {
     throw new Error("Missing env var SQUARE_LOCATION_ID");
@@ -233,6 +238,9 @@ export async function createSquareSubscription(params: {
     plan_variation_id: params.planVariationId,
     card_id: params.cardId,
     ...(params.startDate ? { start_date: params.startDate } : {}),
+    ...(typeof params.priceOverrideCents === "number"
+      ? { price_override_money: { amount: params.priceOverrideCents, currency: "USD" } }
+      : {}),
   });
 
   const subscription = payload.subscription;
@@ -242,6 +250,47 @@ export async function createSquareSubscription(params: {
   }
 
   return subscription;
+}
+
+export async function setSquareSubscriptionCanceledDate(params: {
+  subscriptionId: string;
+  canceledDate: string;
+  referenceId: string;
+}) {
+  const payload = await squareRequest<SquareSubscriptionResponse>(
+    `/v2/subscriptions/${encodeURIComponent(params.subscriptionId)}`,
+    {
+      subscription: { canceled_date: params.canceledDate },
+    },
+    "PUT"
+  );
+
+  return payload.subscription;
+}
+
+export async function cancelSquareSubscription(subscriptionId: string) {
+  const payload = await squareRequest<SquareSubscriptionResponse>(
+    `/v2/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
+    {}
+  );
+
+  return payload.subscription;
+}
+
+export async function swapSquareSubscriptionPlan(params: {
+  subscriptionId: string;
+  planVariationId: string;
+  referenceId: string;
+}) {
+  const payload = await squareRequest<SquareSubscriptionResponse>(
+    `/v2/subscriptions/${encodeURIComponent(params.subscriptionId)}/swap-plan`,
+    {
+      idempotency_key: squareIdempotencyKey("lr-swap", params.referenceId),
+      new_plan_variation_id: params.planVariationId,
+    }
+  );
+
+  return payload.subscription;
 }
 
 export async function disableSquareCard(cardId: string) {

@@ -8,6 +8,7 @@ import { awardRewardTask } from "../../lib/rewards";
 import { createSquareCard, createSquareCustomer, disableSquareCard, squareIdempotencyKey } from "../../lib/square-partner-billing";
 import { getOrCreateRole } from "../../lib/roles";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../src/config/subscriptionPlans";
+import { queueWelcomeEmail } from "../../lib/notification-templates";
 
 type RegisterPartnerResponse =
   | {
@@ -304,10 +305,15 @@ export default async function handler(
 
       return {
         user,
+        created: !existingUser,
         partnerCode: partnerProfile.partner_code || partnerCode,
         subscription,
       };
     });
+
+    if (result.created) {
+      await queueWelcomeEmail(result.user.user_id, "partner");
+    }
 
     return res.status(200).json({
       message: "Partner registered successfully",

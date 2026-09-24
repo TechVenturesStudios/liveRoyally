@@ -8,6 +8,7 @@ type MemberNetworkResponse = {
     networkName: string | null;
     networkCode: string | null;
   };
+  networks?: Array<{ code: string; name: string }>;
   vouchers: MemberVoucherRecord[];
 };
 
@@ -21,8 +22,10 @@ async function readJsonOrThrow(response: Response, fallbackMessage: string) {
   return data;
 }
 
-export async function fetchMemberNetworkVouchers(cognitoId?: string) {
-  const response = await fetch(`/api/member-network-vouchers${buildDashboardQuery(cognitoId)}`, {
+export async function fetchMemberNetworkVouchers(cognitoId?: string, networkCode?: string) {
+  const query = new URLSearchParams(buildDashboardQuery(cognitoId).replace(/^\?/, ""));
+  if (networkCode) query.set("networkCode", networkCode);
+  const response = await fetch(`/api/member-network-vouchers?${query.toString()}`, {
     credentials: "include",
   });
   return (await readJsonOrThrow(response, "Failed to fetch member network vouchers")) as MemberNetworkResponse;

@@ -30,6 +30,7 @@ export async function createEvent(input: CreateEventInput) {
     message: string;
     eventId: string;
     notifications?: {
+      queued: number;
       sent: number;
       failed: number;
     };

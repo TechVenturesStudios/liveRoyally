@@ -13,8 +13,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckCircle, XCircle, ArrowUp, ArrowDown, Clock, Calendar, MapPin, Users, DollarSign, Percent, Gift, Tag, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ViewToggle from "@/components/ui/ViewToggle";
-import PointsCircle from "@/components/ui/PointsCircle";
-import EventDetailDialog from "@/components/ui/EventDetailDialog";
 import { fetchProviderPendingEvents, ProviderPendingInvite, respondToProviderInvite } from "@/api/providerEvents";
 import { getUserFromStorage } from "@/utils/userStorage";
 import { isDeadlinePassed } from "@/utils/inviteDeadline";
@@ -242,7 +240,7 @@ const ProviderPendingEventsPage = () => {
                         <CardTitle className="text-base font-semibold truncate">{event.eventTitle}</CardTitle>
                         <CardDescription className="mt-1 line-clamp-2">{event.eventDescription}</CardDescription>
                       </div>
-                      <PointsCircle points={event.networkPoints} />
+                      <span className="text-lg font-bold text-foreground">{event.networkPoints}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-3 text-sm">
@@ -319,7 +317,7 @@ const ProviderPendingEventsPage = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="py-2">{getStatusBadge(isInviteExpired(event) ? "expired" : event.status)}</TableCell>
-                          <TableCell className="py-2"><PointsCircle points={event.networkPoints} size="sm" /></TableCell>
+                          <TableCell className="py-2 text-right text-xs font-semibold">{event.networkPoints}</TableCell>
                           <TableCell className="py-2">
                             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                               <Button size="sm" className="h-6 px-2 text-[10px] bg-green-600 hover:bg-green-700" onClick={() => handleOpenApproval(event)} disabled={isInviteExpired(event)}>

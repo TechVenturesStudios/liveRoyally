@@ -4,6 +4,7 @@ import { PartnerSubscriptionStatus } from "@prisma/client";
 
 import { prisma } from "../../../lib/prisma";
 import { normalizeSquareStatus } from "../../../lib/square-partner-billing";
+import { PARTNER_SUBSCRIPTION_PLANS } from "../../../src/config/subscriptionPlans";
 
 export const config = {
   api: {
@@ -144,7 +145,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const existing = await prisma.partner_subscriptions.findUnique({
     where: { billing_provider_subscription_id: squareSubscriptionId },
-    select: { subscription_id: true },
+    select: {
+      subscription_id: true,
+      pending_plan: true,
+      pending_change_effective_at: true,
+    },
   });
 
   if (!existing) {
@@ -163,11 +168,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     status = normalizeSquareStatus(subscription?.status);
   }
 
+  const scheduledPlan = existing.pending_plan;
+  const scheduledPlanIsDue = Boolean(
+    scheduledPlan &&
+      existing.pending_change_effective_at &&
+      existing.pending_change_effective_at.getTime() <= Date.now()
+  );
+  const cancellationToStarter = eventType === "subscription.deleted" && scheduledPlan === "starter";
+  const appliedPlan = scheduledPlanIsDue || cancellationToStarter ? scheduledPlan : null;
+  const appliedPlanConfig = appliedPlan ? PARTNER_SUBSCRIPTION_PLANS[appliedPlan] : null;
+  const isCompleteCancellation = eventType === "subscription.deleted" && !cancellationToStarter;
+  if (cancellationToStarter) status = PartnerSubscriptionStatus.active;
+
   const updated = await prisma.partner_subscriptions.update({
     where: { subscription_id: existing.subscription_id },
     data: {
       status,
       updated_at: new Date(),
+      ...(appliedPlanConfig
+        ? {
+            plan: appliedPlan,
+            monthly_price_cents: appliedPlanConfig.monthlyPriceCents,
+            max_providers: appliedPlanConfig.maxProviders,
+            pending_plan: null,
+            pending_change_effective_at: null,
+            cancel_at_period_end: false,
+          }
+        : {}),
+      ...(isCompleteCancellation ? { cancel_at_period_end: false } : {}),
       ...(status === PartnerSubscriptionStatus.active ? { canceled_at: null } : {}),
       ...(status === PartnerSubscriptionStatus.canceled
         ? { canceled_at: toDate(subscription?.canceled_date) || new Date() }

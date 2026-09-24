@@ -77,6 +77,24 @@ We hope to see you there!
 LOCAL METRICS Team`
   },
   {
+    id: "member-event-published",
+    subject: "New event near you: {{eventName}}",
+    scenario: "Published Event Notification",
+    body: `Hi {{firstName}},
+
+{{partnerName}} just published a new event in your network:
+
+{{eventName}}
+📅 {{eventDate}}
+📍 {{eventLocation}}
+
+{{eventShortDescription}}
+
+View event & claim your voucher: {{eventLink}}
+
+The Royally Team`
+  },
+  {
     id: "member-score",
     subject: "Your Monthly Network Score Update",
     scenario: "Monthly Score Summary",

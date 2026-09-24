@@ -8,6 +8,8 @@ import {
   disableSquareCard,
   getSquarePlanVariationId,
 } from "../../../../lib/square-partner-billing";
+import { setCognitoTemporaryPassword } from "../../../../lib/cognito-admin";
+import { sendSesSimpleEmail } from "../../../../lib/ses-email";
 
 type PendingPartnerActionResponse =
   | {
@@ -24,6 +26,38 @@ type PendingPartnerActionResponse =
 
 function getSubscriptionId(req: NextApiRequest) {
   return String(req.query.subscriptionId || "").trim();
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>'"]/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;",
+  })[character] ?? character);
+}
+
+async function sendPartnerApprovalEmail(email: string, organizationName: string) {
+  const temporaryPassword = await setCognitoTemporaryPassword(email);
+  const safeOrganizationName = escapeHtml(organizationName || "Live Royally partner");
+  const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://liveroyally.com"}/login`;
+
+  await sendSesSimpleEmail({
+    toEmail: email,
+    subject: "Your Live Royally partner account is approved",
+    textBody: [
+      `Your Live Royally partner account for ${organizationName || "your organization"} has been approved.`,
+      "",
+      "Sign in with:",
+      `Email: ${email}`,
+      `Temporary password: ${temporaryPassword}`,
+      `Login: ${loginUrl}`,
+      "",
+      "You will be prompted to create a new password when you sign in.",
+    ].join("\n"),
+    htmlBody: `<p>Your Live Royally partner account for <strong>${safeOrganizationName}</strong> has been approved.</p><p><strong>Email:</strong> ${escapeHtml(email)}<br /><strong>Temporary password:</strong> ${escapeHtml(temporaryPassword)}</p><p><a href="${escapeHtml(loginUrl)}">Sign in to Live Royally</a></p><p>You will be prompted to create a new password when you sign in.</p>`,
+  });
 }
 
 export default async function handler(
@@ -71,6 +105,7 @@ export default async function handler(
         billing_provider_customer_id: true,
         billing_provider_card_id: true,
         billing_provider_subscription_id: true,
+        approval_email_sent_at: true,
         monthly_price_cents: true,
         users: {
           select: {
@@ -95,6 +130,21 @@ export default async function handler(
         subscription.status !== PartnerSubscriptionStatus.pending ||
         subscription.billing_provider_subscription_id
       ) {
+        if (
+          subscription.status === PartnerSubscriptionStatus.active &&
+          !subscription.approval_email_sent_at
+        ) {
+          await sendPartnerApprovalEmail(
+            subscription.users.email,
+            subscription.users.partner_profiles?.org_name ?? ""
+          );
+          const emailSentAt = new Date();
+          await prisma.partner_subscriptions.update({
+            where: { subscription_id: subscription.subscription_id },
+            data: { approval_email_sent_at: emailSentAt, updated_at: emailSentAt },
+          });
+        }
+
         return res.status(200).json({
           subscriptionId: subscription.subscription_id,
           status: subscription.status,
@@ -127,6 +177,16 @@ export default async function handler(
             canceled_at: true,
             billing_provider_subscription_id: true,
           },
+        });
+
+        await sendPartnerApprovalEmail(
+          subscription.users.email,
+          subscription.users.partner_profiles?.org_name ?? ""
+        );
+        const emailSentAt = new Date();
+        await prisma.partner_subscriptions.update({
+          where: { subscription_id: subscription.subscription_id },
+          data: { approval_email_sent_at: emailSentAt, updated_at: emailSentAt },
         });
 
         return res.status(200).json({
@@ -182,6 +242,16 @@ export default async function handler(
           canceled_at: true,
           billing_provider_subscription_id: true,
         },
+      });
+
+      await sendPartnerApprovalEmail(
+        subscription.users.email,
+        subscription.users.partner_profiles?.org_name ?? ""
+      );
+      const emailSentAt = new Date();
+      await prisma.partner_subscriptions.update({
+        where: { subscription_id: subscription.subscription_id },
+        data: { approval_email_sent_at: emailSentAt, updated_at: emailSentAt },
       });
 
       return res.status(200).json({

@@ -47,7 +47,10 @@ export default async function handler(
       return res.status(400).json({ error: "email is required" });
     }
 
-    if (!isAtLeastSixteen(body.birthday)) {
+    // Only members provide a birthday and are subject to the member age rule.
+    // Providers and partners register business/organization accounts and do not
+    // need to provide a birthday.
+    if (body.userType === "member" && !isAtLeastSixteen(body.birthday)) {
       return res.status(400).json({ error: "You must be at least 16 years old to create an account" });
     }
 

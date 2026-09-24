@@ -9,13 +9,15 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { User, Edit, Save, X, Crown, CreditCard, CalendarDays, Users } from "lucide-react";
+import { User, Edit, Save, X, Crown, CreditCard, CalendarDays, Users, Check, AlertTriangle } from "lucide-react";
 import ViewToggle from "@/components/ui/ViewToggle";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { getUserFromStorage, User as StorageUser } from "@/utils/userStorage";
 import type { User as UserType, MemberUser, ProviderUser, PartnerUser, AdminUser } from "@/types/user";
+import { PARTNER_SUBSCRIPTION_PLAN_LIST, PARTNER_SUBSCRIPTION_PLANS, type PartnerSubscriptionPlan } from "@/config/subscriptionPlans";
 
 const formatPlanName = (plan?: string | null) => {
   if (!plan) return "No active plan";
@@ -54,6 +56,9 @@ const ProfilePage = () => {
   const [formData, setFormData] = useState<any>({});
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [loadError, setLoadError] = useState("");
+  const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
+  const [subscriptionTargetPlan, setSubscriptionTargetPlan] = useState<PartnerSubscriptionPlan | null>(null);
+  const [subscriptionUpdatePending, setSubscriptionUpdatePending] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -106,6 +111,9 @@ const ProfilePage = () => {
             subscriptionEndDate: data.profile.subscriptionEndDate,
             maxProviders: data.profile.maxProviders,
             currentProviders: data.profile.currentProviders,
+            pendingPlan: data.profile.pendingPlan,
+            pendingChangeEffectiveAt: data.profile.pendingChangeEffectiveAt,
+            cancelAtPeriodEnd: data.profile.cancelAtPeriodEnd,
             agentFirstName: data.profile.partnerAgentFirstName,
             agentLastName: data.profile.partnerAgentLastName,
             agentPhone: data.profile.partnerAgentPhone,
@@ -160,19 +168,62 @@ const ProfilePage = () => {
     }));
   };
 
-  const handleSave = () => {
-    // Here you would typically save to your backend/database
-    setUser(formData);
-    setIsEditing(false);
-    toast({
-      title: "Profile Updated",
-      description: "Your profile information has been successfully updated.",
-    });
+  const handleSave = async () => {
+    try {
+      const response = await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, cognitoId: formData.cognitoId || (user as any)?.cognitoId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to update profile");
+      setUser(formData);
+      setIsEditing(false);
+      toast({
+        title: "Profile Updated",
+        description: data.changedFields?.length ? "Your changes were saved and a confirmation email was queued." : "No profile changes were detected.",
+      });
+    } catch (error) {
+      toast({
+        title: "Profile update failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCancel = () => {
     setFormData(user);
     setIsEditing(false);
+  };
+
+  const handleSubscriptionChange = async (plan: PartnerSubscriptionPlan | "cancel") => {
+    const cognitoId = (user as any)?.cognitoId;
+    if (!cognitoId) return;
+    setSubscriptionUpdatePending(true);
+    try {
+      const response = await fetch(`/api/partner-subscription?cognitoId=${encodeURIComponent(cognitoId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to update subscription");
+
+      setUser((previous) => previous ? ({
+        ...previous,
+        membershipPlan: data.plan ?? (previous as any).membershipPlan,
+        pendingPlan: plan === "cancel" ? null : plan,
+        cancelAtPeriodEnd: plan === "cancel",
+        pendingChangeEffectiveAt: data.effectiveAt ?? null,
+      } as unknown as UserType) : previous);
+      setSubscriptionDialogOpen(false);
+      toast({ title: "Subscription updated", description: data.message });
+    } catch (error) {
+      toast({ title: "Subscription update failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setSubscriptionUpdatePending(false);
+    }
   };
 
   if (!user) {
@@ -218,17 +269,10 @@ const ProfilePage = () => {
         </div>
         <div className="space-y-2">
           <Label htmlFor="birthday">Birthday</Label>
+          <p className="py-2 px-3 bg-muted rounded-md">{formatBirthday(user.birthday)}</p>
           {isEditing ? (
-            <Input
-              id="birthday"
-              type="date"
-              value={formData.birthday || ""}
-              onChange={(e) => handleInputChange("birthday", e.target.value)}
-              className="brand-input"
-            />
-          ) : (
-            <p className="py-2 px-3 bg-muted rounded-md">{formatBirthday(user.birthday)}</p>
-          )}
+            <p className="text-xs text-muted-foreground">Birthday cannot be changed after registration.</p>
+          ) : null}
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -345,11 +389,18 @@ const ProfilePage = () => {
     const status = formatPlanName((user as any).membershipStatus);
     const price = Number((user as any).membershipPrice ?? 0);
     const startDate = (user as any).subscriptionStartDate;
+    const subscriptionEndDate = (user as any).subscriptionEndDate;
     const maxProviders = (user as any).maxProviders;
     const currentProviders = Number((user as any).currentProviders ?? 0);
     const hasProviderLimit = typeof maxProviders === "number";
     const remaining = hasProviderLimit ? Math.max(maxProviders - currentProviders, 0) : null;
     const usagePercent = hasProviderLimit && maxProviders > 0 ? Math.round((currentProviders / maxProviders) * 100) : 0;
+    const currentPlanKey = ((user as any).membershipPlan || "") as PartnerSubscriptionPlan;
+    const pendingPlan = (user as any).pendingPlan as PartnerSubscriptionPlan | null;
+    const pendingChangeDate = (user as any).pendingChangeEffectiveAt;
+    const cancelAtPeriodEnd = Boolean((user as any).cancelAtPeriodEnd);
+    const selectedTarget = subscriptionTargetPlan ? PARTNER_SUBSCRIPTION_PLANS[subscriptionTargetPlan] : null;
+    const isSelectedDowngrade = Boolean(selectedTarget && currentPlanKey && selectedTarget.monthlyPriceCents < (PARTNER_SUBSCRIPTION_PLANS[currentPlanKey]?.monthlyPriceCents ?? 0));
     const formattedStart = startDate
       ? new Date(startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
       : "Not available";
@@ -447,7 +498,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Current Plan</p>
                 <p className="text-2xl font-bold">{plan}</p>
               </div>
-              <Badge className="text-sm px-3 py-1">${price.toFixed(2)}/mo</Badge>
+              <Badge className="text-sm px-3 py-1">${price.toFixed(2)}/yr</Badge>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-start gap-3">
@@ -483,19 +534,78 @@ const ProfilePage = () => {
                   : "Unlimited provider slots"}
               </p>
             </div>
-            {isEditing && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  toast({ title: "Redirecting to Square", description: "You'll be taken to Square to manage your subscription." });
-                }}
-              >
-                <CreditCard className="h-4 w-4 mr-2" /> Edit Subscription
-              </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSubscriptionTargetPlan(currentPlanKey || null);
+                setSubscriptionDialogOpen(true);
+              }}
+            >
+              <CreditCard className="h-4 w-4 mr-2" /> Manage Subscription
+            </Button>
+            {pendingPlan && pendingChangeDate && (
+              <p className="text-xs rounded-md border border-amber-200 bg-amber-50 text-amber-900 p-3">
+                Your change to <strong>{PARTNER_SUBSCRIPTION_PLANS[pendingPlan]?.label}</strong> is scheduled for {new Date(pendingChangeDate).toLocaleDateString()}.
+              </p>
+            )}
+            {cancelAtPeriodEnd && (
+              <p className="text-xs rounded-md border border-amber-200 bg-amber-50 text-amber-900 p-3">
+                Your subscription will remain active through the current billing period and will not renew.
+              </p>
             )}
           </CardContent>
         </Card>
+        <Dialog open={subscriptionDialogOpen} onOpenChange={setSubscriptionDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Manage Subscription</DialogTitle>
+              <DialogDescription>Choose the tier that matches the number of providers you manage.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {PARTNER_SUBSCRIPTION_PLAN_LIST.map((planOption) => {
+                const isCurrent = planOption.value === currentPlanKey;
+                const isPending = planOption.value === pendingPlan;
+                return (
+                  <button
+                    type="button"
+                    key={planOption.value}
+                    disabled={subscriptionUpdatePending || isCurrent}
+                    onClick={() => setSubscriptionTargetPlan(planOption.value)}
+                    className={`rounded-lg border p-4 text-left transition-colors ${subscriptionTargetPlan === planOption.value ? "border-primary bg-primary/5" : "hover:border-primary/50"} ${isCurrent ? "opacity-60" : ""}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{planOption.label}</span>
+                      {(isCurrent || isPending) && <Badge variant="outline">{isCurrent ? "Current" : "Scheduled"}</Badge>}
+                    </div>
+                    <p className="mt-1 text-sm font-medium">{planOption.price}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Up to {planOption.maxProviders} providers</p>
+                  </button>
+                );
+              })}
+            </div>
+            {isSelectedDowngrade && (
+              <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>This downgrade will take effect at your next renewal on {subscriptionEndDate ? new Date(subscriptionEndDate).toLocaleDateString() : "the end of your current billing period"}. You will keep your current tier until then.</p>
+              </div>
+            )}
+            {subscriptionTargetPlan && !isSelectedDowngrade && subscriptionTargetPlan !== currentPlanKey && (
+              <div className="flex gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+                <Check className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>This upgrade takes effect immediately. Square will apply the unused portion of your current subscription toward the new tier and charge only the prorated difference.</p>
+              </div>
+            )}
+            <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+              <Button variant="ghost" className="text-destructive hover:text-destructive" disabled={subscriptionUpdatePending || cancelAtPeriodEnd} onClick={() => handleSubscriptionChange("cancel")}>
+                Cancel at renewal
+              </Button>
+              <Button disabled={subscriptionUpdatePending || !subscriptionTargetPlan || subscriptionTargetPlan === currentPlanKey} onClick={() => subscriptionTargetPlan && handleSubscriptionChange(subscriptionTargetPlan)}>
+                {subscriptionUpdatePending ? "Updating…" : isSelectedDowngrade ? "Schedule downgrade" : "Confirm change"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </>
     );
   };
@@ -549,7 +659,7 @@ const ProfilePage = () => {
         rows.push(
           { label: "First Name", value: m.firstName, editable: true, field: "firstName" },
           { label: "Last Name", value: m.lastName, editable: true, field: "lastName" },
-          { label: "Birthday", value: formatBirthday(m.birthday), editable: true, field: "birthday", inputType: "date" },
+          { label: "Birthday", value: formatBirthday(m.birthday) },
           { label: "Zip Code", value: m.zipCode, editable: true, field: "zipCode" },
           { label: "Phone", value: m.phoneNumber || "Not provided", editable: true, field: "phoneNumber" }
         );

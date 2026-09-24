@@ -55,6 +55,7 @@ const NewDealsPage = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedDeal, setSelectedDeal] = useState<MemberVoucherRecord | null>(null);
   const [selectedNetwork, setSelectedNetwork] = useState("");
+  const [networkOptions, setNetworkOptions] = useState<Array<{ code: string; name: string }>>([]);
   const [sortKey, setSortKey] = useState<SortKey>("title");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [memberName, setMemberName] = useState("");
@@ -76,6 +77,7 @@ const NewDealsPage = () => {
 
         setMemberName(data.member.networkName || "My Network");
         setSelectedNetwork(data.member.networkCode || "");
+        setNetworkOptions(data.networks || []);
         setAvailableDeals(data.vouchers);
       } catch (error) {
         if (cancelled) return;
@@ -96,6 +98,23 @@ const NewDealsPage = () => {
       cancelled = true;
     };
   }, [cognitoId]);
+
+  const handleNetworkChange = async (networkCode: string) => {
+    setSelectedNetwork(networkCode);
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await fetchMemberNetworkVouchers(cognitoId, networkCode);
+      setNetworkOptions(data.networks || networkOptions);
+      setAvailableDeals(data.vouchers);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to load vouchers";
+      setLoadError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -120,7 +139,7 @@ const NewDealsPage = () => {
     });
   }, [availableDeals, sortDir, sortKey]);
 
-  const selectedNetworkName = memberName || "My Network";
+  const selectedNetworkName = networkOptions.find((network) => network.code === selectedNetwork)?.name || memberName || "My Network";
 
   const handleClaimDeal = async (voucher: MemberVoucherRecord) => {
     if (claimingVoucherId) return;
@@ -222,13 +241,15 @@ const NewDealsPage = () => {
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {selectedNetwork ? (
-              <Select value={selectedNetwork} onValueChange={setSelectedNetwork} disabled>
+              <Select value={selectedNetwork} onValueChange={handleNetworkChange} disabled={loading}>
                 <SelectTrigger className="w-[240px] h-9 text-xs bg-background">
                   <Globe className="h-3.5 w-3.5 mr-1.5 text-primary shrink-0" />
-                  <SelectValue placeholder="Your network" />
+                  <SelectValue placeholder="Choose a network" />
                 </SelectTrigger>
                 <SelectContent className="bg-background z-50">
-                  <SelectItem value={selectedNetwork}>{memberName || "My Network"}</SelectItem>
+                  {networkOptions.map((network) => (
+                    <SelectItem key={network.code} value={network.code}>{network.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             ) : (

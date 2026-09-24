@@ -1,8 +1,10 @@
 import {
   AdminCreateUserCommand,
   AdminGetUserCommand,
+  AdminSetUserPasswordCommand,
   CognitoIdentityProviderClient,
 } from "@aws-sdk/client-cognito-identity-provider";
+import { randomBytes } from "node:crypto";
 
 import {
   isMissingAwsCredentialsError,
@@ -88,6 +90,30 @@ export async function createOrGetCognitoUser(args: CreateCognitoUserArgs) {
   const cognitoSub = await getSub(cognito, userPoolId, username);
 
   return { cognitoSub, username };
+}
+
+function generateTemporaryPassword() {
+  // Keep the generated password compatible with Cognito's usual password policy.
+  const suffix = randomBytes(12).toString("base64url").replace(/[-_]/g, "A");
+  return `Lr!${suffix}9a`;
+}
+
+export async function setCognitoTemporaryPassword(username: string) {
+  const userPoolId = getUserPoolId();
+  const region = process.env.AWS_REGION || "us-east-2";
+  const cognito = new CognitoIdentityProviderClient({ region });
+  const temporaryPassword = generateTemporaryPassword();
+
+  await cognito.send(
+    new AdminSetUserPasswordCommand({
+      UserPoolId: userPoolId,
+      Username: normalizeUsername(username),
+      Password: temporaryPassword,
+      Permanent: false,
+    })
+  );
+
+  return temporaryPassword;
 }
 
 export function mapCognitoError(error: unknown) {

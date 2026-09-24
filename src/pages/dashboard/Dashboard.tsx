@@ -11,6 +11,7 @@ import { fetchMemberPurchaseHistory } from "@/api/memberPurchases";
 import { isVoucherExpired } from "@/utils/memberVoucherFormatting";
 import { getUserFromStorage } from "@/utils/userStorage";
 import { getEffectiveDashboardType } from "@/utils/dashboardContext";
+import MemberRepresentativeInvites from "@/components/dashboard/MemberRepresentativeInvites";
 
 const Dashboard = () => {
   const { user, isLoading } = useAuthCheck();
@@ -99,6 +100,7 @@ const Dashboard = () => {
       return (
         <DashboardLayout>
           <DashboardWelcome />
+          <MemberRepresentativeInvites />
           <DashboardCards userType={user.userType} statsOverrides={memberCardStats} />
         </DashboardLayout>
       );

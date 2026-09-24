@@ -46,11 +46,7 @@ export default async function handler(
       select: {
         user_id: true,
         user_type: true,
-        member_profiles: {
-          select: {
-            network_code: true,
-          },
-        },
+        member_profiles: { select: { network_code: true } },
       },
     });
 
@@ -94,10 +90,6 @@ export default async function handler(
     const voucherRecord = voucher[0];
     if (!voucherRecord) {
       return res.status(404).json({ error: "Voucher not found" });
-    }
-
-    if (voucherRecord.provider_network_code !== member.member_profiles.network_code) {
-      return res.status(403).json({ error: "Voucher does not belong to your network" });
     }
 
     if (!voucherRecord.event_id) {

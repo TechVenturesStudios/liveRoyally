@@ -5,6 +5,7 @@ import { prisma } from "../../lib/prisma";
 import { awardRewardTask } from "../../lib/rewards";
 import { getOrCreateRole } from "../../lib/roles";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../src/config/subscriptionPlans";
+import { queueWelcomeEmail } from "../../lib/notification-templates";
 
 type RegisterProviderResponse =
   | {
@@ -163,6 +164,8 @@ export default async function handler(
 
       return { user, partner };
     });
+
+    await queueWelcomeEmail(result.user.user_id, "provider");
 
     return res.status(200).json({
       message: "Provider registered successfully",

@@ -415,7 +415,7 @@ const sortedProviders = useMemo(() => {
           ? "Event Created with Email Warnings"
           : "Event Created & Sent",
         description: result.notifications?.failed
-          ? `"${createEventForm.title}" (${result.eventId}) was created, but only ${result.notifications.sent}/${selectedProviders.length} provider email(s) were delivered.`
+          ? `"${createEventForm.title}" (${result.eventId}) was created, but only ${result.notifications.queued}/${selectedProviders.length} provider email(s) were queued.`
           : `"${createEventForm.title}" (${result.eventId}) has been sent to ${selectedProviders.length} provider(s) for approval.`,
       });
 

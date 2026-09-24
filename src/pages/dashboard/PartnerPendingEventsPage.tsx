@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowUp, ArrowDown, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ViewToggle from "@/components/ui/ViewToggle";
-import PointsCircle from "@/components/ui/PointsCircle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
 import { useToast } from "@/hooks/use-toast";
 import { fetchPartnerPendingEvents, PartnerPendingEvent } from "@/api/partnerEvents";
@@ -122,7 +121,7 @@ const PartnerPendingEventsPage = () => {
                         <CardTitle className="text-base font-semibold truncate">{event.title}</CardTitle>
                         <CardDescription className="mt-1 line-clamp-2">{event.description}</CardDescription>
                       </div>
-                      <PointsCircle points={event.networkPoints} />
+                      <span className="text-lg font-bold text-foreground">{event.networkPoints}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-3 text-sm">
@@ -196,7 +195,7 @@ const PartnerPendingEventsPage = () => {
                               ))}
                             </div>
                           </TableCell>
-                          <TableCell className="py-2"><PointsCircle points={event.networkPoints} size="sm" /></TableCell>
+                          <TableCell className="py-2 text-right text-xs font-semibold">{event.networkPoints}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -221,6 +220,7 @@ const PartnerPendingEventsPage = () => {
           title={selectedEvent.title}
           description={selectedEvent.description}
           points={selectedEvent.networkPoints}
+          pointsDisplay="text"
           rows={[
             { label: "Location", value: selectedEvent.location },
             { label: "Date", value: selectedEvent.date },

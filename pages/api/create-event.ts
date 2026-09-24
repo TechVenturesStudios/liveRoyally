@@ -3,13 +3,15 @@ import { randomInt } from "crypto";
 import { prisma } from "../../lib/prisma";
 import { awardRewardTask } from "../../lib/rewards";
 import { getAppBaseUrl } from "../../lib/app-url";
-import { sendSesSimpleEmail } from "../../lib/ses-email";
+import { queueEmail } from "../../lib/email-outbox";
+import { escapeHtml } from "../../lib/email-template";
 
 type CreateEventResponse =
   | {
       message: string;
       eventId: string;
       notifications?: {
+        queued: number;
         sent: number;
         failed: number;
       };
@@ -65,15 +67,6 @@ function parseVoucherAvailability(value: unknown) {
     throw new Error("totalVouchersAvailable must be a positive whole number");
   }
   return parsed;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 export default async function handler(
@@ -266,23 +259,30 @@ export default async function handler(
           </div>
         `;
 
-        return sendSesSimpleEmail({
+        return queueEmail({
+          idempotencyKey: `event-provider-invite:${event.event_id}:${provider.user_id}`,
+          templateKey: "provider.event_invitation",
           toEmail: recipientEmail,
           subject,
           textBody,
           htmlBody,
+          userId: provider.user_id,
+          relatedEntityType: "event",
+          relatedEntityId: event.event_id,
+          payload: { eventId: event.event_id, providerId: provider.user_id },
         });
       })
     );
 
-    const sent = emailResults.filter((result) => result.status === "fulfilled").length;
-    const failed = emailResults.length - sent;
+    const queued = emailResults.filter((result) => result.status === "fulfilled").length;
+    const failed = emailResults.length - queued;
 
     return res.status(200).json({
       message: "Event created",
       eventId: event.event_id,
       notifications: {
-        sent,
+        queued,
+        sent: 0,
         failed,
       },
     });

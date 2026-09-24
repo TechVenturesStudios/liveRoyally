@@ -28,6 +28,7 @@ import Demo from "./pages/Demo";
 import ProviderEventsPage from "./pages/dashboard/ProviderEventsPage";
 import ProfilePage from "./pages/dashboard/ProfilePage";
 import EmailTemplatesPage from "./pages/dashboard/EmailTemplatesPage";
+import EmailDeliveryPage from "./pages/dashboard/EmailDeliveryPage";
 import PurchaseHistoryPage from "./pages/dashboard/PurchaseHistoryPage";
 import NewDealsPage from "./pages/dashboard/NewDealsPage";
 import EngagementScorePage from "./pages/dashboard/EngagementScorePage";
@@ -129,6 +130,7 @@ const App = () => (
           {/* Utility routes (admin-only) */}
           <Route path="/dashboard/database-schema" element={<RoleRoute allowed={["admin"]}><DatabaseSchemaView /></RoleRoute>} />
           <Route path="/dashboard/email-templates" element={<RoleRoute allowed={["admin"]}><EmailTemplatesPage /></RoleRoute>} />
+          <Route path="/dashboard/email-delivery" element={<RoleRoute allowed={["admin"]}><EmailDeliveryPage /></RoleRoute>} />
           
           {/* Catch-all dashboard → redirects to role-appropriate landing */}
           <Route path="/dashboard/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

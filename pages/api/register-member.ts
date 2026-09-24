@@ -4,6 +4,7 @@ import { UserType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { awardRewardTask } from "../../lib/rewards";
 import { getOrCreateRole } from "../../lib/roles";
+import { queueWelcomeEmail } from "../../lib/notification-templates";
 
 type RegisterMemberResponse =
   | {
@@ -110,6 +111,8 @@ export default async function handler(
 
       return user;
     });
+
+    await queueWelcomeEmail(result.user_id, "member");
 
     return res.status(200).json({
       message: "DB user created",
