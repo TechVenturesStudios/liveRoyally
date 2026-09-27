@@ -15,6 +15,9 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
+    "lambda:build": "node scripts/build-scheduled-email-worker.mjs",
+    "lambda:zip": "node scripts/zip-scheduled-email-worker.mjs",
+    "lambda:package": "npm run lambda:build && npm run lambda:zip",
     "network-codes:import": "node scripts/import-network-codes.mjs",
     "square:seed-subscription-plans": "node scripts/create-square-subscription-plans.mjs",
     "docker:publish": "powershell -ExecutionPolicy Bypass -File scripts/publish-ecr.ps1"
@@ -24,6 +27,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1053.0",
+    "@aws-sdk/client-sqs": "^3.1141.0",
     "@hookform/resolvers": "^3.9.0",
     "@prisma/client": "^5.22.0",
     "@radix-ui/react-accordion": "^1.2.0",

@@ -1,5 +1,16 @@
 import { Prisma } from "@prisma/client";
+import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { prisma } from "./prisma";
+
+const sqs = new SQSClient({
+  region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-2",
+});
+
+function getEmailQueueUrl() {
+  const queueUrl = String(process.env.EMAIL_QUEUE_URL || "").trim();
+  if (!queueUrl) throw new Error("EMAIL_QUEUE_URL is required");
+  return queueUrl;
+}
 
 export type QueueEmailInput = {
   idempotencyKey: string;
@@ -17,7 +28,7 @@ export type QueueEmailInput = {
 };
 
 export async function queueEmail(input: QueueEmailInput) {
-  return prisma.email_jobs.upsert({
+  const job = await prisma.email_jobs.upsert({
     where: { idempotency_key: input.idempotencyKey },
     create: {
       idempotency_key: input.idempotencyKey,
@@ -36,4 +47,13 @@ export async function queueEmail(input: QueueEmailInput) {
     update: {},
     select: { job_id: true, status: true },
   });
+
+  if (job.status !== "sent" && job.status !== "failed") {
+    await sqs.send(new SendMessageCommand({
+      QueueUrl: getEmailQueueUrl(),
+      MessageBody: JSON.stringify({ jobId: job.job_id }),
+    }));
+  }
+
+  return job;
 }
