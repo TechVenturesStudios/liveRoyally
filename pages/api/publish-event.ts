@@ -66,7 +66,7 @@ export default async function handler(
           email: { not: "" },
           member_profiles: {
             network_code: networkCode,
-            OR: [{ notification_enabled: true }, { notification_enabled: null }],
+            notification_enabled: true,
           },
         },
         select: { user_id: true, email: true, first_name: true },

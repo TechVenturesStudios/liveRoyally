@@ -17,6 +17,7 @@ export type PartnerPendingEvent = {
   title: string;
   description: string;
   date: string;
+  endDate: string;
   time: string;
   location: string;
   networkPoints: number;
@@ -31,9 +32,12 @@ export type PartnerDashboardEvent = {
   title: string;
   description: string;
   date: string;
+  endDate: string;
   time: string;
   location: string;
   networkPoints: number;
+  memberPrice: number | null;
+  totalVouchersAvailable: number | null;
   createdDate: string;
   responseDeadline: string;
   status: string;

@@ -50,6 +50,12 @@ async function getSub(
   return sub;
 }
 
+function generateTemporaryPassword() {
+  // Keep the generated password compatible with Cognito's usual password policy.
+  const suffix = randomBytes(12).toString("base64url").replace(/[-_]/g, "A");
+  return `Lr!${suffix}9a`;
+}
+
 export async function createOrGetCognitoUser(args: CreateCognitoUserArgs) {
   const userPoolId = getUserPoolId();
   const region = process.env.AWS_REGION || "us-east-2";
@@ -63,13 +69,16 @@ export async function createOrGetCognitoUser(args: CreateCognitoUserArgs) {
       ? rawPhone
       : `+1${rawPhone.replace(/\D/g, "")}`
     : undefined;
+  const temporaryPassword = generateTemporaryPassword();
+  let created = false;
 
   try {
     await cognito.send(
       new AdminCreateUserCommand({
         UserPoolId: userPoolId,
         Username: username,
-        DesiredDeliveryMediums: ["EMAIL"],
+        MessageAction: "SUPPRESS",
+        TemporaryPassword: temporaryPassword,
         UserAttributes: [
           { Name: "email", Value: username },
           { Name: "email_verified", Value: "true" },
@@ -81,6 +90,7 @@ export async function createOrGetCognitoUser(args: CreateCognitoUserArgs) {
         ],
       })
     );
+    created = true;
   } catch (error) {
     if (!(error instanceof Error) || error.name !== "UsernameExistsException") {
       throw error;
@@ -89,13 +99,12 @@ export async function createOrGetCognitoUser(args: CreateCognitoUserArgs) {
 
   const cognitoSub = await getSub(cognito, userPoolId, username);
 
-  return { cognitoSub, username };
-}
-
-function generateTemporaryPassword() {
-  // Keep the generated password compatible with Cognito's usual password policy.
-  const suffix = randomBytes(12).toString("base64url").replace(/[-_]/g, "A");
-  return `Lr!${suffix}9a`;
+  return {
+    cognitoSub,
+    username,
+    created,
+    temporaryPassword: created ? temporaryPassword : null,
+  };
 }
 
 export async function setCognitoTemporaryPassword(username: string) {

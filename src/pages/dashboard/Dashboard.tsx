@@ -12,6 +12,7 @@ import { isVoucherExpired } from "@/utils/memberVoucherFormatting";
 import { getUserFromStorage } from "@/utils/userStorage";
 import { getEffectiveDashboardType } from "@/utils/dashboardContext";
 import MemberRepresentativeInvites from "@/components/dashboard/MemberRepresentativeInvites";
+import MemberReferralCard from "@/components/dashboard/MemberReferralCard";
 
 const Dashboard = () => {
   const { user, isLoading } = useAuthCheck();
@@ -100,6 +101,7 @@ const Dashboard = () => {
       return (
         <DashboardLayout>
           <DashboardWelcome />
+          <MemberReferralCard />
           <MemberRepresentativeInvites />
           <DashboardCards userType={user.userType} statsOverrides={memberCardStats} />
         </DashboardLayout>

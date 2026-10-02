@@ -47,3 +47,15 @@ export async function publishEvent(eventId: string) {
   if (!response.ok) throw new Error(data.error || "Failed to publish event");
   return data as { event: { id: string; published: boolean; publishedAt: string } };
 }
+
+export async function updateEvent(input: Record<string, unknown>) {
+  const cognitoId = String(input.cognitoId || "").trim();
+  const response = await fetch(`/api/update-event${cognitoId ? `?cognitoId=${encodeURIComponent(cognitoId)}` : ""}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Failed to update event");
+  return data as { eventId: string; changed: boolean; notifications: { queued: number; failed: number } };
+}

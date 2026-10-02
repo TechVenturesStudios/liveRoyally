@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createOrGetCognitoUser, mapCognitoError } from "../../lib/cognito-admin";
+import { queueTemporaryPasswordEmail } from "../../lib/notification-templates";
 
 type CreateCognitoUserResponse =
   | {
@@ -54,13 +55,21 @@ export default async function handler(
       return res.status(400).json({ error: "You must be at least 16 years old to create an account" });
     }
 
-    const { cognitoSub, username } = await createOrGetCognitoUser({
+    const { cognitoSub, username, created, temporaryPassword } = await createOrGetCognitoUser({
       email,
       firstName: body.firstName,
       lastName: body.lastName,
       phoneNumber: body.phoneNumber,
       userType: body.userType,
     });
+
+    if (created && temporaryPassword) {
+      await queueTemporaryPasswordEmail({
+        email,
+        temporaryPassword,
+        userType: body.userType,
+      });
+    }
 
     return res.status(200).json({ cognitoSub, username });
   } catch (error) {

@@ -132,6 +132,7 @@ const MemberForm = () => {
     await registerMember({
       cognitoSub,
       ...formData,
+      referralToken: new URLSearchParams(window.location.search).get("referral") || undefined,
       userType: USER_TYPES.member,
     });
     navigate("/dashboard");

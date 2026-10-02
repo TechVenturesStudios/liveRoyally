@@ -92,7 +92,31 @@ LOCAL METRICS Team`
 
 View event & claim your voucher: {{eventLink}}
 
-The Royally Team`
+The Local Metrics Team`
+  },
+  {
+    id: "member-points-tier-guide",
+    subject: "How Local Metrics Points & Tiers work",
+    scenario: "Points & Tier Guide",
+    body: `Hi {{firstName}},
+
+Here's a quick guide to earning and using points on Local Metrics:
+
+EARNING POINTS
+- {{earnRule1}}
+- {{earnRule2}}
+- {{earnRule3}}
+
+TIERS
+{{#each tiers}}
+- {{this.tierName}}: {{this.pointsThreshold}} points — {{this.tierBenefit}}
+{{/each}}
+
+You're currently at {{currentPoints}} points ({{currentTier}} tier). {{pointsToNextTier}} more points to reach {{nextTier}}!
+
+View your dashboard: {{dashboardLink}}
+
+The Local Metrics Team`
   },
   {
     id: "member-score",
@@ -117,6 +141,41 @@ View Full Report: {{reportLink}}
 
 Best,
 LOCAL METRICS Team`
+  },
+  {
+    id: "member-voucher-expiring-soon",
+    subject: "⏰ Your voucher for {{eventName}} expires in 3 days",
+    scenario: "Voucher Expiring Soon",
+    body: `Hi {{firstName}},
+
+Just a heads up — your voucher for {{eventName}} is still unclaimed, and time is running out.
+
+Voucher: {{voucherName}}
+Expires: {{expirationDate}} ({{daysRemaining}} days left)
+
+Claim it now: {{claimLink}}
+
+Don't let it go to waste!
+
+The Local Metrics Team`
+  },
+  {
+    id: "member-inactive-no-voucher-claims",
+    subject: "We miss you, {{firstName}} — here's what's new",
+    scenario: "Member Inactive - No Voucher Claims",
+    body: `Hi {{firstName}},
+
+It's been a little while since you've claimed a voucher on Local Metrics. Here's what you might have missed:
+
+{{#each recentEvents}}
+- {{this.eventName}} — {{this.partnerName}}
+{{/each}}
+
+Browse current offers: {{browseLink}}
+
+We'd love to see you back,
+
+The Local Metrics Team`
   }
 ];
 
@@ -327,23 +386,23 @@ Best of luck with the event!
 {{partnerName}} via LOCAL METRICS`
   },
   {
-    id: "provider-live-royally-invite",
-    subject: "Join the Live Royally Network - Your Data Awaits",
-    scenario: "Live Royally Network Invitation",
+    id: "provider-local-metrics-invite",
+    subject: "Join the Local Metrics Network - Your Data Awaits",
+    scenario: "Local Metrics Network Invitation",
     body: `Dear {{businessName}},
 
 We noticed that your provider account has been inactive with {{previousPartner}} for 30 days. 
 
-We want to offer you an opportunity to continue your LOCAL METRICS journey by joining the Live Royally Network!
+We want to offer you an opportunity to continue your Local Metrics journey by joining the Local Metrics Network!
 
-🌟 Why Join Live Royally Network?
+🌟 Why Join the Local Metrics Network?
 • Maintain access to your campaign history and data
 • Continue engaging with local community members
 • Access to new partnership opportunities
 • Keep your business visible to LOCAL METRICS members
 
 ⚠️ Important Notice:
-If you do not join the Live Royally Network or another partner network within the next 30 days, your campaign data will no longer be accessible.
+If you do not join the Local Metrics Network or another partner network within the next 30 days, your campaign data will no longer be accessible.
 
 📊 Your Current Data:
 • Historical Campaigns: {{campaignCount}}
@@ -351,7 +410,7 @@ If you do not join the Live Royally Network or another partner network within th
 • Total Redemptions: {{totalRedemptions}}
 • Community Reach: {{communityReach}} members
 
-Join Live Royally Network: {{joinLink}}
+Join Local Metrics Network: {{joinLink}}
 
 Alternatively, you can find other local partners in your area: {{findPartnersLink}}
 
@@ -532,6 +591,20 @@ Welcome to the LOCAL METRICS family!
 
 Best regards,
 LOCAL METRICS Admin Team`
+  },
+  {
+    id: "partner-inactive-no-event",
+    subject: "Ready to create your next event?",
+    scenario: "Partner Inactive - No Event Created",
+    body: `Hi {{firstName}},
+
+It's been about 30 days since {{partnerName}} last published an event on Local Metrics. Your network of members is ready for what's next.
+
+Create a new event: {{createEventLink}}
+
+Need help or ideas? Reach out to your account manager at {{supportEmail}}.
+
+The Local Metrics Team`
   }
 ];
 

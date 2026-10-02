@@ -209,11 +209,23 @@ const PartnerProvidersPage = () => {
     ? `${providers.length} / ${providerLimit === null ? "Unlimited" : providerLimit} providers`
     : "No active plan";
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    setProviders((prev) => prev.filter((p) => p.id !== deleteTarget.id));
-    toast.success(`${deleteTarget.businessName} has been removed.`);
-    setDeleteTarget(null);
+    try {
+      const user = getUserFromStorage();
+      const response = await fetch(`/api/remove-provider${user?.cognitoId ? `?cognitoId=${encodeURIComponent(user.cognitoId)}` : ""}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ providerId: deleteTarget.id, cognitoId: user?.cognitoId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to remove provider");
+      setProviders((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      toast.success(`${deleteTarget.businessName} has been removed.`);
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove provider");
+    }
   };
 
   const handleAdd = () => {

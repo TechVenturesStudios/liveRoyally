@@ -3,8 +3,7 @@ import { randomInt } from "crypto";
 import { prisma } from "../../lib/prisma";
 import { awardRewardTask } from "../../lib/rewards";
 import { getAppBaseUrl } from "../../lib/app-url";
-import { queueEmail } from "../../lib/email-outbox";
-import { escapeHtml } from "../../lib/email-template";
+import { queueProviderInvitationEmail } from "../../lib/notification-templates";
 
 type CreateEventResponse =
   | {
@@ -170,7 +169,7 @@ export default async function handler(
       return createdEvent;
     });
 
-    const [partner, providers] = await Promise.all([
+    const [partner, providers, invites] = await Promise.all([
       prisma.users.findUnique({
         where: { user_id: partnerId },
         select: {
@@ -199,9 +198,14 @@ export default async function handler(
             select: {
               business_email: true,
               business_name: true,
+              notification_enabled: true,
             },
           },
         },
+      }),
+      prisma.event_provider_invites.findMany({
+        where: { event_id: event.event_id },
+        select: { invite_id: true, provider_id: true },
       }),
     ]);
 
@@ -211,65 +215,26 @@ export default async function handler(
       partner?.email?.trim() ||
       "Your partner";
     const pendingEventsUrl = new URL("/dashboard/provider-pending-events", getAppBaseUrl(req)).toString();
+    const inviteByProviderId = new Map(invites.map((invite) => [invite.provider_id, invite.invite_id]));
 
     const emailResults = await Promise.allSettled(
-      providers.map(async (provider) => {
+      providers
+        .map(async (provider) => {
         const recipientEmail =
           provider.provider_profiles?.business_email?.trim() ||
           provider.email.trim();
-
-        const providerName =
-          provider.provider_profiles?.business_name?.trim() ||
-          [provider.first_name, provider.last_name].filter(Boolean).join(" ").trim() ||
-          recipientEmail;
-
-        const eventTitle = title.trim();
-        const eventDate = String(body.startDate).trim();
-        const eventTimeLabel = eventTime || "TBD";
-        const locationLabel = location.trim();
-        const subject = `Event invitation from ${partnerName}`;
-        const textBody = [
-          `Hello ${providerName},`,
-          "",
-          `${partnerName} invited you to "${eventTitle}" on Live Royally.`,
-          "",
-          `Event date: ${eventDate}`,
-          `Time: ${eventTimeLabel}`,
-          `Location: ${locationLabel}`,
-          "",
-          `Review the invitation and accept or decline it here: ${pendingEventsUrl}`,
-          "",
-          "If you were not expecting this invitation, you can ignore this email.",
-        ].join("\n");
-        const htmlBody = `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
-            <p>Hello ${escapeHtml(providerName)},</p>
-            <p><strong>${escapeHtml(partnerName)}</strong> invited you to <strong>${escapeHtml(eventTitle)}</strong> on Live Royally.</p>
-            <ul>
-              <li><strong>Event date:</strong> ${escapeHtml(eventDate)}</li>
-              <li><strong>Time:</strong> ${escapeHtml(eventTimeLabel)}</li>
-              <li><strong>Location:</strong> ${escapeHtml(locationLabel)}</li>
-            </ul>
-            <p>
-              <a href="${pendingEventsUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;">
-                View pending events
-              </a>
-            </p>
-            <p>If you were not expecting this invitation, you can ignore this email.</p>
-          </div>
-        `;
-
-        return queueEmail({
-          idempotencyKey: `event-provider-invite:${event.event_id}:${provider.user_id}`,
-          templateKey: "provider.event_invitation",
+        return queueProviderInvitationEmail({
+          inviteId: inviteByProviderId.get(provider.user_id) || `${event.event_id}:${provider.user_id}`,
+          providerId: provider.user_id,
           toEmail: recipientEmail,
-          subject,
-          textBody,
-          htmlBody,
-          userId: provider.user_id,
-          relatedEntityType: "event",
-          relatedEntityId: event.event_id,
-          payload: { eventId: event.event_id, providerId: provider.user_id },
+          firstName: provider.first_name,
+          partnerName,
+          eventName: title,
+          eventDate: String(body.startDate).trim(),
+          eventTime: eventTime || "TBD",
+          eventLocation: location,
+          acceptInviteLink: pendingEventsUrl,
+          inviteExpirationDate: responseDeadline ? responseDeadline.toISOString().slice(0, 10) : null,
         });
       })
     );

@@ -8,10 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Calendar, Users, Send, ArrowUpDown, CalendarDays, Tag, CheckCircle2, Search, Clock } from "lucide-react";
+import { PlusCircle, Calendar, Users, Send, ArrowUpDown, CalendarDays, Tag, CheckCircle2, Search, Clock, Edit } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { createEvent } from "@/api/events";
+import { createEvent, updateEvent } from "@/api/events";
 import { fetchPartnerDashboardEvents, type PartnerDashboardEvent } from "@/api/partnerEvents";
 import { fetchPartnerProviders, PartnerProvider } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
@@ -20,6 +20,9 @@ const CampaignManagementTab = () => {
   const { toast } = useToast();
   const [showCreateEventDialog, setShowCreateEventDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<PartnerDashboardEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState<Record<string, string>>({});
   const [events, setEvents] = useState<PartnerDashboardEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState("");
@@ -201,6 +204,43 @@ const CampaignManagementTab = () => {
       toast({ title: "Event creation failed", description: message, variant: "destructive" });
     } finally {
       setSubmittingEvent(false);
+    }
+  };
+
+  const beginEdit = (event: PartnerDashboardEvent) => {
+    setEditForm({
+      eventId: event.id,
+      title: event.title,
+      description: event.description,
+      startDate: event.date,
+      endDate: event.date,
+      eventTime: event.time,
+      location: event.location,
+      networkPoints: String(event.networkPoints),
+      memberPrice: event.memberPrice == null ? "" : String(event.memberPrice),
+      totalVouchersAvailable: event.totalVouchersAvailable == null ? "" : String(event.totalVouchersAvailable),
+      responseDeadline: event.responseDeadline,
+    });
+    setEditingEvent(true);
+  };
+
+  const handleEditChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setEditForm((previous) => ({ ...previous, [event.target.name]: event.target.value }));
+  };
+
+  const saveEdit = async () => {
+    if (!selectedEvent) return;
+    try {
+      setSavingEdit(true);
+      const result = await updateEvent({ ...editForm, cognitoId: getUserFromStorage()?.cognitoId });
+      toast({ title: result.changed ? "Event updated" : "No changes found", description: result.changed ? "Members and accepted providers were notified when enabled." : "Nothing needed to be updated." });
+      setEditingEvent(false);
+      setSelectedEvent(null);
+      await loadEvents();
+    } catch (error) {
+      toast({ title: "Could not update event", description: error instanceof Error ? error.message : "Failed to update event", variant: "destructive" });
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -505,10 +545,24 @@ const CampaignManagementTab = () => {
           {selectedEvent && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-base">{selectedEvent.title}</DialogTitle>
-                <DialogDescription className="text-xs">Event details and invite statuses</DialogDescription>
+                <div className="flex items-center justify-between pr-6">
+                  <div>
+                    <DialogTitle className="text-base">{selectedEvent.title}</DialogTitle>
+                    <DialogDescription className="text-xs">Event details and invite statuses</DialogDescription>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => beginEdit(selectedEvent)}><Edit className="h-3.5 w-3.5 mr-1" /> Edit</Button>
+                </div>
               </DialogHeader>
-              <ScrollArea className="max-h-[400px]">
+              {editingEvent ? (
+                <div className="space-y-3 overflow-y-auto max-h-[500px] pr-2">
+                  <div className="space-y-1"><Label>Title</Label><Input name="title" value={editForm.title || ""} onChange={handleEditChange} /></div>
+                  <div className="space-y-1"><Label>Description</Label><Textarea name="description" value={editForm.description || ""} onChange={handleEditChange} /></div>
+                  <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Start date</Label><Input type="date" name="startDate" value={editForm.startDate || ""} onChange={handleEditChange} /></div><div className="space-y-1"><Label>End date</Label><Input type="date" name="endDate" value={editForm.endDate || ""} onChange={handleEditChange} /></div></div>
+                  <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Time</Label><Input name="eventTime" value={editForm.eventTime || ""} onChange={handleEditChange} /></div><div className="space-y-1"><Label>Location</Label><Input name="location" value={editForm.location || ""} onChange={handleEditChange} /></div></div>
+                  <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Network points</Label><Input type="number" name="networkPoints" value={editForm.networkPoints || ""} onChange={handleEditChange} /></div><div className="space-y-1"><Label>Member price</Label><Input type="number" name="memberPrice" value={editForm.memberPrice || ""} onChange={handleEditChange} /></div></div>
+                  <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Voucher availability</Label><Input type="number" name="totalVouchersAvailable" value={editForm.totalVouchersAvailable || ""} onChange={handleEditChange} /></div><div className="space-y-1"><Label>Provider deadline</Label><Input type="date" name="responseDeadline" value={editForm.responseDeadline || ""} onChange={handleEditChange} /></div></div>
+                </div>
+              ) : <ScrollArea className="max-h-[400px]">
                 <div className="space-y-3 pr-3">
                   <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Event Details</h4>
@@ -541,11 +595,9 @@ const CampaignManagementTab = () => {
                     {selectedEvent.pendingProviderCount} pending, {selectedEvent.acceptedProviderCount} accepted, {selectedEvent.declinedProviderCount} declined
                   </p>
                 </div>
-              </ScrollArea>
+              </ScrollArea>}
               <DialogFooter>
-                <Button variant="outline" size="sm" className="text-xs" onClick={() => setSelectedEvent(null)}>
-                  Close
-                </Button>
+                {editingEvent ? <><Button variant="outline" size="sm" onClick={() => setEditingEvent(false)}>Cancel</Button><Button size="sm" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? "Saving..." : "Save & Notify"}</Button></> : <Button variant="outline" size="sm" className="text-xs" onClick={() => setSelectedEvent(null)}>Close</Button>}
               </DialogFooter>
             </>
           )}

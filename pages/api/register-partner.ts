@@ -8,7 +8,7 @@ import { awardRewardTask } from "../../lib/rewards";
 import { createSquareCard, createSquareCustomer, disableSquareCard, squareIdempotencyKey } from "../../lib/square-partner-billing";
 import { getOrCreateRole } from "../../lib/roles";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../src/config/subscriptionPlans";
-import { queueWelcomeEmail } from "../../lib/notification-templates";
+import { queueTemporaryPasswordEmail, queueWelcomeEmail } from "../../lib/notification-templates";
 
 type RegisterPartnerResponse =
   | {
@@ -171,6 +171,14 @@ export default async function handler(
       phoneNumber: body.agentPhone,
       userType: "partner",
     });
+
+    if (cognitoUser.created && cognitoUser.temporaryPassword) {
+      await queueTemporaryPasswordEmail({
+        email,
+        temporaryPassword: cognitoUser.temporaryPassword,
+        userType: "partner",
+      });
+    }
 
     const organizationZip = normalizeZip(body.organizationZip);
     const network =

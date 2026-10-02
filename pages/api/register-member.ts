@@ -103,6 +103,26 @@ export default async function handler(
         },
       });
 
+      const referralToken = String(body.referralToken || "").trim();
+      if (referralToken) {
+        const referral = await tx.referrals.findUnique({ where: { referral_token: referralToken }, select: { referral_id: true, referrer_id: true, status: true } });
+        if (referral && referral.status === "pending" && referral.referrer_id !== user.user_id) {
+          const updatedReferral = await tx.referrals.update({
+            where: { referral_id: referral.referral_id },
+            data: { referred_user_id: user.user_id, status: "registered", registered_at: new Date() },
+            select: { referral_id: true, referrer_id: true },
+          });
+          const reward = await awardRewardTask(tx, {
+            userId: updatedReferral.referrer_id,
+            taskKey: "member_refer_new_customer",
+            description: "Verified member referral",
+          });
+          if (reward.awarded) {
+            await tx.referrals.update({ where: { referral_id: updatedReferral.referral_id }, data: { status: "rewarded", rewarded_at: new Date() } });
+          }
+        }
+      }
+
       await awardRewardTask(tx, {
         userId: user.user_id,
         taskKey: "member_create_account",
