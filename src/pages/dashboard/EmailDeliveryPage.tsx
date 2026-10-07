@@ -18,7 +18,7 @@ type EmailJob = {
 
 const dateLabel = (value: string | null) => value ? new Date(value).toLocaleString() : "—";
 
-export default function EmailDeliveryPage() {
+export function EmailDeliveryContent() {
   const { isLoading } = useAuthCheck();
   const [jobs, setJobs] = useState<EmailJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,8 +36,7 @@ export default function EmailDeliveryPage() {
   if (isLoading || loading) return <LoadingSpinner />;
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 p-4 sm:p-8">
+    <div className="space-y-6 p-4 sm:p-8">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-brand-purple">Email delivery</h1>
@@ -64,7 +63,14 @@ export default function EmailDeliveryPage() {
             </tbody>
           </table>
         </div>
-      </div>
+    </div>
+  );
+}
+
+export default function EmailDeliveryPage() {
+  return (
+    <DashboardLayout>
+      <EmailDeliveryContent />
     </DashboardLayout>
   );
 }

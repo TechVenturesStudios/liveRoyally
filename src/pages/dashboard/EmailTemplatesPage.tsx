@@ -1,3 +1,4 @@
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -757,7 +758,7 @@ const EmailTemplateCard = ({ template }: { template: EmailTemplate }) => (
   </Card>
 );
 
-const EmailTemplatesPage = () => {
+export const EmailTemplatesContent = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -829,6 +830,14 @@ const EmailTemplatesPage = () => {
         </TabsContent>
       </Tabs>
     </div>
+  );
+};
+
+const EmailTemplatesPage = () => {
+  return (
+    <DashboardLayout>
+      <EmailTemplatesContent />
+    </DashboardLayout>
   );
 };
 

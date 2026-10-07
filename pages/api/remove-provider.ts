@@ -12,9 +12,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const providerId = String(req.body?.providerId || "").trim();
     const provider = await prisma.provider_profiles.findFirst({ where: { user_id: providerId, partner_id: account.actingUserId }, select: { user_id: true, business_email: true, users: { select: { email: true, first_name: true }, }, } });
     if (!provider) return res.status(404).json({ error: "Provider is not linked to this partner" });
+    const recipientEmail = provider.users.email?.trim() || provider.business_email?.trim();
+    if (!recipientEmail) {
+      return res.status(422).json({ error: "Provider does not have an email address for the removal notification" });
+    }
     const partner = await prisma.users.findUnique({ where: { user_id: account.actingUserId }, select: { email: true, partner_profiles: { select: { org_name: true } } } });
     await prisma.provider_profiles.update({ where: { user_id: providerId }, data: { partner_id: null } });
-    const recipientEmail = provider.business_email?.trim() || provider.users.email;
     await queueProviderRemovedEmail({ providerId, toEmail: recipientEmail, firstName: provider.users.first_name, partnerName: partner?.partner_profiles?.org_name?.trim() || "Your partner", lrnJoinLink: `${getAppBaseUrl(req)}/join-network`, supportEmail: process.env.SUPPORT_EMAIL || process.env.SES_FROM_EMAIL || "support@localmetrics.com" });
     return res.status(200).json({ removed: true });
   } catch (error) {

@@ -129,6 +129,7 @@ const PartnerProvidersPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProviderEntry | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [providerLimit, setProviderLimit] = useState<number | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
@@ -210,7 +211,8 @@ const PartnerProvidersPage = () => {
     : "No active plan";
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || isRemoving) return;
+    setIsRemoving(true);
     try {
       const user = getUserFromStorage();
       const response = await fetch(`/api/remove-provider${user?.cognitoId ? `?cognitoId=${encodeURIComponent(user.cognitoId)}` : ""}`, {
@@ -225,6 +227,8 @@ const PartnerProvidersPage = () => {
       setDeleteTarget(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to remove provider");
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -468,13 +472,13 @@ const PartnerProvidersPage = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Provider</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove <strong>{deleteTarget?.businessName}</strong> from your network? This action cannot be undone.
+              Are you sure you want to remove <strong>{deleteTarget?.businessName}</strong> from your partner account? They will no longer be connected to your account and will receive an email about joining the Live Royally Network. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Remove
+            <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={isRemoving} onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isRemoving ? "Removing..." : "Remove Provider"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

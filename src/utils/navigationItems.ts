@@ -11,6 +11,7 @@ import {
   Users,
   Building,
   MessageSquare,
+  Mail,
   Link,
   LayoutDashboard,
   Crown,
@@ -174,6 +175,12 @@ const navigationItemsByType: NavItemsByUserType = {
       shortName: "Reps",
       icon: Users,
       path: "/dashboard/admin/representatives",
+    },
+    {
+      name: "Email Management",
+      shortName: "Email",
+      icon: Mail,
+      path: "/dashboard/admin/email-management",
     }
   ]
 };

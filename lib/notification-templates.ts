@@ -607,7 +607,6 @@ export type ProviderRemovedEmailInput = {
 };
 
 export async function queueProviderRemovedEmail(input: ProviderRemovedEmailInput) {
-  if (!(await notificationsEnabled(input.providerId))) return null;
   const firstName = input.firstName?.trim() || "there";
   const subject = `You've been removed from ${input.partnerName} — explore Local Metrics's Local Rewards Network`;
   const preheader = "Stay connected with new opportunities on Local Metrics.";

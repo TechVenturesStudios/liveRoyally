@@ -37,17 +37,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     data: { referrer_id: account.actingUserId, invitee_email: inviteeEmail, referral_token: randomBytes(24).toString("base64url") },
     select: { referral_id: true, referral_token: true },
   });
-  const [referrer, profile] = await Promise.all([
-    prisma.users.findUnique({ where: { user_id: account.actingUserId }, select: { first_name: true, last_name: true } }),
-    prisma.member_profiles.findUnique({ where: { user_id: account.actingUserId }, select: { notification_enabled: true } }),
-  ]);
-  if (profile?.notification_enabled) {
-    await queueReferralEmail({
-      referralId: referral.referral_id,
-      toEmail: inviteeEmail,
-      referrerName: [referrer?.first_name, referrer?.last_name].filter(Boolean).join(" ").trim() || "Your friend",
-      referralSignupLink: `${getAppBaseUrl(req)}/register?referral=${encodeURIComponent(referral.referral_token)}`,
-    });
-  }
-  return res.status(201).json({ referralId: referral.referral_id, referralLink: `${getAppBaseUrl(req)}/register?referral=${encodeURIComponent(referral.referral_token)}`, emailed: Boolean(profile?.notification_enabled) });
+  const referrer = await prisma.users.findUnique({ where: { user_id: account.actingUserId }, select: { first_name: true, last_name: true } });
+  await queueReferralEmail({
+    referralId: referral.referral_id,
+    toEmail: inviteeEmail,
+    referrerName: [referrer?.first_name, referrer?.last_name].filter(Boolean).join(" ").trim() || "Your friend",
+    referralSignupLink: `${getAppBaseUrl(req)}/register?referral=${encodeURIComponent(referral.referral_token)}`,
+  });
+  return res.status(201).json({ referralId: referral.referral_id, referralLink: `${getAppBaseUrl(req)}/register?referral=${encodeURIComponent(referral.referral_token)}`, emailed: true });
 }
