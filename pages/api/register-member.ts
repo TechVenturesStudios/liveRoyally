@@ -4,7 +4,8 @@ import { UserType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { awardRewardTask } from "../../lib/rewards";
 import { getOrCreateRole } from "../../lib/roles";
-import { queueWelcomeEmail } from "../../lib/notification-templates";
+import { queueMemberPointsTierGuideEmail, queueWelcomeEmail } from "../../lib/notification-templates";
+import { getAppBaseUrl } from "../../lib/app-url";
 
 type RegisterMemberResponse =
   | {
@@ -132,7 +133,14 @@ export default async function handler(
       return user;
     });
 
-    await queueWelcomeEmail(result.user_id, "member");
+    await Promise.all([
+      queueWelcomeEmail(result.user_id, "member"),
+      queueMemberPointsTierGuideEmail({
+        userId: result.user_id,
+        dashboardLink: `${getAppBaseUrl(req)}/dashboard`,
+        idempotencyKey: `points-tier-guide:registration:${result.user_id}`,
+      }),
+    ]);
 
     return res.status(200).json({
       message: "DB user created",

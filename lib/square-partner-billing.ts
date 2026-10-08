@@ -171,7 +171,7 @@ export async function createSquareCustomer(params: {
     email_address: params.email.trim().toLowerCase(),
     phone_number: params.organizationPhone?.trim() || undefined,
     reference_id: params.referenceId,
-    note: "Live Royally partner registration",
+    note: "Local Metrics  partner registration",
     ...(addressLine1 && locality && region && postalCode
       ? {
           address: {

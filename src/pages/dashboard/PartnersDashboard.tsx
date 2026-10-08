@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { fetchEngagementAnalytics } from "@/api/engagementAnalytics";
 import { fetchAuthorizedRepresentatives, type AuthorizedRepresentative } from "@/api/authorizedRepresentatives";
 import { fetchPartnerDashboardEvents, type PartnerDashboardEvent } from "@/api/partnerEvents";
-import { createEvent, publishEvent } from "@/api/events";
+import { createEvent, publishEvent, updateEvent } from "@/api/events";
 import { fetchPartnerProviders, type PartnerProvider } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
 import { getDashboardContext } from "@/utils/dashboardContext";
@@ -73,11 +73,29 @@ type DashboardEventRow = {
   description: string;
   location: string;
   date: string;
+  endDate: string;
+  time: string;
+  networkPoints: number;
+  memberPrice: number | null;
+  totalVouchersAvailable: number | null;
   deadline: string;
   status: "pending" | "active" | "completed";
   published: boolean;
   purchaseCount: number;
   contacts: DashboardEventContact[];
+};
+
+type EventEditForm = {
+  title: string;
+  description: string;
+  date: string;
+  endDate: string;
+  time: string;
+  location: string;
+  networkPoints: string;
+  memberPrice: string;
+  totalVouchersAvailable: string;
+  deadline: string;
 };
 
 const mapPartnerEventToDashboardRow = (event: PartnerDashboardEvent): DashboardEventRow => ({
@@ -86,7 +104,12 @@ const mapPartnerEventToDashboardRow = (event: PartnerDashboardEvent): DashboardE
   description: event.description,
   location: event.location,
   date: event.date,
-  deadline: event.responseDeadline || event.date,
+  endDate: event.endDate,
+  time: event.time,
+  networkPoints: event.networkPoints,
+  memberPrice: event.memberPrice,
+  totalVouchersAvailable: event.totalVouchersAvailable,
+  deadline: event.responseDeadline,
   status: event.status === "active" ? "active" : event.status === "completed" ? "completed" : "pending",
   published: event.published,
   purchaseCount: event.purchaseCount,
@@ -105,6 +128,11 @@ const PartnersDashboard = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [showAddContact, setShowAddContact] = useState(false);
   const [showCreateEventDialog, setShowCreateEventDialog] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<DashboardEventRow | null>(null);
+  const [editEventForm, setEditEventForm] = useState<EventEditForm>({
+    title: "", description: "", date: "", endDate: "", time: "", location: "",
+    networkPoints: "", memberPrice: "", totalVouchersAvailable: "", deadline: "",
+  });
   const [rewardPoints, setRewardPoints] = useState(0);
   const [eventsCreatedCount, setEventsCreatedCount] = useState(0);
   const [createEventForm, setCreateEventForm] = useState({
@@ -127,6 +155,7 @@ const PartnersDashboard = () => {
   const [providersLoading, setProvidersLoading] = useState(false);
   const [providersError, setProvidersError] = useState("");
   const [submittingEvent, setSubmittingEvent] = useState(false);
+  const [savingEvent, setSavingEvent] = useState(false);
   const [publishingEventId, setPublishingEventId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -470,6 +499,76 @@ const sortedProviders = useMemo(() => {
     setEvents(updatedEvents);
   };
 
+  const handleOpenEditEvent = (event: DashboardEventRow) => {
+    setEditingEvent(event);
+    setEditEventForm({
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      endDate: event.endDate,
+      time: event.time,
+      location: event.location,
+      networkPoints: String(event.networkPoints ?? ""),
+      memberPrice: event.memberPrice == null ? "" : String(event.memberPrice),
+      totalVouchersAvailable: event.totalVouchersAvailable == null ? "" : String(event.totalVouchersAvailable),
+      deadline: event.deadline,
+    });
+  };
+
+  const handleEditEventChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setEditEventForm((previous) => ({ ...previous, [e.target.name]: e.target.value }));
+  };
+
+  const handleEditEventSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEvent || !editEventForm.title || !editEventForm.date || !editEventForm.location) {
+      toast({ title: "Missing fields", description: "Title, start date, and location are required.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setSavingEvent(true);
+      const result = await updateEvent({
+        eventId: editingEvent.id,
+        title: editEventForm.title,
+        description: editEventForm.description,
+        startDate: editEventForm.date,
+        endDate: editEventForm.endDate,
+        eventTime: editEventForm.time,
+        location: editEventForm.location,
+        networkPoints: editEventForm.networkPoints,
+        memberPrice: editEventForm.memberPrice,
+        totalVouchersAvailable: editEventForm.totalVouchersAvailable,
+        responseDeadline: editEventForm.deadline,
+      });
+
+      setEvents((previous) => previous.map((event) => event.id === editingEvent.id ? {
+        ...event,
+        title: editEventForm.title,
+        description: editEventForm.description,
+        date: editEventForm.date,
+        endDate: editEventForm.endDate,
+        time: editEventForm.time,
+        location: editEventForm.location,
+        networkPoints: Number(editEventForm.networkPoints) || 0,
+        memberPrice: editEventForm.memberPrice === "" ? null : Number(editEventForm.memberPrice),
+        totalVouchersAvailable: editEventForm.totalVouchersAvailable === "" ? null : Number(editEventForm.totalVouchersAvailable),
+        deadline: editEventForm.deadline,
+      } : event));
+      setEditingEvent(null);
+      toast({
+        title: result.notifications.failed ? "Event saved with email warnings" : "Event updated",
+        description: result.notifications.failed
+          ? `The event was saved, but ${result.notifications.failed} notification(s) could not be queued.`
+          : "Network members and participating providers were notified of the changes.",
+      });
+    } catch (error) {
+      toast({ title: "Could not update event", description: error instanceof Error ? error.message : "Failed to update event", variant: "destructive" });
+    } finally {
+      setSavingEvent(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -601,7 +700,7 @@ const sortedProviders = useMemo(() => {
                             <TableCell>
                               <input 
                                 type="date" 
-                                defaultValue={event.deadline}
+                                defaultValue={event.deadline || event.date}
                                 className="border rounded px-2 py-1 text-sm"
                                 onChange={(e) => handleSetDeadline(event.id, e.target.value)}
                               />
@@ -619,7 +718,7 @@ const sortedProviders = useMemo(() => {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
-                                <Button variant="outline" size="sm">Edit</Button>
+                                <Button variant="outline" size="sm" onClick={() => handleOpenEditEvent(event)}>Edit</Button>
                                 <Button
                                   size="sm"
                                   className="bg-green-600 hover:bg-green-700"
@@ -740,6 +839,44 @@ const sortedProviders = useMemo(() => {
               </Tabs>
             </CardContent>
           </Card>
+          <Dialog open={Boolean(editingEvent)} onOpenChange={(open) => { if (!open && !savingEvent) setEditingEvent(null); }}>
+            <DialogContent className="sm:max-w-[650px] max-h-[85vh] p-0 overflow-hidden">
+              <form onSubmit={handleEditEventSubmit} className="flex max-h-[85vh] flex-col">
+                <DialogHeader className="px-6 pt-6 pb-2">
+                  <DialogTitle>Edit Event</DialogTitle>
+                  <DialogDescription>Update the event details. Network members and accepted providers will be emailed after saving.</DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[calc(85vh-140px)] px-6 pb-2">
+                  <div className="space-y-4 pr-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-event-title">Event Title *</Label>
+                      <Input id="edit-event-title" name="title" value={editEventForm.title} onChange={handleEditEventChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-event-description">Description</Label>
+                      <Textarea id="edit-event-description" name="description" value={editEventForm.description} onChange={handleEditEventChange} rows={3} />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-2"><Label htmlFor="edit-event-date">Start Date *</Label><Input id="edit-event-date" name="date" type="date" value={editEventForm.date} onChange={handleEditEventChange} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-end-date">End Date</Label><Input id="edit-event-end-date" name="endDate" type="date" value={editEventForm.endDate} onChange={handleEditEventChange} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-time">Time</Label><Input id="edit-event-time" name="time" value={editEventForm.time} onChange={handleEditEventChange} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-deadline">Provider Response Deadline</Label><Input id="edit-event-deadline" name="deadline" type="date" value={editEventForm.deadline} onChange={handleEditEventChange} /></div>
+                    </div>
+                    <div className="space-y-2"><Label htmlFor="edit-event-location">Location *</Label><Input id="edit-event-location" name="location" value={editEventForm.location} onChange={handleEditEventChange} /></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-2"><Label htmlFor="edit-event-points">Network Points</Label><Input id="edit-event-points" name="networkPoints" type="number" min="0" value={editEventForm.networkPoints} onChange={handleEditEventChange} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-price">Member Price ($)</Label><Input id="edit-event-price" name="memberPrice" type="number" min="0" step="0.01" value={editEventForm.memberPrice} onChange={handleEditEventChange} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-vouchers">Vouchers / Provider</Label><Input id="edit-event-vouchers" name="totalVouchersAvailable" type="number" min="1" value={editEventForm.totalVouchersAvailable} onChange={handleEditEventChange} /></div>
+                    </div>
+                  </div>
+                </ScrollArea>
+                <DialogFooter className="px-6 py-4 border-t">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditingEvent(null)} disabled={savingEvent}>Cancel</Button>
+                  <Button type="submit" size="sm" disabled={savingEvent || !editEventForm.title || !editEventForm.date || !editEventForm.location}>{savingEvent ? "Saving..." : "Save Changes"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
           <Dialog
             open={showCreateEventDialog}
             onOpenChange={(open) => {

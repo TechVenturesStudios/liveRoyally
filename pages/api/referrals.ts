@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const existingUser = await prisma.users.findUnique({ where: { email: inviteeEmail }, select: { user_id: true } });
-  if (existingUser) return res.status(409).json({ error: "That email already has a Royally account" });
+  if (existingUser) return res.status(409).json({ error: "That email already has a Local Metrics account" });
 
   const referral = await prisma.referrals.create({
     data: { referrer_id: account.actingUserId, invitee_email: inviteeEmail, referral_token: randomBytes(24).toString("base64url") },

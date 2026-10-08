@@ -3,6 +3,16 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const roles = ["member", "provider", "partner", "admin"];
+const networkSeeds = [
+  {
+    // Reserved non-ZIP key for networks that do not use ZIP-based assignment.
+    zip_code: "NO-ZIP",
+    network_name: "Live Royally Network",
+    network_code: "LIVE_ROYALLY",
+    parish: null,
+    state: null,
+  },
+];
 const rewardTiers = [
   {
     user_type: "member",
@@ -195,6 +205,26 @@ const rewardTasks = [
 ];
 
 async function main() {
+  for (const network of networkSeeds) {
+    await prisma.network_codes.upsert({
+      where: { zip_code: network.zip_code },
+      update: {
+        network_name: network.network_name,
+        network_code: network.network_code,
+        parish: network.parish,
+        state: network.state,
+        updated_at: new Date(),
+      },
+      create: network,
+    });
+  }
+
+  console.log(
+    `Seeded networks: ${networkSeeds
+      .map((network) => `${network.network_name} (${network.network_code})`)
+      .join(", ")}`
+  );
+
   for (const roleName of roles) {
     await prisma.roles.upsert({
       where: { role_name: roleName },

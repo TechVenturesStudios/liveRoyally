@@ -204,6 +204,21 @@ model partner_profiles {
   users                users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 }
 
+model partner_square_connections {
+  user_id                  String    @id @db.Uuid
+  merchant_id              String    @db.VarChar(100)
+  location_id              String?   @db.VarChar(100)
+  access_token_ciphertext  String?   @db.Text
+  refresh_token_ciphertext String?   @db.Text
+  access_token_expires_at  DateTime? @db.Timestamp(6)
+  scopes                   String?   @db.Text
+  connected_at             DateTime  @default(now()) @db.Timestamp(6)
+  updated_at               DateTime  @default(now()) @db.Timestamp(6)
+  users                    users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([merchant_id], map: "idx_partner_square_connections_merchant")
+}
+
 model partner_subscriptions {
   subscription_id                   String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   partner_id                        String                    @db.Uuid
@@ -342,6 +357,7 @@ model users {
   member_profiles   member_profiles?
   member_vouchers   member_vouchers[]
   partner_profiles  partner_profiles?
+  partner_square_connections partner_square_connections?
   partner_subscriptions partner_subscriptions[]
   provider_profiles provider_profiles? @relation("ProviderUser")
   partner_providers provider_profiles[] @relation("ProviderPartner")

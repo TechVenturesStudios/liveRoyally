@@ -55,7 +55,7 @@ export default function MemberReferralCard() {
     <Card className="mb-6">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg"><Gift className="h-5 w-5 text-primary" /> Refer a friend</CardTitle>
-        <CardDescription>Invite someone to Royally. You earn referral points when they register.</CardDescription>
+        <CardDescription>Invite someone to Local Metrics. You earn referral points when they register.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-col sm:flex-row gap-2">

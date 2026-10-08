@@ -218,7 +218,7 @@ async function getOrCreateSubscriptionPlan(planConfig) {
   };
 
   const idempotencyKey =
-    `liveRoyally-${planConfig.key}-plan-2026-${Date.now()}`;
+    `localmetrics-${planConfig.key}-plan-2026-${Date.now()}`;
 
   const createdPlan = await upsertCatalogObject(
     planObject,
@@ -320,7 +320,7 @@ async function createAnnualVariation(planConfig, planId) {
    */
 
   const idempotencyKey =
-    `liveRoyally-${planConfig.key}-annual-2026-${Date.now()}`;
+    `localmetrics-${planConfig.key}-annual-2026-${Date.now()}`;
 
   const createdVariation = await upsertCatalogObject(
     variationObject,

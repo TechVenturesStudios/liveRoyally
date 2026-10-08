@@ -8,7 +8,6 @@ import { awardRewardTask } from "../../lib/rewards";
 import { createSquareCard, createSquareCustomer, disableSquareCard, squareIdempotencyKey } from "../../lib/square-partner-billing";
 import { getOrCreateRole } from "../../lib/roles";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../src/config/subscriptionPlans";
-import { queueTemporaryPasswordEmail, queueWelcomeEmail } from "../../lib/notification-templates";
 
 type RegisterPartnerResponse =
   | {
@@ -172,14 +171,6 @@ export default async function handler(
       userType: "partner",
     });
 
-    if (cognitoUser.created && cognitoUser.temporaryPassword) {
-      await queueTemporaryPasswordEmail({
-        email,
-        temporaryPassword: cognitoUser.temporaryPassword,
-        userType: "partner",
-      });
-    }
-
     const organizationZip = normalizeZip(body.organizationZip);
     const network =
       organizationZip.length === 5
@@ -318,10 +309,6 @@ export default async function handler(
         subscription,
       };
     });
-
-    if (result.created) {
-      await queueWelcomeEmail(result.user.user_id, "partner");
-    }
 
     return res.status(200).json({
       message: "Partner registered successfully",

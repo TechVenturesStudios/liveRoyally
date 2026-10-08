@@ -61,14 +61,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!changeSummary) return res.status(200).json({ eventId, changed: false, notifications: { queued: 0, failed: 0 } });
     const event = await prisma.events.update({ where: { event_id: eventId }, data: next, select: { event_id: true, title: true, start_date: true, location: true, partner_id: true } });
-    const [partner, members, providers] = await Promise.all([
-      prisma.users.findUnique({ where: { user_id: account.actingUserId }, select: { email: true, partner_profiles: { select: { org_name: true, org_email: true } } } }),
-      prisma.$queryRaw<Array<{ user_id: string; email: string; first_name: string | null }>>`
-        SELECT DISTINCT u.user_id, u.email, u.first_name FROM member_vouchers mv
-        JOIN vouchers v ON v.voucher_id = mv.voucher_id JOIN users u ON u.user_id = mv.member_id
-        JOIN member_profiles mp ON mp.user_id = u.user_id
-        WHERE v.event_id = ${eventId} AND mp.notification_enabled = TRUE AND NULLIF(TRIM(u.email), '') IS NOT NULL
-      `,
+    const partner = await prisma.users.findUnique({
+      where: { user_id: account.actingUserId },
+      select: { email: true, partner_profiles: { select: { org_name: true, org_email: true, network_code: true } } },
+    });
+    const [members, providers] = await Promise.all([
+      partner?.partner_profiles?.network_code
+        ? prisma.$queryRaw<Array<{ user_id: string; email: string; first_name: string | null }>>`
+            SELECT DISTINCT u.user_id, u.email, u.first_name
+            FROM member_profiles mp
+            JOIN users u ON u.user_id = mp.user_id
+            WHERE mp.network_code = ${partner.partner_profiles.network_code}
+              AND mp.notification_enabled = TRUE
+              AND NULLIF(TRIM(u.email), '') IS NOT NULL
+          `
+        : Promise.resolve([]),
       prisma.$queryRaw<Array<{ user_id: string; email: string; first_name: string | null }>>`
         SELECT DISTINCT u.user_id, u.email, u.first_name FROM event_provider_invites i
         JOIN users u ON u.user_id = i.provider_id JOIN provider_profiles pp ON pp.user_id = u.user_id

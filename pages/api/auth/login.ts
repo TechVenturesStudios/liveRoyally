@@ -103,6 +103,20 @@ async function signInWithAuthResult(
     return res.status(404).json({ error: "User does not exist in database" });
   }
 
+  if (user.user_type === "partner") {
+    const subscription = await prisma.partner_subscriptions.findFirst({
+      where: { partner_id: user.user_id },
+      orderBy: { created_at: "desc" },
+      select: { status: true },
+    });
+
+    if (subscription?.status === "declined") {
+      return res.status(403).json({
+        error: "Your partner account application was declined.",
+      });
+    }
+  }
+
   const cookieMaxAge = 60 * 60;
   const cookies = [
     authCookie("lr_id_token", idToken, cookieMaxAge, secure),
@@ -152,6 +166,27 @@ export default async function handler(
 
     if (!email || (!password && !newPassword)) {
       return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    // Declined partner accounts must not establish a Local Metrics session.
+    // This check also covers Cognito's first-login NEW_PASSWORD_REQUIRED
+    // challenge. Pending applications may still sign in to check their status.
+    const partner = await prisma.users.findUnique({
+      where: { email },
+      select: {
+        user_type: true,
+        partner_subscriptions: {
+          orderBy: { created_at: "desc" },
+          take: 1,
+          select: { status: true },
+        },
+      },
+    });
+
+    if (partner?.user_type === "partner" && partner.partner_subscriptions[0]?.status === "declined") {
+      return res.status(403).json({
+        error: "Your partner account application was declined.",
+      });
     }
 
     const cognito = new CognitoIdentityProviderClient({

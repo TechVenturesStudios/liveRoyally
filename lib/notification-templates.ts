@@ -243,6 +243,60 @@ export function queuePointsTierGuideEmail(input: PointsTierGuideEmailInput) {
   });
 }
 
+export async function queueMemberPointsTierGuideEmail(input: {
+  userId: string;
+  dashboardLink: string;
+  idempotencyKey?: string;
+}) {
+  const year = new Date().getFullYear();
+  const [user, rewardAccount, tiers, tasks] = await Promise.all([
+    prisma.users.findUnique({
+      where: { user_id: input.userId },
+      select: { email: true, first_name: true, user_type: true },
+    }),
+    prisma.reward_accounts.findUnique({
+      where: { user_id_reward_year: { user_id: input.userId, reward_year: year } },
+      select: { points_balance: true },
+    }),
+    prisma.reward_tiers.findMany({
+      where: { user_type: "member", active: true },
+      orderBy: [{ min_points: "asc" }, { display_order: "asc" }],
+      select: { name: true, min_points: true },
+    }),
+    prisma.reward_tasks.findMany({
+      where: { user_type: "member", active: true },
+      orderBy: [{ display_order: "asc" }, { created_at: "asc" }],
+      take: 3,
+      select: { name: true, description: true },
+    }),
+  ]);
+
+  if (!user || user.user_type !== "member" || !user.email?.trim()) return null;
+
+  const currentPoints = rewardAccount?.points_balance ?? 0;
+  const currentTier = [...tiers].reverse().find((tier) => tier.min_points <= currentPoints) ?? tiers[0];
+  const nextTier = tiers.find((tier) => tier.min_points > currentPoints) ?? null;
+  const earnRules = tasks.map((task) => task.description?.trim() ? `${task.name}: ${task.description.trim()}` : task.name);
+
+  return queuePointsTierGuideEmail({
+    userId: input.userId,
+    toEmail: user.email,
+    firstName: user.first_name,
+    earnRules,
+    tiers: tiers.map((tier) => ({
+      tierName: tier.name,
+      pointsThreshold: tier.min_points,
+      tierBenefit: `Continue earning points to reach the ${tier.name} tier.`,
+    })),
+    currentPoints,
+    currentTier: currentTier?.name || "Explorer",
+    pointsToNextTier: nextTier ? Math.max(0, nextTier.min_points - currentPoints) : 0,
+    nextTier: nextTier?.name || currentTier?.name || "top tier",
+    dashboardLink: input.dashboardLink,
+    idempotencyKey: input.idempotencyKey,
+  });
+}
+
 export type VoucherExpiringSoonEmailInput = {
   voucherId: string;
   memberId: string;
@@ -549,6 +603,46 @@ export async function queuePartnerApprovedEmail(input: PartnerApprovedEmailInput
   return queueEmail({ idempotencyKey: `partner-approved:${input.partnerId}`, templateKey: "partner.account_approved", toEmail: input.toEmail, subject, textBody, htmlBody, userId: input.partnerId, relatedEntityType: "user", relatedEntityId: input.partnerId, payload: { ...input, firstName } });
 }
 
+export type PartnerDeclinedEmailInput = {
+  partnerId: string;
+  toEmail: string;
+  firstName?: string | null;
+  partnerName: string;
+  supportEmail: string;
+};
+
+export async function queuePartnerDeclinedEmail(input: PartnerDeclinedEmailInput) {
+  const firstName = input.firstName?.trim() || "there";
+  const subject = "Your Local Metrics partner account application was declined";
+  const preheader = "An update about your Local Metrics partner application.";
+  const textBody = [
+    `Hi ${firstName},`,
+    "",
+    `Thank you for applying for ${input.partnerName} to join Local Metrics as a Partner. After review, we were unable to approve the application at this time.`,
+    "",
+    `If you have questions or would like more information, please contact us at ${input.supportEmail}.`,
+    "",
+    "The Local Metrics Team",
+  ].join("\n");
+  const htmlBody = layout(
+    preheader,
+    `<p>Hi ${escapeHtml(firstName)},</p><p>Thank you for applying for <strong>${escapeHtml(input.partnerName)}</strong> to join Local Metrics as a Partner. After review, we were unable to approve the application at this time.</p><p>If you have questions or would like more information, please contact us at <a href="mailto:${escapeHtml(input.supportEmail)}">${escapeHtml(input.supportEmail)}</a>.</p>`,
+  );
+
+  return queueEmail({
+    idempotencyKey: `partner-declined:${input.partnerId}`,
+    templateKey: "partner.account_declined",
+    toEmail: input.toEmail,
+    subject,
+    textBody,
+    htmlBody,
+    userId: input.partnerId,
+    relatedEntityType: "user",
+    relatedEntityId: input.partnerId,
+    payload: { ...input, firstName },
+  });
+}
+
 export type ProviderInvitationEmailInput = {
   inviteId: string;
   providerId: string;
@@ -572,6 +666,48 @@ export async function queueProviderInvitationEmail(input: ProviderInvitationEmai
   const textBody = [`Hi ${firstName},`, "", `${input.partnerName} has invited you to join Local Metrics as a Provider${eventCopy}.`, "", "As a Provider, you'll be able to:", "- Participate in partner events", "- Reach a network of engaged members", "- Grow your local business network", "", `Accept invitation: ${input.acceptInviteLink}`, input.inviteExpirationDate ? "" : null, input.inviteExpirationDate ? `This invite expires on ${input.inviteExpirationDate}.` : null, "", "The Local Metrics Team"].filter((line): line is string => line !== null).join("\n");
   const htmlBody = layout(preheader, `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${escapeHtml(input.partnerName)}</strong> has invited you to join Local Metrics as a Provider${input.eventName ? ` for <strong>${escapeHtml(input.eventName)}</strong>` : ""}.</p><ul><li>Participate in partner events</li><li>Reach a network of engaged members</li><li>Grow your local business network</li></ul><p><a href="${escapeHtml(input.acceptInviteLink)}">Accept invitation</a></p>${input.inviteExpirationDate ? `<p>This invite expires on ${escapeHtml(input.inviteExpirationDate)}.</p>` : ""}`);
   return queueEmail({ idempotencyKey: `provider-invitation:${input.inviteId}`, templateKey: "provider.invitation", toEmail: input.toEmail, subject, textBody, htmlBody, userId: input.providerId, relatedEntityType: "event_provider_invite", relatedEntityId: input.inviteId, payload: { ...input, firstName } });
+}
+
+export type ProviderNetworkInvitationEmailInput = {
+  invitationId: string;
+  toEmail: string;
+  firstName?: string | null;
+  partnerName: string;
+  partnerCode: string;
+  acceptInviteLink: string;
+};
+
+export async function queueProviderNetworkInvitationEmail(input: ProviderNetworkInvitationEmailInput) {
+  const firstName = input.firstName?.trim() || "there";
+  const subject = `${input.partnerName} invited you to join their provider network`;
+  const preheader = "Complete your provider registration to join the network.";
+  const textBody = [
+    `Hi ${firstName},`,
+    "",
+    `${input.partnerName} has invited your business to join their provider network on Local Metrics.`,
+    "",
+    `Complete your provider registration here: ${input.acceptInviteLink}`,
+    "",
+    "If you were not expecting this invitation, you can safely ignore this email.",
+    "",
+    "The Local Metrics Team",
+  ].join("\n");
+  const htmlBody = layout(
+    preheader,
+    `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${escapeHtml(input.partnerName)}</strong> has invited your business to join their provider network on Local Metrics.</p><p><a href="${escapeHtml(input.acceptInviteLink)}">Complete provider registration</a></p><p>If you were not expecting this invitation, you can safely ignore this email.</p>`,
+  );
+
+  return queueEmail({
+    idempotencyKey: `provider-network-invitation:${input.invitationId}`,
+    templateKey: "provider.network_invitation",
+    toEmail: input.toEmail,
+    subject,
+    textBody,
+    htmlBody,
+    relatedEntityType: "partner_provider_invitation",
+    relatedEntityId: input.invitationId,
+    payload: { ...input, firstName },
+  });
 }
 
 export type CampaignResultsEmailInput = {

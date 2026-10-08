@@ -61,7 +61,7 @@ const Login = () => {
         const user = await completeNewPasswordChallenge(email, challengeSession, newPassword);
         saveUserToStorage(user);
         clearDashboardContext();
-        toast.success("Password updated", { description: "Welcome to Live Royally!" });
+        toast.success("Password updated", { description: "Welcome to Local Metrics!" });
         navigate("/dashboard");
         return;
       }
@@ -127,7 +127,7 @@ const Login = () => {
                 ? "Enter your password reset verification code and choose a new password."
                 : needsNewPassword
                   ? "Your temporary password was accepted. Choose a permanent password for your account."
-                : "Welcome back to Live Royally"}
+                : "Welcome back to Local Metrics"}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">

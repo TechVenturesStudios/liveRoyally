@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { User, Edit, Save, X, Crown, CreditCard, CalendarDays, Users, Check, AlertTriangle } from "lucide-react";
+import { User, Edit, Save, X, Crown, CreditCard, CalendarDays, Users, Check, AlertTriangle, BookOpen, Link2, Unplug } from "lucide-react";
 import ViewToggle from "@/components/ui/ViewToggle";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -59,6 +59,10 @@ const ProfilePage = () => {
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
   const [subscriptionTargetPlan, setSubscriptionTargetPlan] = useState<PartnerSubscriptionPlan | null>(null);
   const [subscriptionUpdatePending, setSubscriptionUpdatePending] = useState(false);
+  const [pointsGuideSending, setPointsGuideSending] = useState(false);
+  const [squareConnected, setSquareConnected] = useState(false);
+  const [squareConnectionLoading, setSquareConnectionLoading] = useState(false);
+  const [squareDisconnecting, setSquareDisconnecting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -144,6 +148,10 @@ const ProfilePage = () => {
         }
         setUser(completeUser)
         setFormData(completeUser)
+        if (data.user_type === "partner") {
+          const squareResponse = await fetch("/api/square/oauth/connection", { cache: "no-store" });
+          if (squareResponse.ok) setSquareConnected(Boolean((await squareResponse.json()).connected));
+        }
         return data;
       } 
       fetchUser().catch((error) => {
@@ -195,6 +203,37 @@ const ProfilePage = () => {
   const handleCancel = () => {
     setFormData(user);
     setIsEditing(false);
+  };
+
+  const handleSendPointsGuide = async () => {
+    if (pointsGuideSending) return;
+    setPointsGuideSending(true);
+    try {
+      const response = await fetch("/api/send-points-tier-guide", { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to queue points guide email");
+      toast({ title: "Points guide sent", description: "The points and tiers guide was queued for delivery." });
+    } catch (error) {
+      toast({ title: "Unable to send points guide", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setPointsGuideSending(false);
+    }
+  };
+
+  const handleDisconnectSquare = async () => {
+    if (squareDisconnecting) return;
+    setSquareDisconnecting(true);
+    try {
+      const response = await fetch("/api/square/oauth/connection", { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to disconnect Square");
+      setSquareConnected(false);
+      toast({ title: "Square disconnected", description: "Paid voucher charges will remain unavailable until Square is connected again." });
+    } catch (error) {
+      toast({ title: "Unable to disconnect Square", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setSquareDisconnecting(false);
+    }
   };
 
   const handleSubscriptionChange = async (plan: PartnerSubscriptionPlan | "cancel") => {
@@ -483,6 +522,44 @@ const ProfilePage = () => {
           </div>
         )}
 
+        <Card className="mt-4 border-primary/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-barlow font-bold flex items-center gap-2 text-base">
+              <Link2 className="h-5 w-5 text-primary" /> Square account
+            </CardTitle>
+            <CardDescription>
+              Connect the Square account that should receive payments for your event vouchers.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <Badge variant={squareConnected ? "default" : "outline"}>
+                {squareConnected ? "Connected" : "Not connected"}
+              </Badge>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Members will authorize payment to this account when claiming a paid voucher.
+              </p>
+            </div>
+            {squareConnected ? (
+              <Button type="button" variant="outline" size="sm" onClick={handleDisconnectSquare} disabled={squareDisconnecting}>
+                <Unplug className="mr-2 h-4 w-4" /> {squareDisconnecting ? "Disconnecting..." : "Disconnect Square"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                disabled={squareConnectionLoading}
+                onClick={() => {
+                  setSquareConnectionLoading(true);
+                  window.location.assign("/api/square/oauth/start");
+                }}
+              >
+                <Link2 className="mr-2 h-4 w-4" /> {squareConnectionLoading ? "Redirecting..." : "Connect Square account"}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Subscription Card */}
         <Card className="mt-4 border-primary/20">
           <CardHeader className="pb-3">
@@ -764,6 +841,13 @@ const ProfilePage = () => {
           <Badge variant="outline" className="capitalize text-xs">{user.userType}</Badge>
           <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
         </div>
+
+        {user.userType === "member" && (
+          <Button variant="outline" className="gap-2" onClick={handleSendPointsGuide} disabled={pointsGuideSending}>
+            <BookOpen className="h-4 w-4" />
+            {pointsGuideSending ? "Sending..." : "Learn how points & tiers work"}
+          </Button>
+        )}
 
         {viewMode === "grid" ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

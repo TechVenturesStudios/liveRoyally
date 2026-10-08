@@ -130,6 +130,7 @@ const PartnerProvidersPage = () => {
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProviderEntry | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [providerLimit, setProviderLimit] = useState<number | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
@@ -232,7 +233,8 @@ const PartnerProvidersPage = () => {
     }
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
+    if (isInviting) return;
     if (!newProvider.businessName.trim() || !newProvider.businessEmail.trim()) {
       toast.error("Business name and email are required.");
       return;
@@ -251,18 +253,29 @@ const PartnerProvidersPage = () => {
       return;
     }
 
-    const id = `PRV${String(Date.now()).slice(-5)}`;
-    setProviders((prev) => [
-      ...prev,
-      { id, ...newProvider } as ProviderEntry,
-    ]);
-    toast.success(`${newProvider.businessName} has been added.`);
-    setShowAddDialog(false);
-    setNewProvider({
-      businessName: "", businessCategory: "", agentFirstName: "", agentLastName: "",
-      agentPhone: "", businessEmail: "", businessPhone: "", businessAddress: "",
-      businessCity: "", businessState: "", businessZip: "",
-    });
+    setIsInviting(true);
+    try {
+      const user = getUserFromStorage();
+      const response = await fetch("/api/invite-provider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newProvider, cognitoId: user?.cognitoId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to send provider invite");
+
+      toast.success(`Invite sent to ${newProvider.businessEmail}.`);
+      setShowAddDialog(false);
+      setNewProvider({
+        businessName: "", businessCategory: "", agentFirstName: "", agentLastName: "",
+        agentPhone: "", businessEmail: "", businessPhone: "", businessAddress: "",
+        businessCity: "", businessState: "", businessZip: "",
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send provider invite");
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   const handleNewProviderInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -306,7 +319,7 @@ const PartnerProvidersPage = () => {
               onClick={() => setShowAddDialog(true)}
               size="sm"
               className="bg-royal hover:bg-royal-dark text-white gap-1.5"
-              disabled={!hasProviderCapacity}
+              disabled={!hasProviderCapacity || isInviting}
             >
               <Plus className="h-4 w-4" />
               Add Provider
@@ -520,7 +533,7 @@ const PartnerProvidersPage = () => {
               className="bg-royal hover:bg-royal-dark text-white"
               disabled={!hasProviderCapacity}
             >
-              Send Invite
+              {isInviting ? "Sending..." : "Send Invite"}
             </Button>
           </DialogFooter>
         </DialogContent>

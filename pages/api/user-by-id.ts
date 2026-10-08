@@ -103,6 +103,12 @@ export default async function handler(
       return res.status(404).json({ error: "User not found" });
     }
 
+    if (user.user_type === "partner" && user.partner_subscriptions[0]?.status === "declined") {
+      return res.status(403).json({
+        error: "Your partner account application was declined.",
+      });
+    }
+
     const memberProfile = user.member_profiles;
     const providerProfile = user.provider_profiles;
     const partnerProfile = user.partner_profiles;

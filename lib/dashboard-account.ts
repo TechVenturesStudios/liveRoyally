@@ -1,6 +1,7 @@
 import type { NextApiRequest } from "next";
 import { prisma } from "./prisma";
 import { getCognitoIdFromRequest } from "./api-auth";
+import { PartnerSubscriptionStatus } from "@prisma/client";
 
 export type DashboardAccountType = "member" | "provider" | "partner" | "admin";
 
@@ -120,6 +121,18 @@ export async function resolveDashboardAccount(
 
   if (expectedTypes && !expectedTypes.includes(actingAccount.actingUserType)) {
     return { error: "Current account is not authorized for this view", status: 403 };
+  }
+
+  if (actingAccount.actingUserType === "partner") {
+    const subscription = await prisma.partner_subscriptions.findFirst({
+      where: { partner_id: actingAccount.actingUserId },
+      orderBy: { created_at: "desc" },
+      select: { status: true },
+    });
+
+    if (subscription?.status !== PartnerSubscriptionStatus.active) {
+      return { error: "Your partner account is not approved for Local Metrics access", status: 403 };
+    }
   }
 
   return actingAccount;

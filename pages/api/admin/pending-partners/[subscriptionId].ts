@@ -9,7 +9,7 @@ import {
   getSquarePlanVariationId,
 } from "../../../../lib/square-partner-billing";
 import { setCognitoTemporaryPassword } from "../../../../lib/cognito-admin";
-import { queuePartnerApprovedEmail, queueTemporaryPasswordEmail } from "../../../../lib/notification-templates";
+import { queuePartnerApprovedEmail, queuePartnerDeclinedEmail, queueTemporaryPasswordEmail } from "../../../../lib/notification-templates";
 
 type PendingPartnerActionResponse =
   | {
@@ -272,6 +272,14 @@ export default async function handler(
         canceled_at: true,
         billing_provider_subscription_id: true,
       },
+    });
+
+    await queuePartnerDeclinedEmail({
+      partnerId: subscription.users.user_id,
+      toEmail: subscription.users.email,
+      firstName: subscription.users.first_name,
+      partnerName: subscription.users.partner_profiles?.org_name || "Your organization",
+      supportEmail: process.env.SUPPORT_EMAIL || process.env.SES_FROM_EMAIL || "support@localmetrics.com",
     });
 
     return res.status(200).json({

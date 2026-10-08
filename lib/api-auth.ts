@@ -13,13 +13,7 @@ function parseCookies(cookieHeader = "") {
   }, {});
 }
 
-export function getCognitoIdFromRequest(req: NextApiRequest) {
-  const queryCognitoId = String(req.query.cognitoId || req.query.cognito_id || "").trim();
-
-  if (queryCognitoId) {
-    return queryCognitoId;
-  }
-
+export function getCognitoIdFromCookie(req: NextApiRequest) {
   const cookies = parseCookies(req.headers.cookie);
   const idToken = cookies.lr_id_token;
 
@@ -36,4 +30,9 @@ export function getCognitoIdFromRequest(req: NextApiRequest) {
   } catch {
     return null;
   }
+}
+
+export function getCognitoIdFromRequest(req: NextApiRequest) {
+  const queryCognitoId = String(req.query.cognitoId || req.query.cognito_id || "").trim();
+  return queryCognitoId || getCognitoIdFromCookie(req);
 }
