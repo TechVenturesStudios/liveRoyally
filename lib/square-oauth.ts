@@ -12,8 +12,8 @@ export const squareOauthApiBaseUrl =
     : "https://connect.squareupsandbox.com";
 export const squareOauthAuthorizeUrl =
   squareEnvironment === "production" || squareEnvironment === "prod"
-    ? "https://squareup.com/oauth2/authorize"
-    : "https://squareupsandbox.com/oauth2/authorize";
+    ? "https://connect.squareup.com/oauth2/authorize"
+    : "https://connect.squareupsandbox.com/oauth2/authorize";
 
 export const squareOauthScopes = (process.env.SQUARE_OAUTH_SCOPES || "PAYMENTS_WRITE MERCHANT_PROFILE_READ")
   .split(/[\s,]+/)

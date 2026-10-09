@@ -685,6 +685,9 @@ export async function queueProviderNetworkInvitationEmail(input: ProviderNetwork
     "",
     `${input.partnerName} has invited your business to join their provider network on Local Metrics.`,
     "",
+    `Partner code: ${input.partnerCode}`,
+    "Use this code when you complete your provider registration.",
+    "",
     `Complete your provider registration here: ${input.acceptInviteLink}`,
     "",
     "If you were not expecting this invitation, you can safely ignore this email.",
@@ -693,7 +696,7 @@ export async function queueProviderNetworkInvitationEmail(input: ProviderNetwork
   ].join("\n");
   const htmlBody = layout(
     preheader,
-    `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${escapeHtml(input.partnerName)}</strong> has invited your business to join their provider network on Local Metrics.</p><p><a href="${escapeHtml(input.acceptInviteLink)}">Complete provider registration</a></p><p>If you were not expecting this invitation, you can safely ignore this email.</p>`,
+    `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${escapeHtml(input.partnerName)}</strong> has invited your business to join their provider network on Local Metrics.</p><p><strong>Partner code:</strong> <code>${escapeHtml(input.partnerCode)}</code><br />Use this code when you complete your provider registration.</p><p><a href="${escapeHtml(input.acceptInviteLink)}">Complete provider registration</a></p><p>If you were not expecting this invitation, you can safely ignore this email.</p>`,
   );
 
   return queueEmail({
