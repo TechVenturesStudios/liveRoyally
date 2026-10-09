@@ -5,7 +5,9 @@ import { decryptSquareToken, squareOauthApiBaseUrl } from "../../../../lib/squar
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const account = await resolveDashboardAccount({ ...req, query: {} } as NextApiRequest, ["partner"]);
+    // Preserve the original request object so cookie-based authentication can
+    // read headers consistently across local and stage runtimes.
+    const account = await resolveDashboardAccount(req, ["partner"]);
     if (!account) return res.status(401).json({ error: "Not authenticated" });
     if ("error" in account) return res.status(account.status).json({ error: account.error });
     const connection = await prisma.partner_square_connections.findUnique({ where: { user_id: account.actingUserId } });

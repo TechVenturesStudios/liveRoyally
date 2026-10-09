@@ -10,7 +10,10 @@ import {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   try {
-    const account = await resolveDashboardAccount({ ...req, query: {} } as NextApiRequest, ["partner"]);
+    // Pass the original Next request through. Spreading `req` can drop
+    // non-enumerable request properties (including `headers`) in some stage
+    // runtimes, which makes cookie-based authentication fail before OAuth starts.
+    const account = await resolveDashboardAccount(req, ["partner"]);
     if (!account) return res.status(401).json({ error: "Not authenticated" });
     if ("error" in account) return res.status(account.status).json({ error: account.error });
 

@@ -26,6 +26,54 @@ type EmailJob = {
   attempt_count: number;
 };
 
+function assertSafeHeaderValue(value: string, name: string) {
+  if (/[\r\n]/.test(value)) {
+    throw new Error(`${name} contains an invalid line break`);
+  }
+}
+
+function encodeMimeHeader(value: string) {
+  return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
+}
+
+function encodeMimeBody(value: string) {
+  const encoded = Buffer.from(value, "utf8").toString("base64");
+  return encoded.match(/.{1,76}/g)?.join("\r\n") || "";
+}
+
+function buildRawEmail(job: EmailJob, from: string, fromName: string) {
+  assertSafeHeaderValue(from, "SES_FROM_EMAIL");
+  assertSafeHeaderValue(fromName, "SES_FROM_NAME");
+  assertSafeHeaderValue(job.to_email, "recipient email");
+  assertSafeHeaderValue(job.subject, "email subject");
+
+  const boundary = `=_LocalMetrics_${job.job_id.replace(/[^A-Za-z0-9]/g, "")}`;
+  const displayFrom = fromName
+    ? `${encodeMimeHeader(fromName)} <${from}>`
+    : from;
+
+  return [
+    `From: ${displayFrom}`,
+    `To: ${job.to_email}`,
+    `Subject: ${encodeMimeHeader(job.subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    "Content-Type: text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    encodeMimeBody(job.text_body),
+    `--${boundary}`,
+    "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    encodeMimeBody(job.html_body),
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+}
+
 async function claimJob(client: Client, jobId: string) {
   await client.query("BEGIN");
   try {
@@ -62,7 +110,7 @@ function getJobId(record: SQSRecord) {
   return jobId;
 }
 
-async function processRecord(record: SQSRecord, from: string) {
+async function processRecord(record: SQSRecord, from: string, fromName: string) {
   const client = databaseClient();
   await client.connect();
   try {
@@ -79,15 +127,9 @@ async function processRecord(record: SQSRecord, from: string) {
 
     try {
       const response = await ses.send(new SendEmailCommand({
-        FromEmailAddress: from,
-        Destination: { ToAddresses: [job.to_email] },
         Content: {
-          Simple: {
-            Subject: { Data: job.subject, Charset: "UTF-8" },
-            Body: {
-              Text: { Data: job.text_body, Charset: "UTF-8" },
-              Html: { Data: job.html_body, Charset: "UTF-8" },
-            },
+          Raw: {
+            Data: Buffer.from(buildRawEmail(job, from, fromName), "utf8"),
           },
         },
       }));
@@ -121,6 +163,7 @@ async function processRecord(record: SQSRecord, from: string) {
 export const handler = async (event: SQSEvent): Promise<SQSBatchResponse> => {
   const from = String(process.env.SES_FROM_EMAIL || "").trim();
   if (!from) throw new Error("SES_FROM_EMAIL is required");
+  const fromName = String(process.env.SES_FROM_NAME || "Local Metrics").trim();
 
   const failures: string[] = [];
   const concurrency = Math.max(1, Math.min(
@@ -133,7 +176,7 @@ export const handler = async (event: SQSEvent): Promise<SQSBatchResponse> => {
     while (nextIndex < event.Records.length) {
       const record = event.Records[nextIndex++];
       try {
-        const failedMessageId = await processRecord(record, from);
+        const failedMessageId = await processRecord(record, from, fromName);
         if (failedMessageId) failures.push(failedMessageId);
       } catch (error) {
         console.error("email job processing error:", error);

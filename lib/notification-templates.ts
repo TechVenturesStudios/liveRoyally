@@ -594,7 +594,6 @@ export type PartnerApprovedEmailInput = {
 };
 
 export async function queuePartnerApprovedEmail(input: PartnerApprovedEmailInput) {
-  if (!(await notificationsEnabled(input.partnerId))) return null;
   const firstName = input.firstName?.trim() || "there";
   const subject = "You're approved! Welcome to Local Metrics as a Partner";
   const preheader = "Your account is live — start building your first event.";
