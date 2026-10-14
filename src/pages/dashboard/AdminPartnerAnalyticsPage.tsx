@@ -31,6 +31,18 @@ const planColors: Record<string, string> = {
   Enterprise: "bg-purple-100 text-purple-700",
 };
 const planOrder: Record<string, number> = { Enterprise: 0, Growth: 1, Starter: 2, Free: 3 };
+const statusOrder: Record<string, number> = { active: 0, pending: 1, past_due: 2, declined: 3, canceled: 4, expired: 5 };
+
+const statusLabel = (status: PartnerAnalytics["status"]) => {
+  if (!status) return "No subscription";
+  return status === "canceled" ? "Cancelled" : status.replace("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
+const statusClassName = (status: PartnerAnalytics["status"]) => {
+  if (status === "active") return "bg-green-100 text-green-700";
+  if (status === "declined" || status === "canceled" || status === "expired") return "bg-red-100 text-red-700";
+  return "bg-amber-100 text-amber-700";
+};
 
 const AdminPartnerAnalyticsPage = () => {
   const navigate = useNavigate();
@@ -100,7 +112,13 @@ const AdminPartnerAnalyticsPage = () => {
   };
 
   const sortedPartners = useMemo(() => {
-    if (!sortKey) return partnerAnalytics;
+    if (!sortKey) {
+      return [...partnerAnalytics].sort((a, b) => {
+        const statusDiff = (statusOrder[a.status || ""] ?? 99) - (statusOrder[b.status || ""] ?? 99);
+        if (statusDiff !== 0) return statusDiff;
+        return (b.subscriptionDate || "").localeCompare(a.subscriptionDate || "");
+      });
+    }
     return [...partnerAnalytics].sort((a, b) => {
       if (sortKey === "plan") {
         const diff = planOrder[a.plan] - planOrder[b.plan];
@@ -138,7 +156,9 @@ const AdminPartnerAnalyticsPage = () => {
     { label: "Category", value: p.organizationCategory },
     { label: "Location", value: `${p.city}, ${p.state}` },
     { label: "Plan", value: <Badge className={planColors[p.plan]}>{p.plan}</Badge> },
+    { label: "Subscription Status", value: <Badge className={statusClassName(p.status)}>{statusLabel(p.status)}</Badge> },
     { label: "Join Date", value: new Date(p.joinDate).toLocaleDateString() },
+    { label: "Subscription Date", value: p.subscriptionDate ? new Date(p.subscriptionDate).toLocaleDateString() : "—" },
     { label: "Published Events", value: String(p.publishedEvents) },
     { label: "Pending Events", value: String(p.pendingEvents) },
     { label: "Total Providers", value: String(p.totalProviders) },
@@ -264,7 +284,10 @@ const AdminPartnerAnalyticsPage = () => {
                     <h3 className="font-barlow font-bold text-base">{p.organizationName}</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">{p.organizationCategory}</p>
                   </div>
-                  <Badge className={`text-xs ${planColors[p.plan]}`}>{p.plan}</Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge className={`text-xs ${statusClassName(p.status)}`}>{statusLabel(p.status)}</Badge>
+                    <Badge className={`text-xs ${planColors[p.plan]}`}>{p.plan}</Badge>
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-center mt-4">
                   <div>
@@ -301,6 +324,7 @@ const AdminPartnerAnalyticsPage = () => {
                   <TableHead className="cursor-pointer select-none" onClick={() => handleSort("plan")}>
                     <span className="flex items-center">Plan <SortIcon column="plan" /></span>
                   </TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-center cursor-pointer select-none" onClick={() => handleSort("publishedEvents")}>
                     <span className="flex items-center justify-center">Published <SortIcon column="publishedEvents" /></span>
                   </TableHead>
@@ -326,6 +350,9 @@ const AdminPartnerAnalyticsPage = () => {
                     <TableCell className="text-muted-foreground">{p.organizationCategory}</TableCell>
                     <TableCell>
                       <Badge className={`text-xs ${planColors[p.plan]}`}>{p.plan}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`text-xs ${statusClassName(p.status)}`}>{statusLabel(p.status)}</Badge>
                     </TableCell>
                     <TableCell className="text-center font-medium">{p.publishedEvents}</TableCell>
                     <TableCell className="text-center font-medium">{p.pendingEvents}</TableCell>

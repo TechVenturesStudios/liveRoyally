@@ -51,6 +51,15 @@ export default async function handler(
           org_phone: true,
           org_city: true,
           org_state: true,
+          users: {
+            select: {
+              partner_subscriptions: {
+                orderBy: { created_at: "desc" },
+                take: 1,
+                select: { status: true },
+              },
+            },
+          },
         },
       }),
       prisma.provider_profiles.findMany({
@@ -111,6 +120,7 @@ export default async function handler(
       city: text(partner.org_city),
       state: text(partner.org_state),
       providerCount: providerCounts.get(partner.user_id) ?? 0,
+      subscriptionStatus: partner.users.partner_subscriptions[0]?.status ?? null,
     }));
 
     const providers = matchingProviderProfiles.map((provider) => ({

@@ -40,7 +40,7 @@ export default async function handler(
           },
           partner_subscriptions: {
             orderBy: { created_at: "desc" },
-            select: { plan: true, status: true, approved_at: true, canceled_at: true },
+            select: { plan: true, status: true, approved_at: true, canceled_at: true, created_at: true },
           },
           events: {
             select: {
@@ -92,16 +92,16 @@ export default async function handler(
         responseDeadline: event.response_deadline,
         inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
       }) !== "pending").length;
-      const plan = partner.partner_subscriptions.find(
-        (subscription) => subscription.status === PartnerSubscriptionStatus.active &&
-          subscription.approved_at && !subscription.canceled_at
-      )?.plan ?? partner.partner_subscriptions[0]?.plan;
+      const latestSubscription = partner.partner_subscriptions[0];
+      const plan = latestSubscription?.plan;
 
       return {
         id: partner.user_id,
         organizationName: text(profile?.org_name, text(partner.email, "Unnamed partner")),
         organizationCategory: text(profile?.org_category, "Uncategorized"),
         plan: plan ? PARTNER_SUBSCRIPTION_PLANS[plan].label : "Free",
+        status: latestSubscription?.status ?? null,
+        subscriptionDate: latestSubscription?.created_at?.toISOString() ?? null,
         joinDate: (partner.created_at ?? new Date()).toISOString(),
         publishedEvents,
         pendingEvents: partner.events.length - publishedEvents,

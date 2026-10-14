@@ -28,6 +28,7 @@ export type AdminNetworkPartner = {
   city: string;
   state: string;
   providerCount: number;
+  subscriptionStatus: "pending" | "active" | "past_due" | "declined" | "canceled" | "expired" | null;
 };
 
 export type AdminNetworkResponse = {

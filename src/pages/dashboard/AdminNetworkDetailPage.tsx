@@ -17,6 +17,17 @@ import { getUserFromStorage } from "@/utils/userStorage";
 
 type ProviderEntry = AdminNetworkProvider;
 
+const subscriptionStatusLabel = (status: AdminNetworkPartner["subscriptionStatus"]) => {
+  if (!status) return "No subscription";
+  return status === "canceled" ? "Cancelled" : status.replace("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
+const subscriptionStatusClassName = (status: AdminNetworkPartner["subscriptionStatus"]) => {
+  if (status === "active") return "bg-green-100 text-green-700";
+  if (status === "declined" || status === "canceled" || status === "expired") return "bg-red-100 text-red-700";
+  return "bg-amber-100 text-amber-700";
+};
+
 const AdminNetworkDetailPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -151,6 +162,7 @@ const AdminNetworkDetailPage = () => {
                         <div className="flex items-center gap-2">
                           <Building className="h-4 w-4 text-muted-foreground" />
                           <h2 className="font-barlow font-bold text-sm uppercase tracking-wide text-muted-foreground">{getPartnerName(partnerKey)}</h2>
+                          {partnerDetails[partnerKey] && <Badge className={`text-[10px] ${subscriptionStatusClassName(partnerDetails[partnerKey].subscriptionStatus)}`}>{subscriptionStatusLabel(partnerDetails[partnerKey].subscriptionStatus)}</Badge>}
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="text-[10px]">{groupedByPartner[partnerKey].length}</Badge>
@@ -211,8 +223,11 @@ const AdminNetworkDetailPage = () => {
                           <CardTitle className="text-base font-semibold truncate">{getPartnerName(partnerKey)}</CardTitle>
                           <CardDescription className="mt-1">{partner?.category || "Partner"}</CardDescription>
                         </div>
-                        <div className="rounded-full p-2 bg-muted shrink-0">
-                          <Building className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <Badge className={`text-[10px] ${subscriptionStatusClassName(partner?.subscriptionStatus ?? null)}`}>{subscriptionStatusLabel(partner?.subscriptionStatus ?? null)}</Badge>
+                          <div className="rounded-full p-2 bg-muted">
+                            <Building className="h-4 w-4 text-muted-foreground" />
+                          </div>
                         </div>
                       </div>
                     </CardHeader>
