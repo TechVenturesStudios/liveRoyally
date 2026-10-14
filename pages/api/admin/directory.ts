@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { PartnerSubscriptionStatus, UserType } from "@prisma/client";
+import { UserType } from "@prisma/client";
 
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../../src/config/subscriptionPlans";
 import { deriveEventLifecycleStatus } from "../../../src/utils/eventStatus";
@@ -42,7 +42,7 @@ export default async function handler(
           },
           partner_subscriptions: {
             orderBy: { created_at: "desc" },
-            select: { plan: true, status: true, approved_at: true, canceled_at: true },
+            select: { plan: true, status: true, approved_at: true, canceled_at: true, created_at: true },
           },
           events: {
             select: {
@@ -86,11 +86,8 @@ export default async function handler(
         inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
       }) !== "pending").length;
       const pendingEvents = events.length - publishedEvents;
-      const activeSubscription = profile.partner_subscriptions.find(
-        (subscription) => subscription.status === PartnerSubscriptionStatus.active &&
-          subscription.approved_at && !subscription.canceled_at
-      );
-      const plan = activeSubscription?.plan ?? profile.partner_subscriptions[0]?.plan;
+      const latestSubscription = profile.partner_subscriptions[0];
+      const plan = latestSubscription?.plan;
 
       return {
         id: profile.user_id,
@@ -103,6 +100,8 @@ export default async function handler(
         organizationCity: text(partnerProfile?.org_city),
         organizationState: text(partnerProfile?.org_state),
         plan: plan ? PARTNER_SUBSCRIPTION_PLANS[plan].label : "Free",
+        status: latestSubscription?.status ?? null,
+        subscriptionDate: latestSubscription?.created_at?.toISOString() ?? null,
         joinDate: (profile.created_at ?? new Date()).toISOString(),
         publishedEvents,
         pendingEvents,

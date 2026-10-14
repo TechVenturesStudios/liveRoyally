@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { clearDashboardContext } from "@/utils/dashboardContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [resetCode, setResetCode] = useState("");
@@ -24,6 +25,21 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const needsNewPassword = Boolean(challengeSession);
   const isPasswordUpdateMode = needsNewPassword || isResetCodeMode;
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const emailFromLink = params.get("email")?.trim();
+    const temporaryPasswordFromLink = params.get("temporaryPassword");
+
+    if (!emailFromLink && !temporaryPasswordFromLink) return;
+
+    if (emailFromLink) setEmail(emailFromLink);
+    if (temporaryPasswordFromLink) setPassword(temporaryPasswordFromLink);
+
+    // Remove credentials from the address bar and browser history after they
+    // have been copied into the controlled form fields.
+    navigate({ pathname: location.pathname, search: "", hash: location.hash }, { replace: true });
+  }, [location.hash, location.pathname, location.search, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

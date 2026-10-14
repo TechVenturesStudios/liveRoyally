@@ -25,6 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "PUT") return res.status(405).json({ error: "Method not allowed" });
   const account = await resolveDashboardAccount(req, ["partner"]);
   if (!account || "error" in account) return res.status(account && "error" in account ? account.status : 401).json({ error: account && "error" in account ? account.error : "Not authenticated" });
+  if (account.isRepresentative) return res.status(403).json({ error: "Authorized representatives cannot edit partner events" });
 
   try {
     const eventId = String(req.body?.eventId || "").trim();
@@ -32,13 +33,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const existing = await prisma.events.findFirst({ where: { event_id: eventId, partner_id: account.actingUserId } });
     if (!existing) return res.status(404).json({ error: "Event not found" });
 
+    const requestedMemberPrice = req.body?.memberPrice === undefined
+      ? existing.member_price
+      : String(req.body.memberPrice).trim() === ""
+        ? null
+        : Number(req.body.memberPrice);
+    if (requestedMemberPrice !== null && (!Number.isFinite(requestedMemberPrice) || requestedMemberPrice < 0)) {
+      return res.status(400).json({ error: "memberPrice must be a valid non-negative number" });
+    }
+    const memberPriceChanged = requestedMemberPrice !== existing.member_price;
+    if (memberPriceChanged) {
+      const squareConnection = await prisma.partner_square_connections.findUnique({
+        where: { user_id: account.actingUserId },
+        select: { user_id: true },
+      });
+      if (!squareConnection) {
+        return res.status(403).json({ error: "Connect your Square account on your profile before setting a member price for vouchers" });
+      }
+    }
+
     const next = {
       title: String(req.body?.title ?? existing.title ?? "").trim(),
       description: String(req.body?.description ?? existing.description ?? ""),
       location: String(req.body?.location ?? existing.location ?? "").trim(),
       event_time: String(req.body?.eventTime ?? existing.event_time ?? "").trim() || null,
       network_points: req.body?.networkPoints === undefined ? existing.network_points : Number(req.body.networkPoints) || 0,
-      member_price: req.body?.memberPrice === undefined ? existing.member_price : Number(req.body.memberPrice) || 0,
+      member_price: requestedMemberPrice,
       total_vouchers_available: req.body?.totalVouchersAvailable === undefined ? existing.total_vouchers_available : Number(req.body.totalVouchersAvailable) || null,
       response_deadline: req.body?.responseDeadline === undefined ? existing.response_deadline : parseDate(req.body.responseDeadline),
       start_date: req.body?.startDate === undefined ? existing.start_date : parseDate(req.body.startDate),

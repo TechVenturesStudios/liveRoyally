@@ -32,6 +32,15 @@ type LoginResponse =
       error: string;
     };
 
+function isDeclinedWithoutActiveSubscription(
+  subscriptions: Array<{ status: string | null }>
+) {
+  return (
+    !subscriptions.some((subscription) => subscription.status === "active") &&
+    subscriptions[0]?.status === "declined"
+  );
+}
+
 function isSecureRequest(req: NextApiRequest) {
   const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
   return forwardedProto === "https";
@@ -104,13 +113,13 @@ async function signInWithAuthResult(
   }
 
   if (user.user_type === "partner") {
-    const subscription = await prisma.partner_subscriptions.findFirst({
+    const subscriptions = await prisma.partner_subscriptions.findMany({
       where: { partner_id: user.user_id },
       orderBy: { created_at: "desc" },
       select: { status: true },
     });
 
-    if (subscription?.status === "declined") {
+    if (isDeclinedWithoutActiveSubscription(subscriptions)) {
       return res.status(403).json({
         error: "Your partner account application was declined.",
       });
@@ -175,15 +184,11 @@ export default async function handler(
       where: { email },
       select: {
         user_type: true,
-        partner_subscriptions: {
-          orderBy: { created_at: "desc" },
-          take: 1,
-          select: { status: true },
-        },
+        partner_subscriptions: { select: { status: true } },
       },
     });
 
-    if (partner?.user_type === "partner" && partner.partner_subscriptions[0]?.status === "declined") {
+    if (partner?.user_type === "partner" && isDeclinedWithoutActiveSubscription(partner.partner_subscriptions)) {
       return res.status(403).json({
         error: "Your partner account application was declined.",
       });

@@ -53,7 +53,13 @@ export async function queueTemporaryPasswordEmail(input: {
   temporaryPassword: string;
   userType?: string | null;
 }) {
-  const loginUrl = `${(process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "")}/login`;
+  const loginUrl = new URL(
+    "/login",
+    (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "")
+  );
+  loginUrl.searchParams.set("email", input.email.trim());
+  loginUrl.searchParams.set("temporaryPassword", input.temporaryPassword);
+  const loginLink = loginUrl.toString();
   const accountType = input.userType ? roleLabel(input.userType as Role) : "Local Metrics";
   const subject = "Your temporary Local Metrics login password";
   const preheader = "Use this temporary password to sign in and create your permanent password.";
@@ -62,11 +68,11 @@ export async function queueTemporaryPasswordEmail(input: {
     `Your ${accountType} account is ready. Use the details below to sign in:`, "",
     `Email: ${input.email}`,
     `Temporary password: ${input.temporaryPassword}`, "",
-    `Sign in: ${loginUrl}`, "",
+    `Sign in: ${loginLink}`, "",
     "You will be prompted to create a new password after signing in.", "",
     "The Local Metrics Team",
   ].join("\n");
-  const htmlBody = layout(preheader, `<p>Welcome to Local Metrics!</p><p>Your <strong>${escapeHtml(accountType)}</strong> account is ready. Use the details below to sign in:</p><p><strong>Email:</strong> ${escapeHtml(input.email)}<br /><strong>Temporary password:</strong> <code>${escapeHtml(input.temporaryPassword)}</code></p><p><a href="${escapeHtml(loginUrl)}">Sign in to Local Metrics</a></p><p>You will be prompted to create a new password after signing in.</p>`);
+  const htmlBody = layout(preheader, `<p>Welcome to Local Metrics!</p><p>Your <strong>${escapeHtml(accountType)}</strong> account is ready. Use the details below to sign in:</p><p><strong>Email:</strong> ${escapeHtml(input.email)}<br /><strong>Temporary password:</strong> <code>${escapeHtml(input.temporaryPassword)}</code></p><p><a href="${escapeHtml(loginLink)}">Sign in to Local Metrics</a></p><p>You will be prompted to create a new password after signing in.</p>`);
 
   return queueEmail({
     idempotencyKey: `temporary-password:${input.email.trim().toLowerCase()}`,

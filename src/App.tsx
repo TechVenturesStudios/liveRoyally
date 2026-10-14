@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { getUserFromStorage } from "@/utils/userStorage";
-import { getEffectiveDashboardType } from "@/utils/dashboardContext";
+import { getEffectiveDashboardType, getRepresentativeCapabilities, isAuthorizedRepresentativeView } from "@/utils/dashboardContext";
 import { UserType } from "@/types/user";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -66,6 +66,15 @@ const RoleRoute = ({ children, allowed }: { children: JSX.Element; allowed: User
   return children;
 };
 
+const RepresentativeRoute = ({ children, capability }: { children: JSX.Element; capability: "canCreateEvents" | "canRunReports" | "canScanVouchers" | "canManageInvites" }) => {
+  const user = getUserFromStorage();
+  if (!user) return <Navigate to="/login" replace />;
+  if (isAuthorizedRepresentativeView() && !getRepresentativeCapabilities()[capability]) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -85,7 +94,7 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           
           {/* Shared routes (all authenticated users) */}
-          <Route path="/dashboard/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/dashboard/profile" element={<ProtectedRoute>{isAuthorizedRepresentativeView() ? <Navigate to="/dashboard" replace /> : <ProfilePage />}</ProtectedRoute>} />
           <Route path="/dashboard/score" element={<ProtectedRoute><EngagementScorePage /></ProtectedRoute>} />
 
           {/* ── Member-only routes ── */}
@@ -98,21 +107,21 @@ const App = () => (
           {/* ── Provider-only routes ── */}
           <Route path="/dashboard/providers" element={<RoleRoute allowed={["provider"]}><ProvidersDashboard /></RoleRoute>} />
           <Route path="/dashboard/providers/crm" element={<RoleRoute allowed={["provider"]}><ProviderCRMDashboard /></RoleRoute>} />
-          <Route path="/dashboard/providers/events" element={<RoleRoute allowed={["provider"]}><ProviderEventsPage /></RoleRoute>} />
-          <Route path="/dashboard/pending-events" element={<RoleRoute allowed={["provider"]}><ProviderPendingEventsPage /></RoleRoute>} />
+          <Route path="/dashboard/providers/events" element={<RoleRoute allowed={["provider"]}><RepresentativeRoute capability="canManageInvites"><ProviderEventsPage /></RepresentativeRoute></RoleRoute>} />
+          <Route path="/dashboard/pending-events" element={<RoleRoute allowed={["provider"]}><RepresentativeRoute capability="canManageInvites"><ProviderPendingEventsPage /></RepresentativeRoute></RoleRoute>} />
           <Route path="/dashboard/upcoming-events" element={<RoleRoute allowed={["provider"]}><ProviderUpcomingEventsPage /></RoleRoute>} />
-          <Route path="/dashboard/providers/scan" element={<RoleRoute allowed={["provider"]}><ProviderScanQrPage /></RoleRoute>} />
-          <Route path="/dashboard/providers/representatives" element={<RoleRoute allowed={["provider"]}><ProviderRepresentativesPage /></RoleRoute>} />
+          <Route path="/dashboard/providers/scan" element={<RoleRoute allowed={["provider"]}><RepresentativeRoute capability="canScanVouchers"><ProviderScanQrPage /></RepresentativeRoute></RoleRoute>} />
+          <Route path="/dashboard/providers/representatives" element={<RoleRoute allowed={["provider"]}><RepresentativeRoute capability="canManageInvites"><ProviderRepresentativesPage /></RepresentativeRoute></RoleRoute>} />
 
           {/* ── Partner-only routes ── */}
-          <Route path="/dashboard/crm" element={<RoleRoute allowed={["partner"]}><PartnersDashboard /></RoleRoute>} />
-          <Route path="/dashboard/my-providers" element={<RoleRoute allowed={["partner"]}><PartnerProvidersPage /></RoleRoute>} />
-          <Route path="/dashboard/partner/representatives" element={<RoleRoute allowed={["partner"]}><ProviderRepresentativesPage ownerType="partner" /></RoleRoute>} />
-          <Route path="/dashboard/analytics" element={<RoleRoute allowed={["partner"]}><EventAnalyticsDashboard /></RoleRoute>} />
+          <Route path="/dashboard/crm" element={<RoleRoute allowed={["partner"]}><RepresentativeRoute capability="canManageInvites"><PartnersDashboard /></RepresentativeRoute></RoleRoute>} />
+          <Route path="/dashboard/my-providers" element={<RoleRoute allowed={["partner"]}><RepresentativeRoute capability="canManageInvites"><PartnerProvidersPage /></RepresentativeRoute></RoleRoute>} />
+          <Route path="/dashboard/partner/representatives" element={<RoleRoute allowed={["partner"]}><RepresentativeRoute capability="canManageInvites"><ProviderRepresentativesPage ownerType="partner" /></RepresentativeRoute></RoleRoute>} />
+          <Route path="/dashboard/analytics" element={<RoleRoute allowed={["partner"]}><RepresentativeRoute capability="canRunReports"><EventAnalyticsDashboard /></RepresentativeRoute></RoleRoute>} />
           <Route path="/dashboard/partners" element={<RoleRoute allowed={["partner"]}><PartnersDashboard /></RoleRoute>} />
           <Route path="/dashboard/partner-pending-events" element={<RoleRoute allowed={["partner"]}><PartnerPendingEventsPage /></RoleRoute>} />
           <Route path="/dashboard/published-events" element={<RoleRoute allowed={["partner"]}><PartnerPublishedEventsPage /></RoleRoute>} />
-          <Route path="/dashboard/create-event" element={<RoleRoute allowed={["partner"]}><PartnerCreateEventPage /></RoleRoute>} />
+          <Route path="/dashboard/create-event" element={<RoleRoute allowed={["partner"]}><RepresentativeRoute capability="canCreateEvents"><PartnerCreateEventPage /></RepresentativeRoute></RoleRoute>} />
 
           {/* ── Admin-only routes ── */}
           <Route path="/dashboard/admin" element={<RoleRoute allowed={["admin"]}><AdminDashboard /></RoleRoute>} />

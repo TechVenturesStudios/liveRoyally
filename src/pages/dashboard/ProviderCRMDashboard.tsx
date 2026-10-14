@@ -10,6 +10,7 @@ import { getUserFromStorage } from "@/utils/userStorage";
 import { fetchProviderDashboardEvents } from "@/api/providerDashboardEvents";
 import { fetchProviderPendingEvents } from "@/api/providerEvents";
 import { fetchAuthorizedRepresentatives } from "@/api/authorizedRepresentatives";
+import { isAuthorizedRepresentativeView } from "@/utils/dashboardContext";
 
 const isOnOrAfterToday = (dateString: string) => {
   if (!dateString) return false;
@@ -26,6 +27,7 @@ const ProviderCRMDashboard = () => {
   const [activeEvents, setActiveEvents] = useState(0);
   const [representatives, setRepresentatives] = useState(0);
   const [loading, setLoading] = useState(true);
+  const isRepView = isAuthorizedRepresentativeView();
 
   useEffect(() => {
     let isMounted = true;
@@ -33,6 +35,10 @@ const ProviderCRMDashboard = () => {
     const loadDashboard = async () => {
       try {
         setLoading(true);
+        if (isRepView) {
+          setLoading(false);
+          return;
+        }
         const user = getUserFromStorage();
         const [eventsResult, pendingResult, repsResult] = await Promise.allSettled([
           fetchProviderDashboardEvents(user?.cognitoId),
@@ -52,7 +58,7 @@ const ProviderCRMDashboard = () => {
             ? pendingResult.value.filter((event) => event.status === "pending").length
             : 0
         );
-        setRepresentatives(repsResult.status === "fulfilled" ? repsResult.value.representatives.length : 0);
+        setRepresentatives(isRepView ? 0 : repsResult.status === "fulfilled" ? repsResult.value.representatives.length : 0);
         setProviderCount(repsResult.status === "fulfilled" ? repsResult.value.networkMembers.length : 0);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to load provider CRM";
@@ -69,9 +75,24 @@ const ProviderCRMDashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, [toast]);
+  }, [isRepView, toast]);
 
-  const quickLinks = [
+  const quickLinks = isRepView ? [
+    {
+      title: "Reports",
+      description: "Review provider performance reports",
+      count: null,
+      icon: Medal,
+      action: () => navigate("/dashboard/score"),
+    },
+    {
+      title: "Scan Vouchers",
+      description: "Scan and validate member vouchers",
+      count: null,
+      icon: MessageSquare,
+      action: () => navigate("/dashboard/providers/scan"),
+    },
+  ] : [
     {
       title: "Events Management",
       description: "Review accepted upcoming and past events",
@@ -79,20 +100,20 @@ const ProviderCRMDashboard = () => {
       icon: Calendar,
       action: () => navigate("/dashboard/providers/events"),
     },
-    {
+    ...(!isRepView ? [{
       title: "Pending Approvals",
       description: "Handle unresponded event invitations",
       count: pendingEvents,
       icon: Clock,
       action: () => navigate("/dashboard/pending-events"),
-    },
-    {
+    }] : []),
+    ...(!isRepView ? [{
       title: "Representatives",
       description: "Manage authorized representatives",
       count: representatives,
       icon: Users,
       action: () => navigate("/dashboard/providers/representatives"),
-    },
+    }] : []),
     {
       title: "Engagement Score",
       description: "View your network activity score",
@@ -112,13 +133,13 @@ const ProviderCRMDashboard = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold royal-header">Provider CRM Dashboard</h1>
             <p className="text-muted-foreground text-xs sm:text-sm mt-1">
-              Overview of your providers, events, and authorized representatives.
+              {isRepView ? "Run reports and validate member vouchers for this provider." : "Overview of your providers, events, and authorized representatives."}
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-          <Card>
+          {!isRepView && <Card>
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -128,8 +149,8 @@ const ProviderCRMDashboard = () => {
                 <Calendar className="h-5 w-5 text-primary" />
               </div>
             </CardContent>
-          </Card>
-          <Card>
+          </Card>}
+          {!isRepView && <Card>
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -139,8 +160,8 @@ const ProviderCRMDashboard = () => {
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
             </CardContent>
-          </Card>
-          <Card>
+          </Card>}
+          {!isRepView && <Card>
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -150,8 +171,8 @@ const ProviderCRMDashboard = () => {
                 <Users className="h-5 w-5 text-primary" />
               </div>
             </CardContent>
-          </Card>
-          <Card>
+          </Card>}
+          {!isRepView && <Card>
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -161,7 +182,7 @@ const ProviderCRMDashboard = () => {
                 <MessageSquare className="h-5 w-5 text-green-600" />
               </div>
             </CardContent>
-          </Card>
+          </Card>}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

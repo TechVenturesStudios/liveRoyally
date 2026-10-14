@@ -24,6 +24,18 @@ const planColors: Record<string, string> = {
 };
 
 const planOrder: Record<string, number> = { Enterprise: 0, Growth: 1, Starter: 2, Free: 3 };
+const statusOrder: Record<string, number> = { active: 0, pending: 1, past_due: 2, declined: 3, canceled: 4, expired: 5 };
+
+const statusLabel = (status: PartnerEntry["status"]) => {
+  if (!status) return "No subscription";
+  return status === "canceled" ? "Cancelled" : status.replace("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
+const statusClassName = (status: PartnerEntry["status"]) => {
+  if (status === "active") return "bg-green-100 text-green-700";
+  if (status === "declined" || status === "canceled" || status === "expired") return "bg-red-100 text-red-700";
+  return "bg-amber-100 text-amber-700";
+};
 
 const AdminPartnersListPage = () => {
   const navigate = useNavigate();
@@ -68,7 +80,13 @@ const AdminPartnersListPage = () => {
   };
 
   const sortedPartners = useMemo(() => {
-    if (!sortKey) return partners;
+    if (!sortKey) {
+      return [...partners].sort((a, b) => {
+        const statusDiff = (statusOrder[a.status || ""] ?? 99) - (statusOrder[b.status || ""] ?? 99);
+        if (statusDiff !== 0) return statusDiff;
+        return (b.subscriptionDate || "").localeCompare(a.subscriptionDate || "");
+      });
+    }
     return [...partners].sort((a, b) => {
       if (sortKey === "plan") {
         const diff = planOrder[a.plan] - planOrder[b.plan];
@@ -102,10 +120,12 @@ const AdminPartnersListPage = () => {
     { label: "Phone", value: p.organizationPhone },
     { label: "Location", value: `${p.organizationCity}, ${p.organizationState}` },
     { label: "Plan", value: <Badge className={planColors[p.plan]}>{p.plan}</Badge> },
+    { label: "Subscription Status", value: <Badge className={statusClassName(p.status)}>{statusLabel(p.status)}</Badge> },
     { label: "Published Events", value: String(p.publishedEvents) },
     { label: "Pending Events", value: String(p.pendingEvents) },
     { label: "Total Providers", value: String(p.totalProviders) },
     { label: "Join Date", value: new Date(p.joinDate).toLocaleDateString() },
+    { label: "Subscription Date", value: p.subscriptionDate ? new Date(p.subscriptionDate).toLocaleDateString() : "—" },
   ];
 
   return (
@@ -147,7 +167,10 @@ const AdminPartnersListPage = () => {
                       <CardTitle className="text-base font-semibold truncate">{p.organizationName}</CardTitle>
                       <CardDescription className="mt-1">{p.organizationCategory}</CardDescription>
                     </div>
-                    <Badge className={`text-[10px] shrink-0 ${planColors[p.plan]}`}>{p.plan}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge className={`text-[10px] shrink-0 ${statusClassName(p.status)}`}>{statusLabel(p.status)}</Badge>
+                      <Badge className={`text-[10px] shrink-0 ${planColors[p.plan]}`}>{p.plan}</Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 space-y-3 text-sm">
@@ -207,6 +230,7 @@ const AdminPartnersListPage = () => {
                       <TableHead className="text-[11px] cursor-pointer select-none" onClick={() => handleSort("plan")}>
                         <span className="flex items-center">Plan <SortIcon column="plan" /></span>
                       </TableHead>
+                      <TableHead className="text-[11px]">Status</TableHead>
                       <TableHead className="text-[11px] cursor-pointer select-none" onClick={() => handleSort("agentFirstName")}>
                         <span className="flex items-center">Contact <SortIcon column="agentFirstName" /></span>
                       </TableHead>
@@ -237,6 +261,9 @@ const AdminPartnersListPage = () => {
                         <TableCell className="text-xs py-2">{p.organizationCategory}</TableCell>
                         <TableCell className="py-2">
                           <Badge className={`text-[10px] ${planColors[p.plan]}`}>{p.plan}</Badge>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Badge className={`text-[10px] ${statusClassName(p.status)}`}>{statusLabel(p.status)}</Badge>
                         </TableCell>
                         <TableCell className="text-xs py-2">{p.agentFirstName} {p.agentLastName}</TableCell>
                         <TableCell className="text-xs py-2">{p.organizationCity}, {p.organizationState}</TableCell>

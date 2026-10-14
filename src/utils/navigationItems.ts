@@ -185,13 +185,24 @@ const navigationItemsByType: NavItemsByUserType = {
   ]
 };
 
-export const getNavItems = (userType?: UserType): NavItem[] => {
+export const getNavItems = (userType?: UserType, isRepresentativeView = false): NavItem[] => {
   if (!userType) {
     return navigationItemsByType.common;
   }
   
-  return [
+  const items = [
     ...navigationItemsByType.common,
     ...navigationItemsByType[userType]
   ];
+
+  if (!isRepresentativeView) return items;
+  if (userType === "partner") {
+    return items.filter((item) => ["/dashboard/analytics", "/dashboard/create-event"].includes(item.path));
+  }
+  if (userType === "provider") {
+    return items
+      .filter((item) => ["/dashboard/score", "/dashboard/providers/scan"].includes(item.path))
+      .map((item) => item.path === "/dashboard/score" ? { ...item, name: "Reports", shortName: "Reports" } : item);
+  }
+  return [];
 };

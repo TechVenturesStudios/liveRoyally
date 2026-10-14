@@ -119,6 +119,7 @@ export default async function handler(
     if ("error" in account) {
       return res.status(account.status).json({ error: account.error });
     }
+    if (account.isRepresentative) return res.status(403).json({ error: "Authorized representatives cannot accept or decline event invites" });
 
     const body = req.body ?? {};
     const inviteId = String(body.inviteId ?? "").trim();

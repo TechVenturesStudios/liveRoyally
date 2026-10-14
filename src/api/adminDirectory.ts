@@ -11,6 +11,8 @@ export type AdminPartner = {
   organizationCity: string;
   organizationState: string;
   plan: string;
+  status: "pending" | "active" | "past_due" | "declined" | "canceled" | "expired" | null;
+  subscriptionDate: string | null;
   joinDate: string;
   publishedEvents: number;
   pendingEvents: number;

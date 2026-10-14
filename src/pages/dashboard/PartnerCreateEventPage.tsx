@@ -14,6 +14,7 @@ import { createEvent } from "@/api/events";
 import { fetchPartnerProviders, PartnerProvider } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
 import { getDashboardContext } from "@/utils/dashboardContext";
+import { fetchSquareConnection } from "@/api/square";
 
 const PartnerCreateEventPage = () => {
   const navigate = useNavigate();
@@ -40,6 +41,8 @@ const PartnerCreateEventPage = () => {
   const [providersLoading, setProvidersLoading] = useState(true);
   const [providersError, setProvidersError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [squareConnected, setSquareConnected] = useState(false);
+  const [squareConnectionLoading, setSquareConnectionLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -74,6 +77,25 @@ const PartnerCreateEventPage = () => {
       isMounted = false;
     };
   }, [toast]);
+
+  useEffect(() => {
+    let isMounted = true;
+    void fetchSquareConnection()
+      .then(({ connected }) => {
+        if (isMounted) setSquareConnected(connected);
+      })
+      .catch((error) => {
+        console.error("failed to load Square connection:", error);
+        if (isMounted) setSquareConnected(false);
+      })
+      .finally(() => {
+        if (isMounted) setSquareConnectionLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -283,8 +305,8 @@ const PartnerCreateEventPage = () => {
             <StepHeader step={2} icon={Tag} title="Member Pricing" description="Set the price members will pay for vouchers at this event" />
             <CardContent className="space-y-2">
               <Label htmlFor="memberPrice">Member Price ($) <span className="text-muted-foreground font-normal">(Optional)</span></Label>
-              <Input id="memberPrice" name="memberPrice" type="number" min="0" step="0.01" value={formData.memberPrice} onChange={handleChange} placeholder="Leave blank for free vouchers" />
-              <p className="text-xs text-muted-foreground">This price applies to every voucher providers create for this event. Leave blank to allow free vouchers.</p>
+              <Input id="memberPrice" name="memberPrice" type="number" min="0" step="0.01" value={formData.memberPrice} onChange={handleChange} placeholder="Leave blank for free vouchers" disabled={squareConnectionLoading || !squareConnected} />
+              <p className="text-xs text-muted-foreground">{squareConnected ? "This price applies to every voucher providers create for this event. Leave blank to allow free vouchers." : "Connect your Square account on your profile to enable member pricing for vouchers."}</p>
               <Label htmlFor="totalVouchersAvailable" className="pt-3">Total Vouchers Available per Provider <span className="text-muted-foreground font-normal">(Optional)</span></Label>
               <Input id="totalVouchersAvailable" name="totalVouchersAvailable" type="number" min="1" step="1" value={formData.totalVouchersAvailable} onChange={handleChange} placeholder="Leave blank for unlimited claims" />
               <p className="text-xs text-muted-foreground">Each provider’s voucher can be claimed by this many members. This is separate from the provider’s per-member redemption limit.</p>

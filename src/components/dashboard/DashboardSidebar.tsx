@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { fetchRepresentativeAssignments, type RepresentativeAssignment } from "@/api/authorizedRepresentatives";
-import { getDashboardContext, getEffectiveDashboardType, setDashboardContext } from "@/utils/dashboardContext";
+import { getDashboardContext, getEffectiveDashboardType, isAuthorizedRepresentativeView, setDashboardContext } from "@/utils/dashboardContext";
 
 interface DashboardSidebarProps {
   user: UserType;
@@ -31,7 +31,8 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
   const [assignments, setAssignments] = useState<RepresentativeAssignment[]>([]);
   const currentContext = getDashboardContext();
   const effectiveType = getEffectiveDashboardType(user?.userType as any, user?.cognitoId) || user?.userType;
-  const navItems = getNavItems(effectiveType as UserTypeEnum);
+  const isRepView = isAuthorizedRepresentativeView();
+  const navItems = getNavItems(effectiveType as UserTypeEnum, isRepView);
   const currentAssignment = assignments.find((assignment) => assignment.assignmentId === currentContext?.assignmentId);
 
   useEffect(() => {
@@ -90,7 +91,7 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
 
     navigate(
       assignment.representedUserType === "partner"
-        ? "/dashboard/crm"
+        ? "/dashboard/analytics"
         : assignment.representedUserType === "admin"
           ? "/dashboard/admin"
           : "/dashboard/providers"
@@ -118,7 +119,7 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
         <div className={`mb-2 flex items-center gap-3 py-3 ${collapsed ? "justify-center" : "px-3"}`}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              {!isRepView && <button
                 onClick={() => navigate("/dashboard/profile")}
                 className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${
                   location.pathname === "/dashboard/profile"
@@ -127,11 +128,11 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
                 }`}
               >
                 <User className="h-4 w-4" />
-              </button>
+              </button>}
             </TooltipTrigger>
             <TooltipContent side="right">Profile</TooltipContent>
           </Tooltip>
-          {!collapsed && (
+          {!collapsed && !isRepView && (
             <div className="overflow-hidden">
               <p className="text-sm font-semibold truncate">{user?.displayId || "User ID"}</p>
               <p className="text-xs text-gray-500 capitalize">

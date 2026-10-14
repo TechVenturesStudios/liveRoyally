@@ -8,6 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const account = await resolveDashboardAccount(req, ["partner"]);
   if (!account || "error" in account) return res.status(account && "error" in account ? account.status : 401).json({ error: account && "error" in account ? account.error : "Not authenticated" });
+  if (account.isRepresentative) return res.status(403).json({ error: "Authorized representatives cannot remove providers" });
   try {
     const providerId = String(req.body?.providerId || "").trim();
     const provider = await prisma.provider_profiles.findFirst({ where: { user_id: providerId, partner_id: account.actingUserId }, select: { user_id: true, business_email: true, users: { select: { email: true, first_name: true }, }, } });

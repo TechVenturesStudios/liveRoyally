@@ -18,6 +18,7 @@ import {
   getEffectiveDashboardType,
   getDashboardContext,
   setDashboardContext,
+  isAuthorizedRepresentativeView,
 } from "@/utils/dashboardContext";
 import { fetchRepresentativeAssignments, type RepresentativeAssignment } from "@/api/authorizedRepresentatives";
 
@@ -31,7 +32,8 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
   const [assignments, setAssignments] = useState<RepresentativeAssignment[]>([]);
   const currentContext = getDashboardContext();
   const effectiveType = getEffectiveDashboardType(user?.userType as any, user?.cognitoId) || user?.userType;
-  const navItems = getNavItems(effectiveType as UserTypeEnum);
+  const isRepView = isAuthorizedRepresentativeView();
+  const navItems = getNavItems(effectiveType as UserTypeEnum, isRepView);
   const currentAssignment = assignments.find((assignment) => assignment.assignmentId === currentContext?.assignmentId);
 
   useEffect(() => {
@@ -90,7 +92,7 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
 
     navigate(
       assignment.representedUserType === "partner"
-        ? "/dashboard/crm"
+        ? "/dashboard/analytics"
         : assignment.representedUserType === "admin"
           ? "/dashboard/admin"
           : "/dashboard/providers"
@@ -120,7 +122,7 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
 
           <ScrollArea className="flex-1">
             <div className="space-y-5 px-4 py-4">
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              {!isRepView && <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-purple/10 text-brand-purple">
                     <UserIcon className="h-5 w-5" />
@@ -132,7 +134,7 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
                     </p>
                   </div>
                 </div>
-              </div>
+              </div>}
 
               {assignments.length > 0 && (
                 <div className="space-y-2">

@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma";
 import { awardRewardTask } from "../../lib/rewards";
 import { getAppBaseUrl } from "../../lib/app-url";
 import { queueProviderInvitationEmail } from "../../lib/notification-templates";
+import { resolveDashboardAccount } from "../../lib/dashboard-account";
 
 type CreateEventResponse =
   | {
@@ -83,8 +84,15 @@ export default async function handler(
   }
 
   try {
+    const account = await resolveDashboardAccount(req, ["partner"]);
+    if (!account) return res.status(500).json({ error: "Failed to resolve account" });
+    if ("error" in account) return res.status(account.status).json({ error: account.error });
     const body = req.body ?? {};
-    const partnerId = String(body.partnerId ?? "").trim();
+    const partnerId = account.actingUserId;
+    const squareConnection = await prisma.partner_square_connections.findUnique({
+      where: { user_id: partnerId },
+      select: { user_id: true },
+    });
     const title = String(body.title ?? "").trim();
     const description = String(body.description ?? "");
     const location = String(body.location ?? "").trim();
@@ -98,6 +106,9 @@ export default async function handler(
     const responseDeadline = parseDate(body.responseDeadline, "responseDeadline");
     const networkPoints = parseNumber(body.networkPoints);
     const memberPrice = parseMemberPrice(body.memberPrice);
+    if (memberPrice !== null && !squareConnection) {
+      return res.status(403).json({ error: "Connect your Square account on your profile before setting a member price for vouchers" });
+    }
     const totalVouchersAvailable = parseVoucherAvailability(body.totalVouchersAvailable);
 
     if (!partnerId || !title || !startDate || !location || providerIds.length === 0) {

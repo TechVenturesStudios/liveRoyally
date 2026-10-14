@@ -22,6 +22,7 @@ export default async function handler(
     const account = await resolveDashboardAccount(req, ["partner"]);
     if (!account) return res.status(500).json({ error: "Failed to resolve account" });
     if ("error" in account) return res.status(account.status).json({ error: account.error });
+    if (account.isRepresentative) return res.status(403).json({ error: "Authorized representatives cannot publish events" });
 
     const eventId = String(req.body?.eventId ?? "").trim();
     if (!eventId) return res.status(400).json({ error: "eventId is required" });

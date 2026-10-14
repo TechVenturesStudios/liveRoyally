@@ -18,6 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       error: account && "error" in account ? account.error : "Not authenticated",
     });
   }
+  if (account.isRepresentative) return res.status(403).json({ error: "Authorized representatives cannot invite providers" });
 
   try {
     const body = req.body ?? {};

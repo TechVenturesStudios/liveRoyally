@@ -13,6 +13,7 @@ export type DashboardAccount = {
   actingNetworkCode: string | null;
   actingNetworkName: string | null;
   assignmentId: string | null;
+  isRepresentative: boolean;
 };
 
 type AccountLookupRow = {
@@ -82,6 +83,7 @@ export async function resolveDashboardAccount(
       currentUser.partner_profiles?.network_name ??
       null,
     assignmentId: null,
+    isRepresentative: false,
   };
 
   const assignmentId = String(req.query.actingAsAssignmentId || "").trim();
@@ -115,6 +117,7 @@ export async function resolveDashboardAccount(
         actingNetworkCode: selected.provider_network_code ?? selected.partner_network_code ?? null,
         actingNetworkName: selected.provider_network_name ?? selected.partner_network_name ?? null,
         assignmentId: selected.assignment_id,
+        isRepresentative: true,
       };
     }
   }

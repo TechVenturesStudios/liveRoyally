@@ -20,6 +20,7 @@ import { createEvent, publishEvent, updateEvent } from "@/api/events";
 import { fetchPartnerProviders, type PartnerProvider } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
 import { getDashboardContext } from "@/utils/dashboardContext";
+import { fetchSquareConnection } from "@/api/square";
 import { useToast } from "@/hooks/use-toast";
 import {
   CalendarDays,
@@ -157,6 +158,8 @@ const PartnersDashboard = () => {
   const [submittingEvent, setSubmittingEvent] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
   const [publishingEventId, setPublishingEventId] = useState<string | null>(null);
+  const [squareConnected, setSquareConnected] = useState(false);
+  const [squareConnectionLoading, setSquareConnectionLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -281,6 +284,25 @@ const PartnersDashboard = () => {
     };
 
     void loadPartnerProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    void fetchSquareConnection()
+      .then(({ connected }) => {
+        if (isMounted) setSquareConnected(connected);
+      })
+      .catch((error) => {
+        console.error("failed to load Square connection:", error);
+        if (isMounted) setSquareConnected(false);
+      })
+      .finally(() => {
+        if (isMounted) setSquareConnectionLoading(false);
+      });
 
     return () => {
       isMounted = false;
@@ -865,7 +887,7 @@ const sortedProviders = useMemo(() => {
                     <div className="space-y-2"><Label htmlFor="edit-event-location">Location *</Label><Input id="edit-event-location" name="location" value={editEventForm.location} onChange={handleEditEventChange} /></div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="space-y-2"><Label htmlFor="edit-event-points">Network Points</Label><Input id="edit-event-points" name="networkPoints" type="number" min="0" value={editEventForm.networkPoints} onChange={handleEditEventChange} /></div>
-                      <div className="space-y-2"><Label htmlFor="edit-event-price">Member Price ($)</Label><Input id="edit-event-price" name="memberPrice" type="number" min="0" step="0.01" value={editEventForm.memberPrice} onChange={handleEditEventChange} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-price">Member Price ($)</Label><Input id="edit-event-price" name="memberPrice" type="number" min="0" step="0.01" value={editEventForm.memberPrice} onChange={handleEditEventChange} disabled={squareConnectionLoading || !squareConnected} />{!squareConnected && <p className="text-xs text-muted-foreground">Connect your Square account on your profile to enable member pricing for vouchers.</p>}</div>
                       <div className="space-y-2"><Label htmlFor="edit-event-vouchers">Vouchers / Provider</Label><Input id="edit-event-vouchers" name="totalVouchersAvailable" type="number" min="1" value={editEventForm.totalVouchersAvailable} onChange={handleEditEventChange} /></div>
                     </div>
                   </div>
@@ -1007,8 +1029,9 @@ const sortedProviders = useMemo(() => {
                             value={createEventForm.memberPrice}
                             onChange={handleCreateEventChange}
                             placeholder="Leave blank for free vouchers"
+                            disabled={squareConnectionLoading || !squareConnected}
                           />
-                          <p className="text-xs text-muted-foreground">Applied to every voucher providers create for this event.</p>
+                          <p className="text-xs text-muted-foreground">{squareConnected ? "Applied to every voucher providers create for this event." : "Connect your Square account on your profile to enable member pricing for vouchers."}</p>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="create-event-voucher-availability">Total Vouchers Available per Provider <span className="font-normal text-muted-foreground">(Optional)</span></Label>

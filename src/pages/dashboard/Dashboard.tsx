@@ -10,7 +10,7 @@ import { fetchMemberNetworkVouchers, fetchMemberVouchers } from "@/api/memberVou
 import { fetchMemberPurchaseHistory } from "@/api/memberPurchases";
 import { isVoucherExpired } from "@/utils/memberVoucherFormatting";
 import { getUserFromStorage } from "@/utils/userStorage";
-import { getEffectiveDashboardType } from "@/utils/dashboardContext";
+import { getEffectiveDashboardType, isAuthorizedRepresentativeView } from "@/utils/dashboardContext";
 import MemberRepresentativeInvites from "@/components/dashboard/MemberRepresentativeInvites";
 import MemberReferralCard from "@/components/dashboard/MemberReferralCard";
 
@@ -90,7 +90,7 @@ const Dashboard = () => {
   // Each role gets redirected to their specific landing page
   switch (effectiveType) {
     case "partner":
-      return <Navigate to="/dashboard/crm" replace />;
+      return <Navigate to={isAuthorizedRepresentativeView() ? "/dashboard/analytics" : "/dashboard/crm"} replace />;
     case "admin":
       return <Navigate to="/dashboard/admin" replace />;
     case "provider":

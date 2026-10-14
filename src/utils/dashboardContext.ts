@@ -56,6 +56,28 @@ export const getEffectiveDashboardType = (
   return defaultType;
 };
 
+export const isAuthorizedRepresentativeView = () => {
+  const context = getDashboardContext();
+  return context?.mode === "rep" && Boolean(context.assignmentId) && Boolean(context.targetType);
+};
+
+export const getRepresentativeCapabilities = () => {
+  const context = getDashboardContext();
+  if (!isAuthorizedRepresentativeView()) {
+    return { canCreateEvents: true, canRunReports: true, canScanVouchers: true, canManageInvites: true };
+  }
+
+  if (context?.targetType === "partner") {
+    return { canCreateEvents: true, canRunReports: true, canScanVouchers: false, canManageInvites: false };
+  }
+
+  if (context?.targetType === "provider") {
+    return { canCreateEvents: false, canRunReports: true, canScanVouchers: true, canManageInvites: false };
+  }
+
+  return { canCreateEvents: false, canRunReports: false, canScanVouchers: false, canManageInvites: false };
+};
+
 export const buildDashboardQuery = (cognitoId?: string) => {
   const params = new URLSearchParams();
 
