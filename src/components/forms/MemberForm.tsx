@@ -43,6 +43,7 @@ const getSixteenYearsAgo = () => {
 
 const MemberForm = () => {
   const navigate = useNavigate();
+  const [submitError, setSubmitError] = useState("");
   const [formData, setFormData] = useState<Partial<MemberUser>>({
     networkName: "",
     networkCode: "",
@@ -114,28 +115,31 @@ const MemberForm = () => {
 
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError("");
     if (!formData.birthday || formData.birthday > getSixteenYearsAgo()) {
       window.alert("You must be at least 16 years old to create an account.");
       return;
     }
-    const data1 = await createCognitoUser({
-      email: formData.email,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      phoneNumber: formData.phoneNumber,
-      birthday: formData.birthday,
-      userType: USER_TYPES.member,
-    });
+    try {
+      const data1 = await createCognitoUser({
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber,
+        birthday: formData.birthday,
+        userType: USER_TYPES.member,
+      });
 
-    const cognitoSub = data1.cognitoSub;
-
-    await registerMember({
-      cognitoSub,
-      ...formData,
-      referralToken: new URLSearchParams(window.location.search).get("referral") || undefined,
-      userType: USER_TYPES.member,
-    });
-    navigate("/dashboard");
+      await registerMember({
+        cognitoSub: data1.cognitoSub,
+        ...formData,
+        referralToken: new URLSearchParams(window.location.search).get("referral") || undefined,
+        userType: USER_TYPES.member,
+      });
+      navigate("/dashboard");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Failed to create account");
+    }
   };
 
   return (
@@ -288,6 +292,10 @@ const MemberForm = () => {
           />
         </div>
         
+        {submitError && (
+          <p className="text-sm text-destructive text-center" role="alert">{submitError}</p>
+        )}
+
         <div className="flex justify-end gap-4 pt-4">
           <Button type="button" variant="outline" onClick={() => navigate("/")} className="border-royal text-royal px-6">
             Cancel

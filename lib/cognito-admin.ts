@@ -19,6 +19,15 @@ type CreateCognitoUserArgs = {
   userType?: string | null;
 };
 
+export class CognitoUserAlreadyExistsError extends Error {
+  statusCode = 409;
+
+  constructor() {
+    super("An account already exists with that email");
+    this.name = "CognitoUserAlreadyExistsError";
+  }
+}
+
 function getUserPoolId() {
   const userPoolId = process.env.COGNITO_USER_POOL_ID;
 
@@ -95,6 +104,8 @@ export async function createOrGetCognitoUser(args: CreateCognitoUserArgs) {
     if (!(error instanceof Error) || error.name !== "UsernameExistsException") {
       throw error;
     }
+
+    throw new CognitoUserAlreadyExistsError();
   }
 
   const cognitoSub = await getSub(cognito, userPoolId, username);

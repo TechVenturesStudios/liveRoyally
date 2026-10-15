@@ -49,6 +49,18 @@ export default async function handler(
     const displayId = `P-${randomInt(100000000, 999999999)}`;
 
     const result = await prisma.$transaction(async (tx) => {
+      const normalizedEmail = String(body.businessEmail || "").toLowerCase().trim();
+      const existingUser = await tx.users.findFirst({
+        where: { OR: [{ email: normalizedEmail }, { cognito_id: String(cognitoId) }] },
+        select: { user_id: true },
+      });
+
+      if (existingUser) {
+        const error = new Error("An account already exists with that email") as Error & { statusCode?: number };
+        error.statusCode = 409;
+        throw error;
+      }
+
       const partner = await tx.partner_profiles.findFirst({
         where: partnerCode
           ? { partner_code: partnerCode }
@@ -115,7 +127,7 @@ export default async function handler(
       const user = await tx.users.create({
         data: {
           cognito_id: String(cognitoId),
-          email: String(body.businessEmail || "").toLowerCase().trim(),
+          email: normalizedEmail,
           first_name: body.agentFirstName || null,
           last_name: body.agentLastName || null,
           phone_number: body.agentPhone || null,

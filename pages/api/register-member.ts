@@ -59,6 +59,18 @@ export default async function handler(
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      const normalizedEmail = String(body.email || "").toLowerCase().trim();
+      const existingUser = await tx.users.findFirst({
+        where: { OR: [{ email: normalizedEmail }, { cognito_id: String(body.cognitoSub) }] },
+        select: { user_id: true },
+      });
+
+      if (existingUser) {
+        const error = new Error("An account already exists with that email") as Error & { statusCode?: number };
+        error.statusCode = 409;
+        throw error;
+      }
+
       const network =
         zipCode.length === 5
           ? await tx.network_codes.findUnique({
@@ -70,7 +82,7 @@ export default async function handler(
       const user = await tx.users.create({
         data: {
           cognito_id: String(body.cognitoSub),
-          email: String(body.email || "").toLowerCase().trim(),
+          email: normalizedEmail,
           first_name: body.firstName || null,
           last_name: body.lastName || null,
           phone_number: body.phoneNumber || null,
@@ -148,8 +160,11 @@ export default async function handler(
       displayId,
     });
   } catch (error) {
+    const statusCode = error instanceof Error
+      ? (error as Error & { statusCode?: number }).statusCode
+      : undefined;
     console.error(error);
-    return res.status(500).json({
+    return res.status(statusCode ?? 500).json({
       error: error instanceof Error ? error.message : "Failed to register member in DB",
     });
   }

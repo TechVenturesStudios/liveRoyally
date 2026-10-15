@@ -81,48 +81,23 @@ export default async function handler(
       return res.status(400).json({ error: "organizationEmail is required" });
     }
 
-    // Registration requests can be retried by the browser or a reverse proxy.
-    // Reuse an existing live application instead of creating another Square
-    // customer/card or resetting an already-created subscription.
-    const existingPartner = await prisma.users.findUnique({
+    const existingUserByEmail = await prisma.users.findUnique({
       where: { email },
-      select: {
-        user_id: true,
-        user_type: true,
-        display_id: true,
-        partner_profiles: { select: { partner_code: true } },
-        partner_subscriptions: {
-          orderBy: { created_at: "desc" },
-          take: 1,
-          select: {
-            subscription_id: true,
-            status: true,
-            billing_provider_customer_id: true,
-            billing_provider_card_id: true,
-          },
-        },
-      },
+      select: { user_id: true },
     });
 
-    const existingSubscription = existingPartner?.partner_subscriptions[0];
-    const isLiveSubscription =
-      existingSubscription &&
-      (existingSubscription.status === PartnerSubscriptionStatus.pending ||
-        existingSubscription.status === PartnerSubscriptionStatus.active ||
-        existingSubscription.status === PartnerSubscriptionStatus.past_due);
-
-    if (existingPartner?.user_type === UserType.partner && existingSubscription && isLiveSubscription) {
-      return res.status(200).json({
-        message: "Partner registration already exists",
-        userId: existingPartner.user_id,
-        displayId: existingPartner.display_id || "",
-        partnerCode: existingPartner.partner_profiles?.partner_code || "",
-        subscriptionId: existingSubscription.subscription_id,
-        squareCustomerId: existingSubscription.billing_provider_customer_id,
-        squareCardId: existingSubscription.billing_provider_card_id,
-        subscriptionStatus: existingSubscription.status,
-      });
+    if (existingUserByEmail) {
+      return res.status(409).json({ error: "An account already exists with that email" });
     }
+
+    // Reject an existing Cognito account before creating any Square resources.
+    const cognitoUser = await createOrGetCognitoUser({
+      email,
+      firstName: body.agentFirstName,
+      lastName: body.agentLastName,
+      phoneNumber: body.agentPhone,
+      userType: "partner",
+    });
 
     const displayId = `PT-${randomInt(100000000, 999999999)}`;
     const partnerCode = `PTR-${randomInt(100000, 999999)}`;
@@ -163,14 +138,6 @@ export default async function handler(
       createdCardId = squareCardId;
     }
 
-    const cognitoUser = await createOrGetCognitoUser({
-      email,
-      firstName: body.agentFirstName,
-      lastName: body.agentLastName,
-      phoneNumber: body.agentPhone,
-      userType: "partner",
-    });
-
     const organizationZip = normalizeZip(body.organizationZip);
     const network =
       organizationZip.length === 5
@@ -199,25 +166,18 @@ export default async function handler(
     };
 
     const result = await prisma.$transaction(async (tx) => {
-      const existingUser = await tx.users.findUnique({
-        where: { cognito_id: cognitoUser.cognitoSub },
-        select: { user_id: true, display_id: true },
+      const existingUser = await tx.users.findFirst({
+        where: { OR: [{ email }, { cognito_id: cognitoUser.cognitoSub }] },
+        select: { user_id: true },
       });
 
-      const user = existingUser
-        ? await tx.users.update({
-            where: { user_id: existingUser.user_id },
-            data: {
-              email,
-              first_name: optionalString(body.agentFirstName),
-              last_name: optionalString(body.agentLastName),
-              phone_number: optionalString(body.agentPhone),
-              user_type: UserType.partner,
-              display_id: existingUser.display_id || displayId,
-            },
-            select: { user_id: true, display_id: true },
-          })
-        : await tx.users.create({
+      if (existingUser) {
+        const error = new Error("An account already exists with that email") as Error & { statusCode?: number };
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const user = await tx.users.create({
             data: {
               cognito_id: cognitoUser.cognitoSub,
               email,
@@ -257,14 +217,11 @@ export default async function handler(
         select: { partner_code: true },
       });
 
-      if (!existingUser) {
-        await awardRewardTask(tx, {
-          userId: user.user_id,
-          taskKey: "partner_create_organization_profile",
-          description: "Organization profile created",
-        });
-
-      }
+      await awardRewardTask(tx, {
+        userId: user.user_id,
+        taskKey: "partner_create_organization_profile",
+        description: "Organization profile created",
+      });
 
       const subscriptionData = {
         plan: selectedPlan as PartnerSubscriptionPlan,
@@ -304,7 +261,7 @@ export default async function handler(
 
       return {
         user,
-        created: !existingUser,
+        created: true,
         partnerCode: partnerProfile.partner_code || partnerCode,
         subscription,
       };
@@ -329,8 +286,11 @@ export default async function handler(
       }
     }
 
+    const statusCode = error instanceof Error
+      ? (error as Error & { statusCode?: number }).statusCode
+      : undefined;
     console.error(error);
-    return res.status(500).json({
+    return res.status(statusCode ?? 500).json({
       error: error instanceof Error ? error.message : "Failed to register partner",
     });
   }

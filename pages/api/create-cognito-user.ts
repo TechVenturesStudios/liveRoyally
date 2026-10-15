@@ -74,7 +74,10 @@ export default async function handler(
     return res.status(200).json({ cognitoSub, username });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
+    const statusCode = error instanceof Error && "statusCode" in error
+      ? Number((error as Error & { statusCode?: number }).statusCode) || 500
+      : 500;
+    return res.status(statusCode).json({
       error: mapCognitoError(error),
     });
   }

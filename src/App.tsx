@@ -114,7 +114,7 @@ const App = () => (
           <Route path="/dashboard/providers/representatives" element={<RoleRoute allowed={["provider"]}><RepresentativeRoute capability="canManageInvites"><ProviderRepresentativesPage /></RepresentativeRoute></RoleRoute>} />
 
           {/* ── Partner-only routes ── */}
-          <Route path="/dashboard/crm" element={<RoleRoute allowed={["partner"]}><RepresentativeRoute capability="canManageInvites"><PartnersDashboard /></RepresentativeRoute></RoleRoute>} />
+          <Route path="/dashboard/crm" element={<RoleRoute allowed={["partner"]}><RepresentativeRoute capability="canRunReports"><PartnersDashboard /></RepresentativeRoute></RoleRoute>} />
           <Route path="/dashboard/my-providers" element={<RoleRoute allowed={["partner"]}><RepresentativeRoute capability="canManageInvites"><PartnerProvidersPage /></RepresentativeRoute></RoleRoute>} />
           <Route path="/dashboard/partner/representatives" element={<RoleRoute allowed={["partner"]}><RepresentativeRoute capability="canManageInvites"><ProviderRepresentativesPage ownerType="partner" /></RepresentativeRoute></RoleRoute>} />
           <Route path="/dashboard/analytics" element={<RoleRoute allowed={["partner"]}><RepresentativeRoute capability="canRunReports"><EventAnalyticsDashboard /></RepresentativeRoute></RoleRoute>} />
