@@ -1,7 +1,14 @@
 import type { NextApiRequest } from "next";
 
 function cleanBaseUrl(value: string) {
-  return value.trim().replace(/\/+$/, "");
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return "";
+
+  const withProtocol = /^https?:\/\//i.test(trimmedValue)
+    ? trimmedValue
+    : `https://${trimmedValue}`;
+
+  return withProtocol.replace(/\/+$/, "");
 }
 
 export function getAppBaseUrl(req?: NextApiRequest) {

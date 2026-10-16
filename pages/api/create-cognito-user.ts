@@ -48,6 +48,10 @@ export default async function handler(
       return res.status(400).json({ error: "email is required" });
     }
 
+    if (!String(body.phoneNumber || "").trim()) {
+      return res.status(400).json({ error: "phoneNumber is required" });
+    }
+
     // Only members provide a birthday and are subject to the member age rule.
     // Providers and partners register business/organization accounts and do not
     // need to provide a birthday.

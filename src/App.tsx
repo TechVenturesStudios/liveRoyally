@@ -10,6 +10,7 @@ import { UserType } from "@/types/user";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import PartnerRegistrationSuccess from "./pages/PartnerRegistrationSuccess";
 import Dashboard from "./pages/dashboard/Dashboard";
 import VoucherPage from "./pages/dashboard/VoucherPage";
 import ScanVoucher from "./pages/dashboard/ScanVoucher";
@@ -87,6 +88,7 @@ const App = () => (
           <Route path="/demo" element={<Demo />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/registration-success/:userType" element={<PartnerRegistrationSuccess />} />
           <Route path="/waitlist" element={<Waitlist />} />
           <Route path="/join-network" element={<ProviderNetworkFinder />} />
           

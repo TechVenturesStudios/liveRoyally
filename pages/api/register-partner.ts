@@ -75,6 +75,10 @@ export default async function handler(
       return res.status(400).json({ error: "paymentToken is required" });
     }
 
+    if (!String(body.agentPhone || "").trim() || !String(body.organizationPhone || "").trim()) {
+      return res.status(400).json({ error: "agentPhone and organizationPhone are required" });
+    }
+
     const email = String(body.organizationEmail || "").toLowerCase().trim();
 
     if (!email) {

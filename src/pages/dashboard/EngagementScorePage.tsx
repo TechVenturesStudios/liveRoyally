@@ -83,17 +83,6 @@ function getTierProgressPercent(data: EngagementAnalyticsResponse) {
   return Math.max(0, Math.min(100, Math.round(progress)));
 }
 
-const PARTNER_PROGRESS_PLACEHOLDERS = [
-  {
-    icon: Ticket,
-    iconBg: "bg-fuchsia-50",
-    iconColor: "text-fuchsia-600",
-    title: "Voucher Redemption Status",
-    current: 41,
-    goal: 58,
-  },
-] as const;
-
 const PROVIDER_VOUCHER_HONORED_METRIC = {
   icon: Ticket,
   iconBg: "bg-primary/10",
@@ -597,17 +586,14 @@ const EngagementScorePage = () => {
                         currentProviders={analytics.partnerProviderCapacity?.currentProviders ?? analytics.partnerProviders.length}
                         maxProviders={analytics.partnerProviderCapacity?.maxProviders ?? null}
                       />
-                      {PARTNER_PROGRESS_PLACEHOLDERS.map((metric) => (
-                        <ProgressMetric
-                          key={metric.title}
-                          icon={metric.icon}
-                          iconBg={metric.iconBg}
-                          iconColor={metric.iconColor}
-                          title={metric.title}
-                          current={metric.current}
-                          goal={metric.goal}
-                        />
-                      ))}
+                      <ProgressMetric
+                        icon={Ticket}
+                        iconBg="bg-fuchsia-50"
+                        iconColor="text-fuchsia-600"
+                        title="Voucher Redemption Status"
+                        current={analytics.partnerVoucherRedemption.redeemed}
+                        goal={analytics.partnerVoucherRedemption.claimed}
+                      />
                       <div className="pt-1">
                         <StreakDisplay
                           weeks={analytics.streak.currentWeeks}

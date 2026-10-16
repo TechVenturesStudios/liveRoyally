@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { createCognitoUser } from "@/api/cognito";
 import { registerMember } from "@/api/registration";
+import { Loader2 } from "lucide-react";
 
 const ETHNICITY_OPTIONS = [
   { label: "Black or African American", value: "black" },
@@ -43,6 +44,7 @@ const getSixteenYearsAgo = () => {
 
 const MemberForm = () => {
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [formData, setFormData] = useState<Partial<MemberUser>>({
     networkName: "",
@@ -120,6 +122,8 @@ const MemberForm = () => {
       window.alert("You must be at least 16 years old to create an account.");
       return;
     }
+
+    setIsSubmitting(true);
     try {
       const data1 = await createCognitoUser({
         email: formData.email,
@@ -136,9 +140,11 @@ const MemberForm = () => {
         referralToken: new URLSearchParams(window.location.search).get("referral") || undefined,
         userType: USER_TYPES.member,
       });
-      navigate("/dashboard");
+      navigate("/registration-success/member", { replace: true });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Failed to create account");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -184,6 +190,7 @@ const MemberForm = () => {
               name="phoneNumber"
               type="tel"
               placeholder="Enter your phone number"
+              required
               value={formData.phoneNumber}
               onChange={handleInputChange}
             />
@@ -300,8 +307,9 @@ const MemberForm = () => {
           <Button type="button" variant="outline" onClick={() => navigate("/")} className="border-royal text-royal px-6">
             Cancel
           </Button>
-          <Button type="submit" className="bg-royal hover:bg-royal-dark text-white px-8">
-            Create Account
+          <Button type="submit" disabled={isSubmitting} className="bg-royal hover:bg-royal-dark text-white px-8">
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSubmitting ? "Creating Account..." : "Create Account"}
           </Button>
         </div>
       </form>

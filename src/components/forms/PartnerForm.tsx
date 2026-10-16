@@ -7,7 +7,7 @@ import { PartnerUser } from "@/types/user";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Check, ArrowLeft } from "lucide-react";
+import { Check, ArrowLeft, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { registerPartner } from "@/api/registration";
 import { PARTNER_SUBSCRIPTION_PLAN_LIST } from "@/config/subscriptionPlans";
@@ -128,7 +128,7 @@ const PartnerForm = () => {
 
       await registerPartner(payload);
 
-      navigate("/dashboard");
+      navigate("/registration-success/partner", { replace: true });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Failed to create partner account");
     } finally {
@@ -236,6 +236,7 @@ const PartnerForm = () => {
               disabled={isSubmitting}
               className="w-full bg-royal hover:bg-royal-dark text-white h-12 text-base font-semibold gap-2"
             >
+              {isSubmitting && <Loader2 className="h-5 w-5 animate-spin" />}
               {isSubmitting ? "Submitting..." : "Submit Free Application"}
             </Button>
 

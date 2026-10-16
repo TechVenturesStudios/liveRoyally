@@ -46,14 +46,14 @@ const Index = () => {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Button 
-              className="bg-white hover:bg-white/90 text-brand-purple font-bold text-lg px-8 py-6"
+              className="w-full sm:w-56 h-14 min-h-14 border-2 border-transparent bg-white hover:bg-white/90 text-brand-purple font-bold text-lg px-8 py-0"
               onClick={() => navigate("/register")}
             >
               Join Your Community
             </Button>
             <Button 
               variant="outline" 
-              className="bg-white hover:bg-white/90 text-brand-purple font-bold border-2 border-white text-lg px-8 py-6"
+              className="w-full sm:w-56 h-14 min-h-14 border-2 border-white bg-white hover:bg-white/90 text-brand-purple font-bold text-lg px-8 py-0"
               onClick={() => navigate("/login")}
             >
               Sign In

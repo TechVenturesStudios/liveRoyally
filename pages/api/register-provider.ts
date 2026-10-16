@@ -42,6 +42,10 @@ export default async function handler(
       return res.status(400).json({ error: "cognitoSub is required" });
     }
 
+    if (!String(body.agentPhone || "").trim() || !String(body.businessPhone || "").trim()) {
+      return res.status(400).json({ error: "agentPhone and businessPhone are required" });
+    }
+
     if (!partnerCode && !partnerId) {
       return res.status(400).json({ error: "partnerCode or partnerId is required" });
     }

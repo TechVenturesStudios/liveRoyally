@@ -69,6 +69,10 @@ type EngagementAnalyticsResponse =
       memberActiveNetworkCount: number;
       providerHostedCompletedEvents: number;
       providerVoucherHonoredCount: number;
+      partnerVoucherRedemption: {
+        redeemed: number;
+        claimed: number;
+      };
     }
   | {
       error: string;
@@ -174,6 +178,7 @@ export default async function handler(
       memberActiveNetworkCount,
       providerHostedEvents,
       providerVoucherHonoredCount,
+      partnerVoucherRedemption,
     ] = await Promise.all([
       prisma.reward_accounts.findFirst({
         where: {
@@ -338,6 +343,30 @@ export default async function handler(
               AND p.purchase_date < ${new Date(year + 1, 0, 1)};
           `
         : Promise.resolve([{ count: 0 }]),
+      isPartner
+        ? prisma.$queryRaw<Array<{ redeemed: number; claimed: number }>>`
+            SELECT
+              (
+                SELECT COUNT(*)::int
+                FROM purchases p
+                INNER JOIN vouchers v ON v.voucher_id = p.voucher_id
+                INNER JOIN provider_profiles pp ON pp.user_id = v.provider_id
+                WHERE pp.partner_id = ${account.actingUserId}::uuid
+                  AND LOWER(TRIM(COALESCE(p.status, ''))) IN ('used', 'redeemed', 'completed')
+                  AND p.purchase_date >= ${new Date(year, 0, 1)}
+                  AND p.purchase_date < ${new Date(year + 1, 0, 1)}
+              ) AS redeemed,
+              (
+                SELECT COUNT(*)::int
+                FROM member_vouchers mv
+                INNER JOIN vouchers v ON v.voucher_id = mv.voucher_id
+                INNER JOIN provider_profiles pp ON pp.user_id = v.provider_id
+                WHERE pp.partner_id = ${account.actingUserId}::uuid
+                  AND mv.created_at >= ${new Date(year, 0, 1)}
+                  AND mv.created_at < ${new Date(year + 1, 0, 1)}
+              ) AS claimed;
+          `
+        : Promise.resolve([{ redeemed: 0, claimed: 0 }]),
     ]);
 
     const sortedTiers = [...tiers];
@@ -528,6 +557,7 @@ export default async function handler(
     const memberVoucherRedeemedTotal = memberVoucherRedeemedCount[0]?.count ?? 0;
     const memberActiveNetworkTotal = memberActiveNetworkCount[0]?.count ?? 0;
     const providerVoucherHonoredTotal = providerVoucherHonoredCount[0]?.count ?? 0;
+    const partnerVoucherRedemptionTotal = partnerVoucherRedemption[0] ?? { redeemed: 0, claimed: 0 };
 
     return res.status(200).json({
       year,
@@ -559,6 +589,7 @@ export default async function handler(
       memberActiveNetworkCount: memberActiveNetworkTotal,
       providerHostedCompletedEvents,
       providerVoucherHonoredCount: providerVoucherHonoredTotal,
+      partnerVoucherRedemption: partnerVoucherRedemptionTotal,
     });
   } catch (error) {
     console.error("engagement-analytics error:", error);

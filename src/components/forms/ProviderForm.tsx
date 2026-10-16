@@ -29,6 +29,7 @@ const ProviderForm = () => {
   const [partnerLookupStatus, setPartnerLookupStatus] = useState<"idle" | "loading" | "found" | "not_found">("idle");
   const [partnerInfo, setPartnerInfo] = useState<{ id: string; name: string; networkName: string; networkCode: string } | null>(null);
   const [cameFromInvite, setCameFromInvite] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const [formData, setFormData] = useState<Partial<ProviderUser>>({
@@ -121,6 +122,7 @@ const ProviderForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError("");
+    setIsSubmitting(true);
 
     try {
       const data1 = await createCognitoUser({
@@ -138,9 +140,11 @@ const ProviderForm = () => {
         ...formData,
         userType: USER_TYPES.provider,
       });
-      navigate("/dashboard");
+      navigate("/registration-success/provider", { replace: true });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Failed to create provider account");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -308,9 +312,10 @@ const ProviderForm = () => {
           <Button
             type="submit"
             className="bg-royal hover:bg-royal-dark text-white px-8"
-            disabled={partnerLookupStatus !== "found"}
+            disabled={partnerLookupStatus !== "found" || isSubmitting}
           >
-            Create Account
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSubmitting ? "Creating Account..." : "Create Account"}
           </Button>
         </div>
       </form>

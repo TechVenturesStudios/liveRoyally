@@ -64,6 +64,10 @@ export type EngagementAnalyticsResponse = {
   memberActiveNetworkCount: number;
   providerHostedCompletedEvents: number;
   providerVoucherHonoredCount: number;
+  partnerVoucherRedemption: {
+    redeemed: number;
+    claimed: number;
+  };
 };
 
 async function readJsonOrThrow(response: Response, fallbackMessage: string) {

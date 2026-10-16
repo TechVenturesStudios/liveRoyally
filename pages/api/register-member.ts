@@ -50,6 +50,10 @@ export default async function handler(
       return res.status(400).json({ error: "cognitoSub is required" });
     }
 
+    if (!String(body.phoneNumber || "").trim()) {
+      return res.status(400).json({ error: "phoneNumber is required" });
+    }
+
     const displayId = `M-${randomInt(100000000, 999999999)}`;
     const zipCode = normalizeZip(body.zipCode);
     const birthday = parseEligibleBirthday(body.birthday);
