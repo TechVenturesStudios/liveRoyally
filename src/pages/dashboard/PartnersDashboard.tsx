@@ -22,6 +22,7 @@ import { getUserFromStorage } from "@/utils/userStorage";
 import { getDashboardContext } from "@/utils/dashboardContext";
 import { fetchSquareConnection } from "@/api/square";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import {
   CalendarDays,
   Calendar,
@@ -29,7 +30,6 @@ import {
   ArrowUpDown,
   PlusCircle,
   Medal,
-  UserPlus,
   BarChart3,
   ChevronUp,
   ChevronDown,
@@ -93,7 +93,6 @@ type EventEditForm = {
   endDate: string;
   time: string;
   location: string;
-  networkPoints: string;
   memberPrice: string;
   totalVouchersAvailable: string;
   deadline: string;
@@ -127,12 +126,11 @@ const PartnersDashboard = () => {
   const [contacts, setContacts] = useState<RepresentativeContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [showAddContact, setShowAddContact] = useState(false);
   const [showCreateEventDialog, setShowCreateEventDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<DashboardEventRow | null>(null);
   const [editEventForm, setEditEventForm] = useState<EventEditForm>({
     title: "", description: "", date: "", endDate: "", time: "", location: "",
-    networkPoints: "", memberPrice: "", totalVouchersAvailable: "", deadline: "",
+    memberPrice: "", totalVouchersAvailable: "", deadline: "",
   });
   const [rewardPoints, setRewardPoints] = useState(0);
   const [eventsCreatedCount, setEventsCreatedCount] = useState(0);
@@ -143,7 +141,6 @@ const PartnersDashboard = () => {
     endDate: "",
     time: "",
     location: "",
-    networkPoints: "",
     memberPrice: "",
     totalVouchersAvailable: "",
     deadline: "",
@@ -161,6 +158,7 @@ const PartnersDashboard = () => {
   const [squareConnected, setSquareConnected] = useState(false);
   const [squareConnectionLoading, setSquareConnectionLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
@@ -454,7 +452,6 @@ const sortedProviders = useMemo(() => {
         endDate: createEventForm.endDate,
         location: createEventForm.location,
         eventTime: createEventForm.time,
-        networkPoints: createEventForm.networkPoints,
         memberPrice: createEventForm.memberPrice,
         totalVouchersAvailable: createEventForm.totalVouchersAvailable,
         responseDeadline: createEventForm.deadline,
@@ -477,7 +474,6 @@ const sortedProviders = useMemo(() => {
         endDate: "",
         time: "",
         location: "",
-        networkPoints: "",
         memberPrice: "",
         totalVouchersAvailable: "",
         deadline: "",
@@ -502,7 +498,6 @@ const sortedProviders = useMemo(() => {
       endDate: "",
       time: "",
       location: "",
-      networkPoints: "",
       memberPrice: "",
       totalVouchersAvailable: "",
       deadline: "",
@@ -530,7 +525,6 @@ const sortedProviders = useMemo(() => {
       endDate: event.endDate,
       time: event.time,
       location: event.location,
-      networkPoints: String(event.networkPoints ?? ""),
       memberPrice: event.memberPrice == null ? "" : String(event.memberPrice),
       totalVouchersAvailable: event.totalVouchersAvailable == null ? "" : String(event.totalVouchersAvailable),
       deadline: event.deadline,
@@ -558,7 +552,6 @@ const sortedProviders = useMemo(() => {
         endDate: editEventForm.endDate,
         eventTime: editEventForm.time,
         location: editEventForm.location,
-        networkPoints: editEventForm.networkPoints,
         memberPrice: editEventForm.memberPrice,
         totalVouchersAvailable: editEventForm.totalVouchersAvailable,
         responseDeadline: editEventForm.deadline,
@@ -572,7 +565,6 @@ const sortedProviders = useMemo(() => {
         endDate: editEventForm.endDate,
         time: editEventForm.time,
         location: editEventForm.location,
-        networkPoints: Number(editEventForm.networkPoints) || 0,
         memberPrice: editEventForm.memberPrice === "" ? null : Number(editEventForm.memberPrice),
         totalVouchersAvailable: editEventForm.totalVouchersAvailable === "" ? null : Number(editEventForm.totalVouchersAvailable),
         deadline: editEventForm.deadline,
@@ -886,7 +878,6 @@ const sortedProviders = useMemo(() => {
                     </div>
                     <div className="space-y-2"><Label htmlFor="edit-event-location">Location *</Label><Input id="edit-event-location" name="location" value={editEventForm.location} onChange={handleEditEventChange} /></div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="space-y-2"><Label htmlFor="edit-event-points">Network Points</Label><Input id="edit-event-points" name="networkPoints" type="number" min="0" value={editEventForm.networkPoints} onChange={handleEditEventChange} /></div>
                       <div className="space-y-2"><Label htmlFor="edit-event-price">Member Price ($)</Label><Input id="edit-event-price" name="memberPrice" type="number" min="0" step="0.01" value={editEventForm.memberPrice} onChange={handleEditEventChange} disabled={squareConnectionLoading || !squareConnected} />{!squareConnected && <p className="text-xs text-muted-foreground">Connect your Square account on your profile to enable member pricing for vouchers.</p>}</div>
                       <div className="space-y-2"><Label htmlFor="edit-event-vouchers">Vouchers / Provider</Label><Input id="edit-event-vouchers" name="totalVouchersAvailable" type="number" min="1" value={editEventForm.totalVouchersAvailable} onChange={handleEditEventChange} /></div>
                     </div>
@@ -1007,17 +998,6 @@ const sortedProviders = useMemo(() => {
                         </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="create-event-points">Network Points</Label>
-                          <Input
-                            id="create-event-points"
-                            name="networkPoints"
-                            type="number"
-                            value={createEventForm.networkPoints}
-                            onChange={handleCreateEventChange}
-                            placeholder="e.g. 200"
-                          />
-                        </div>
                         <div className="space-y-2">
                           <Label htmlFor="create-event-member-price">Member Price ($) <span className="font-normal text-muted-foreground">(Optional)</span></Label>
                           <Input
@@ -1240,69 +1220,16 @@ const sortedProviders = useMemo(() => {
               
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium">Authorized Contacts (3 max)</h4>
-                  {contacts.length < 3 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-8 px-2 text-royal" 
-                      onClick={() => setShowAddContact(!showAddContact)}
-                    >
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      <span>Add</span>
-                    </Button>
-                  )}
+                  <h4 className="text-sm font-medium">Authorized Representatives (3 max)</h4>
                 </div>
-                
-                {showAddContact && (
-                  <div className="border rounded-md p-3 mb-4 bg-muted/50">
-                    <h5 className="text-sm font-medium mb-2">Add Contact</h5>
-                    <div className="space-y-2">
-                      <input 
-                        type="email" 
-                        placeholder="Enter email address" 
-                        className="w-full px-3 py-1 text-sm border rounded"
-                      />
-                      <select className="w-full px-3 py-1 text-sm border rounded">
-                        <option value="">Select role</option>
-                        <option value="publisher">Publisher</option>
-                        <option value="approver">Approver</option>
-                        <option value="creator">Creator</option>
-                      </select>
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => setShowAddContact(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          onClick={() => {
-                            console.log("Add contact");
-                            setShowAddContact(false);
-                          }}
-                        >
-                          Add
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
                 <div className="space-y-2">
-                  {contacts.map((contact, index) => (
-                    <div key={index} className="flex items-center justify-between bg-muted/20 rounded p-2">
-                      <div>
-                        <p className="text-sm font-medium">{contact.name}</p>
-                        <p className="text-xs text-gray-500">{contact.role} - {contact.email}</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {contact.type}
-                      </Badge>
+                  {contacts.length > 0 ? contacts.map((contact) => (
+                    <div key={contact.id} className="rounded bg-muted/20 p-2">
+                      <p className="text-sm font-medium">{contact.email}</p>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-muted-foreground">No authorized representatives assigned.</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -1360,7 +1287,7 @@ const sortedProviders = useMemo(() => {
               </div>
             </CardContent>
             <CardFooter className="pt-0">
-              <Button variant="outline" className="w-full" onClick={() => console.log("View full stats")}>
+              <Button variant="outline" className="w-full" onClick={() => navigate("/dashboard/score")}>
                 View Detailed Analytics
               </Button>
             </CardFooter>

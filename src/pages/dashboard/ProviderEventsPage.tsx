@@ -6,7 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CalendarDays, Clock, CheckCircle, ArrowUp, ArrowDown } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ViewToggle from "@/components/ui/ViewToggle";
-import PointsCircle from "@/components/ui/PointsCircle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -139,7 +138,6 @@ const ProviderEventsPage = () => {
                         <CardTitle className="text-base font-semibold truncate">{event.title}</CardTitle>
                         <CardDescription className="mt-1 line-clamp-2">{event.description}</CardDescription>
                       </div>
-                      <PointsCircle points={event.networkScore} />
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-2 text-sm">
@@ -206,7 +204,6 @@ const ProviderEventsPage = () => {
                           <TableCell className="text-xs py-2 whitespace-nowrap">{event.time}</TableCell>
                           <TableCell className="text-xs py-2">{event.organizer}</TableCell>
                           <TableCell className="py-2">{getStatusBadge(event.status)}</TableCell>
-                          <TableCell className="py-2"><PointsCircle points={event.networkScore} size="sm" /></TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

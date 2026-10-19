@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -158,12 +157,9 @@ const EventAnalyticsTab = ({ events, loading = false }: EventAnalyticsTabProps) 
   const participationPercent = totalProviders > 0 ? Math.round((participatingProviders / totalProviders) * 100) : 0;
 
   const EventCard = ({ event }: { event: PartnerEventAnalytics }) => {
-    const engRate = event.membersInvited > 0 ? Math.round((event.membersAttended / event.membersInvited) * 100) : 0;
-    const revRate = event.targetRevenue > 0 ? Math.round((event.revenue / event.targetRevenue) * 100) : 0;
-
     return (
       <div className="border rounded-lg p-3 space-y-2">
-        <div className="flex justify-between items-start gap-2">
+        <div className="flex items-start gap-2">
           <div className="flex-1 space-y-1.5">
             <h4 className="font-medium text-sm">{event.title}</h4>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -189,43 +185,6 @@ const EventAnalyticsTab = ({ events, loading = false }: EventAnalyticsTabProps) 
               <div>
                 <span className="text-muted-foreground block">Provider</span>
                 <span className="font-medium truncate block">{event.providerName}</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <Badge className={event.providerParticipated ? "bg-green-100 text-green-800 text-xs" : "bg-red-100 text-red-800 text-xs"}>
-              {event.providerParticipated ? "Participated" : "No-show"}
-            </Badge>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <div className="relative h-8 w-8">
-                  <svg viewBox="0 0 36 36" className="h-8 w-8 -rotate-90">
-                    <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" className="text-muted/30" strokeWidth="3" />
-                    <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" className="text-blue-500" strokeWidth="3" strokeDasharray={`${engRate * 0.9425} 94.25`} strokeLinecap="round" />
-                  </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold">{engRate}%</span>
-                </div>
-                <span className="text-[8px] text-muted-foreground">Eng.</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="relative h-8 w-8">
-                  <svg viewBox="0 0 36 36" className="h-8 w-8 -rotate-90">
-                    <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" className="text-muted/30" strokeWidth="3" />
-                    <circle
-                      cx="18"
-                      cy="18"
-                      r="15"
-                      fill="none"
-                      stroke="currentColor"
-                      className={revRate >= 100 ? "text-green-500" : "text-amber-500"}
-                      strokeWidth="3"
-                      strokeDasharray={`${Math.min(revRate, 100) * 0.9425} 94.25`}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold">{revRate}%</span>
-                </div>
-                <span className="text-[8px] text-muted-foreground">Rev.</span>
               </div>
             </div>
           </div>

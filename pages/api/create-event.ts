@@ -39,20 +39,6 @@ function parseDate(value: unknown, fieldName: string) {
   return date;
 }
 
-function parseNumber(value: unknown) {
-  if (value === undefined || value === null || String(value).trim() === "") {
-    return null;
-  }
-
-  const parsed = Number(value);
-
-  if (!Number.isFinite(parsed)) {
-    throw new Error("networkPoints must be a valid number");
-  }
-
-  return Math.trunc(parsed);
-}
-
 function parseMemberPrice(value: unknown) {
   if (value === undefined || value === null || String(value).trim() === "") return null;
   const parsed = Number(value);
@@ -104,7 +90,6 @@ export default async function handler(
     const startDate = parseDate(body.startDate, "startDate");
     const endDate = parseDate(body.endDate, "endDate");
     const responseDeadline = parseDate(body.responseDeadline, "responseDeadline");
-    const networkPoints = parseNumber(body.networkPoints);
     const memberPrice = parseMemberPrice(body.memberPrice);
     if (memberPrice !== null && !squareConnection) {
       return res.status(403).json({ error: "Connect your Square account on your profile before setting a member price for vouchers" });
@@ -138,6 +123,11 @@ export default async function handler(
     }
 
     const event = await prisma.$transaction(async (tx) => {
+      const providerParticipationReward = await tx.reward_tasks.findUnique({
+        where: { task_key: "provider_participate_event_campaign" },
+        select: { points: true, active: true },
+      });
+
       const createdEvent = await tx.events.create({
         data: {
           event_id: eventId,
@@ -146,7 +136,7 @@ export default async function handler(
           description,
           location,
           event_time: eventTime || null,
-          network_points: networkPoints,
+          network_points: providerParticipationReward?.active ? providerParticipationReward.points : null,
           member_price: memberPrice,
           total_vouchers_available: totalVouchersAvailable,
           response_deadline: responseDeadline,

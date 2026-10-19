@@ -6,7 +6,6 @@ type CreateEventInput = {
   endDate?: string;
   location?: string;
   eventTime?: string;
-  networkPoints?: string | number;
   memberPrice?: string | number;
   totalVouchersAvailable?: string | number;
   responseDeadline?: string;

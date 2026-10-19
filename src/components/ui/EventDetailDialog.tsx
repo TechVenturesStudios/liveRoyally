@@ -6,8 +6,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import PointsCircle from "@/components/ui/PointsCircle";
 
 export interface DetailRow {
   label: string;
@@ -20,7 +18,6 @@ interface EventDetailDialogProps {
   title: string;
   description?: string;
   points?: number;
-  pointsDisplay?: "circle" | "text";
   rows: DetailRow[];
   actions?: React.ReactNode;
 }
@@ -31,7 +28,6 @@ const EventDetailDialog = ({
   title,
   description,
   points,
-  pointsDisplay = "circle",
   rows,
   actions,
 }: EventDetailDialogProps) => {
@@ -46,13 +42,7 @@ const EventDetailDialog = ({
                 <p className="text-sm text-muted-foreground mt-1">{description}</p>
               )}
             </div>
-            {points !== undefined && (
-              pointsDisplay === "text" ? (
-                <span className="text-lg font-bold text-foreground">{points}</span>
-              ) : (
-                <PointsCircle points={points} />
-              )
-            )}
+            {points !== undefined && <span className="text-lg font-bold text-foreground">{points}</span>}
           </div>
         </DialogHeader>
         <ScrollArea className="flex-1 min-h-0 px-6 pb-6">

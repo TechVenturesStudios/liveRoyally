@@ -220,7 +220,6 @@ const PartnerPendingEventsPage = () => {
           title={selectedEvent.title}
           description={selectedEvent.description}
           points={selectedEvent.networkPoints}
-          pointsDisplay="text"
           rows={[
             { label: "Location", value: selectedEvent.location },
             { label: "Date", value: selectedEvent.date },

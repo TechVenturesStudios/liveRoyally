@@ -19,6 +19,7 @@ type ResponseBody = {
   message?: string;
   effectiveAt?: string | null;
   plan?: PartnerSubscriptionPlan | null;
+  pendingPlan?: PartnerSubscriptionPlan | null;
   canceled?: boolean;
 };
 
@@ -200,7 +201,8 @@ export default async function handler(
     });
 
     return res.status(200).json({
-      plan: targetPlan,
+      plan: currentPlan,
+      pendingPlan: targetPlan,
       message: `Your downgrade to ${targetPlanConfig.label} is scheduled for renewal. You can keep your current plan until then.`,
       effectiveAt: end.toISOString(),
     });

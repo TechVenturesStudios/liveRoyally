@@ -34,7 +34,6 @@ const CampaignManagementTab = () => {
     endDate: "",
     time: "",
     location: "",
-    networkPoints: "",
     deadline: "",
   });
 
@@ -180,7 +179,6 @@ const CampaignManagementTab = () => {
         endDate: eventForm.endDate,
         location: eventForm.location,
         eventTime: eventForm.time,
-        networkPoints: eventForm.networkPoints,
         responseDeadline: eventForm.deadline,
         providerIds: selectedProviders,
       });
@@ -194,7 +192,7 @@ const CampaignManagementTab = () => {
           : `"${eventForm.title}" (${result.eventId}) has been sent to ${selectedProviders.length} provider(s) for approval.`,
       });
 
-      setEventForm({ title: "", description: "", date: "", endDate: "", time: "", location: "", networkPoints: "", deadline: "" });
+      setEventForm({ title: "", description: "", date: "", endDate: "", time: "", location: "", deadline: "" });
       setSelectedProviders([]);
       setProviderSearch("");
       setShowCreateEventDialog(false);
@@ -216,7 +214,6 @@ const CampaignManagementTab = () => {
       endDate: event.date,
       eventTime: event.time,
       location: event.location,
-      networkPoints: String(event.networkPoints),
       memberPrice: event.memberPrice == null ? "" : String(event.memberPrice),
       totalVouchersAvailable: event.totalVouchersAvailable == null ? "" : String(event.totalVouchersAvailable),
       responseDeadline: event.responseDeadline,
@@ -311,10 +308,6 @@ const CampaignManagementTab = () => {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="evt-points">Network Points</Label>
-                      <Input id="evt-points" name="networkPoints" type="number" value={eventForm.networkPoints} onChange={handleEventChange} placeholder="e.g. 200" />
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="evt-deadline">Provider Response Deadline</Label>
                       <Input id="evt-deadline" name="deadline" type="date" value={eventForm.deadline} onChange={handleEventChange} />
@@ -559,7 +552,7 @@ const CampaignManagementTab = () => {
                   <div className="space-y-1"><Label>Description</Label><Textarea name="description" value={editForm.description || ""} onChange={handleEditChange} /></div>
                   <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Start date</Label><Input type="date" name="startDate" value={editForm.startDate || ""} onChange={handleEditChange} /></div><div className="space-y-1"><Label>End date</Label><Input type="date" name="endDate" value={editForm.endDate || ""} onChange={handleEditChange} /></div></div>
                   <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Time</Label><Input name="eventTime" value={editForm.eventTime || ""} onChange={handleEditChange} /></div><div className="space-y-1"><Label>Location</Label><Input name="location" value={editForm.location || ""} onChange={handleEditChange} /></div></div>
-                  <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Network points</Label><Input type="number" name="networkPoints" value={editForm.networkPoints || ""} onChange={handleEditChange} /></div><div className="space-y-1"><Label>Member price</Label><Input type="number" name="memberPrice" value={editForm.memberPrice || ""} onChange={handleEditChange} /></div></div>
+                  <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Member price</Label><Input type="number" name="memberPrice" value={editForm.memberPrice || ""} onChange={handleEditChange} /></div></div>
                   <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Voucher availability</Label><Input type="number" name="totalVouchersAvailable" value={editForm.totalVouchersAvailable || ""} onChange={handleEditChange} /></div><div className="space-y-1"><Label>Provider deadline</Label><Input type="date" name="responseDeadline" value={editForm.responseDeadline || ""} onChange={handleEditChange} /></div></div>
                 </div>
               ) : <ScrollArea className="max-h-[400px]">

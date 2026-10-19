@@ -262,10 +262,18 @@ const ProfilePage = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to update subscription");
 
+      const previousUser = user as any;
+      const currentPlan = previousUser.membershipPlan as PartnerSubscriptionPlan | null;
+      const targetPlan = plan === "cancel" ? null : PARTNER_SUBSCRIPTION_PLANS[plan];
+      const currentPlanConfig = currentPlan ? PARTNER_SUBSCRIPTION_PLANS[currentPlan] : null;
+      const isUpgrade = Boolean(targetPlan && currentPlanConfig && targetPlan.monthlyPriceCents > currentPlanConfig.monthlyPriceCents);
+
       setUser((previous) => previous ? ({
         ...previous,
-        membershipPlan: data.plan ?? (previous as any).membershipPlan,
-        pendingPlan: plan === "cancel" ? null : plan,
+        membershipPlan: isUpgrade ? plan : (previous as any).membershipPlan,
+        membershipPrice: isUpgrade ? targetPlan!.monthlyPriceCents / 100 : (previous as any).membershipPrice,
+        maxProviders: isUpgrade ? targetPlan!.maxProviders : (previous as any).maxProviders,
+        pendingPlan: plan === "cancel" ? null : isUpgrade ? null : plan,
         cancelAtPeriodEnd: plan === "cancel",
         pendingChangeEffectiveAt: data.effectiveAt ?? null,
       } as unknown as UserType) : previous);
@@ -449,6 +457,7 @@ const ProfilePage = () => {
     const usagePercent = hasProviderLimit && maxProviders > 0 ? Math.round((currentProviders / maxProviders) * 100) : 0;
     const currentPlanKey = ((user as any).membershipPlan || "") as PartnerSubscriptionPlan;
     const pendingPlan = (user as any).pendingPlan as PartnerSubscriptionPlan | null;
+    const pendingPlanConfig = pendingPlan ? PARTNER_SUBSCRIPTION_PLANS[pendingPlan] : null;
     const pendingChangeDate = (user as any).pendingChangeEffectiveAt;
     const cancelAtPeriodEnd = Boolean((user as any).cancelAtPeriodEnd);
     const selectedTarget = subscriptionTargetPlan ? PARTNER_SUBSCRIPTION_PLANS[subscriptionTargetPlan] : null;
@@ -640,7 +649,7 @@ const ProfilePage = () => {
             </Button>
             {pendingPlan && pendingChangeDate && (
               <p className="text-xs rounded-md border border-amber-200 bg-amber-50 text-amber-900 p-3">
-                Your change to <strong>{PARTNER_SUBSCRIPTION_PLANS[pendingPlan]?.label}</strong> is scheduled for {new Date(pendingChangeDate).toLocaleDateString()}.
+                Your current plan, price, and provider limit remain active until renewal. On {new Date(pendingChangeDate).toLocaleDateString()}, your plan will change to <strong>{pendingPlanConfig?.label}</strong> ({pendingPlanConfig?.price}) with up to <strong>{pendingPlanConfig?.maxProviders}</strong> providers.
               </p>
             )}
             {cancelAtPeriodEnd && (

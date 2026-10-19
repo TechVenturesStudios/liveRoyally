@@ -14,6 +14,7 @@ import {
   type PartnerDashboardEvent,
   type PartnerEventAnalytics,
 } from "@/api/partnerEvents";
+import { fetchPartnerAccountOverview } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
 
 type PublishedEventRow = PartnerDashboardEvent & {
@@ -53,6 +54,7 @@ const EventAnalyticsDashboard = () => {
   const [activeTab, setActiveTab] = useState("analytics");
   const [partnerEvents, setPartnerEvents] = useState<PartnerDashboardEvent[]>([]);
   const [analyticsEvents, setAnalyticsEvents] = useState<PartnerEventAnalytics[]>([]);
+  const [totalPartnerProviders, setTotalPartnerProviders] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<PublishedEventRow | null>(null);
   const [selectedPendingEvent, setSelectedPendingEvent] = useState<PartnerDashboardEvent | null>(null);
@@ -66,20 +68,23 @@ const EventAnalyticsDashboard = () => {
     Promise.all([
       fetchPartnerDashboardEvents(cognitoId),
       fetchPartnerEventAnalytics(cognitoId),
+      fetchPartnerAccountOverview(cognitoId),
     ])
-      .then(([dashboardEvents, analytics]) => {
+      .then(([dashboardEvents, analytics, accountOverview]) => {
         if (cancelled) {
           return;
         }
 
         setPartnerEvents(dashboardEvents);
         setAnalyticsEvents(analytics);
+        setTotalPartnerProviders(accountOverview.providers.length);
       })
       .catch((error) => {
         if (!cancelled) {
           console.error("Failed to load partner dashboard analytics:", error);
           setPartnerEvents([]);
           setAnalyticsEvents([]);
+          setTotalPartnerProviders(0);
         }
       })
       .finally(() => {
@@ -127,12 +132,18 @@ const EventAnalyticsDashboard = () => {
   const publishedCount = publishedEvents.length;
   const activeCount = publishedEvents.filter((event) => event.status === "active").length;
 
-  const totalAttended = analyticsEvents.reduce((sum, event) => sum + event.membersAttended, 0);
-  const totalInvited = analyticsEvents.reduce((sum, event) => sum + event.membersInvited, 0);
-  const engagementPercent = totalInvited > 0 ? Math.round((totalAttended / totalInvited) * 100) : 0;
+  const totalVouchersClaimed = analyticsEvents.reduce((sum, event) => sum + event.membersInvited, 0);
+  const totalVouchersRedeemed = analyticsEvents.reduce((sum, event) => sum + event.membersAttended, 0);
+  const engagementPercent = totalVouchersClaimed > 0 ? Math.round((totalVouchersRedeemed / totalVouchersClaimed) * 100) : 0;
 
-  const participatingProviders = new Set(analyticsEvents.filter((event) => event.providerParticipated).map((event) => event.providerId)).size;
-  const totalProviders = new Set(analyticsEvents.map((event) => event.providerId)).size;
+  const participatingProviders = new Set(
+    partnerEvents.flatMap((event) =>
+      event.providers
+        .filter((provider) => provider.status === "accepted")
+        .map((provider) => provider.providerId)
+    )
+  ).size;
+  const totalProviders = totalPartnerProviders;
   const participationPercent = totalProviders > 0 ? Math.round((participatingProviders / totalProviders) * 100) : 0;
 
   return (
@@ -152,9 +163,9 @@ const EventAnalyticsDashboard = () => {
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-blue-800">Member Engagement</p>
+                <p className="text-xs font-medium text-blue-800">Member Participation</p>
                 <p className="text-xl font-bold text-blue-900">{engagementPercent}%</p>
-                <p className="text-[11px] text-blue-600">{totalAttended.toLocaleString()} / {totalInvited.toLocaleString()}</p>
+                <p className="text-[11px] text-blue-600">{totalVouchersClaimed.toLocaleString()} claimed / {totalVouchersRedeemed.toLocaleString()} redeemed</p>
               </div>
               <div className="rounded-full p-2 bg-blue-100">
                 <Users className="h-4 w-4 text-blue-600" />
@@ -172,7 +183,7 @@ const EventAnalyticsDashboard = () => {
               <div>
                 <p className="text-xs font-medium text-purple-800">Provider Participation</p>
                 <p className="text-xl font-bold text-purple-900">{participationPercent}%</p>
-                <p className="text-[11px] text-purple-600">{participatingProviders} / {totalProviders} active</p>
+                <p className="text-[11px] text-purple-600">{participatingProviders} / {totalProviders} providers accepted invites</p>
               </div>
               <div className="rounded-full p-2 bg-purple-100">
                 <TrendingUp className="h-4 w-4 text-purple-600" />

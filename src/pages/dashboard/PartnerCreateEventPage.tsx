@@ -27,7 +27,6 @@ const PartnerCreateEventPage = () => {
     endDate: "",
     time: "",
     location: "",
-    networkPoints: "",
     memberPrice: "",
     totalVouchersAvailable: "",
     deadline: "",
@@ -160,7 +159,6 @@ const PartnerCreateEventPage = () => {
         endDate: formData.endDate,
         location: formData.location,
         eventTime: formData.time,
-        networkPoints: formData.networkPoints,
         memberPrice: formData.memberPrice,
         totalVouchersAvailable: formData.totalVouchersAvailable,
         responseDeadline: formData.deadline,
@@ -284,10 +282,6 @@ const PartnerCreateEventPage = () => {
                     Location <span className="text-destructive">*</span>
                   </Label>
                   <Input id="location" name="location" value={formData.location} onChange={handleChange} placeholder="e.g. Downtown Plaza" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="networkPoints">Network Points Reward</Label>
-                  <Input id="networkPoints" name="networkPoints" type="number" value={formData.networkPoints} onChange={handleChange} placeholder="e.g. 200" />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowUp, ArrowDown, CalendarDays, CheckCircle, History } from "lucide-react";
 import ViewToggle from "@/components/ui/ViewToggle";
-import PointsCircle from "@/components/ui/PointsCircle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
 
 const mockPublishedEvents = [
@@ -158,7 +157,6 @@ const PartnerPublishedEventsPage = () => {
                         <CardTitle className="text-base font-semibold truncate">{event.title}</CardTitle>
                         <CardDescription className="mt-1 line-clamp-2">{event.description}</CardDescription>
                       </div>
-                      <PointsCircle points={event.networkPoints} />
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-2 text-sm">
@@ -232,7 +230,6 @@ const PartnerPublishedEventsPage = () => {
                           </TableCell>
                           <TableCell className="text-xs py-2">{event.participantCount}</TableCell>
                           <TableCell className="py-2">{getStatusBadge(event.status)}</TableCell>
-                          <TableCell className="py-2"><PointsCircle points={event.networkPoints} size="sm" /></TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
