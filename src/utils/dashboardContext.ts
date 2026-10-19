@@ -56,14 +56,20 @@ export const getEffectiveDashboardType = (
   return defaultType;
 };
 
-export const isAuthorizedRepresentativeView = () => {
+export const isAuthorizedRepresentativeView = (currentCognitoId: string) => {
   const context = getDashboardContext();
-  return context?.mode === "rep" && Boolean(context.assignmentId) && Boolean(context.targetType);
+  return (
+    context?.mode === "rep" &&
+    Boolean(context.assignmentId) &&
+    Boolean(context.targetType) &&
+    Boolean(context.ownerCognitoId) &&
+    context.ownerCognitoId === currentCognitoId
+  );
 };
 
-export const getRepresentativeCapabilities = () => {
+export const getRepresentativeCapabilities = (currentCognitoId: string) => {
   const context = getDashboardContext();
-  if (!isAuthorizedRepresentativeView()) {
+  if (!isAuthorizedRepresentativeView(currentCognitoId)) {
     return { canCreateEvents: true, canRunReports: true, canScanVouchers: true, canManageInvites: true };
   }
 
@@ -86,7 +92,12 @@ export const buildDashboardQuery = (cognitoId?: string) => {
   }
 
   const context = getDashboardContext();
-  if (context?.mode === "rep" && context.assignmentId) {
+  if (
+    context?.mode === "rep" &&
+    context.assignmentId &&
+    cognitoId &&
+    context.ownerCognitoId === cognitoId
+  ) {
     params.set("actingAsAssignmentId", context.assignmentId);
   }
 

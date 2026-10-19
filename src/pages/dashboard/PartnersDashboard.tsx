@@ -427,10 +427,10 @@ const sortedProviders = useMemo(() => {
   const handleCreateEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!createEventForm.title || !createEventForm.date || !createEventForm.endDate || !createEventForm.location || selectedProviders.length === 0) {
+    if (!createEventForm.title || !createEventForm.date || !createEventForm.endDate || !createEventForm.location || !createEventForm.deadline || selectedProviders.length === 0) {
       toast({
         title: "Missing Fields",
-        description: "Please fill all required fields, including the end date, and select at least one provider.",
+        description: "Please fill all required fields, including the end date and provider response deadline, and select at least one provider.",
         variant: "destructive",
       });
       return;
@@ -1039,13 +1039,14 @@ const sortedProviders = useMemo(() => {
                           <p className="text-xs text-muted-foreground">How many members can claim each provider’s voucher.</p>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="create-event-deadline">Provider Response Deadline</Label>
+                          <Label htmlFor="create-event-deadline">Provider Response Deadline <span className="text-destructive">*</span></Label>
                           <Input
                             id="create-event-deadline"
                             name="deadline"
                             type="date"
                             value={createEventForm.deadline}
                             onChange={handleCreateEventChange}
+                            required
                           />
                         </div>
                       </div>

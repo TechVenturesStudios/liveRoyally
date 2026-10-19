@@ -171,7 +171,7 @@ const ProviderEventsPage = () => {
                       </div>
                     )}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <div>Approved: {event.approvedDate || "TBD"}</div>
+                      <div>Accepted: {event.approvedDate || "TBD"}</div>
                       <div>Go Live: {event.goLiveDate || "TBD"}</div>
                     </div>
                   </CardContent>
@@ -237,8 +237,8 @@ const ProviderEventsPage = () => {
             { label: "Time", value: selectedEvent.time },
             { label: "Organizer", value: selectedEvent.organizer },
             { label: "Status", value: getStatusBadge(selectedEvent.status) },
-            { label: "Participated", value: selectedEvent.participated ? "Yes" : "No" },
-            { label: "Approved", value: selectedEvent.approvedDate || "TBD" },
+            { label: "Participated", value: selectedEvent.inviteStatus === "accepted" ? "Yes" : "No" },
+            { label: "Accepted", value: selectedEvent.approvedDate || "TBD" },
             { label: "Go Live", value: selectedEvent.goLiveDate || "TBD" },
             { label: "Redemptions", value: String(selectedEvent.redemptions) },
           ]}

@@ -18,7 +18,8 @@ export type ProviderPendingInvite = {
 
 export type ProviderInviteResponseInput = {
   inviteId: string;
-  action: "approve" | "decline";
+  action: "accept" | "decline";
+  cognitoId: string;
   voucher?: {
     type: "N" | "P" | "A" | "F";
     value?: string | number;
@@ -40,7 +41,8 @@ export async function fetchProviderPendingEvents(cognitoId?: string) {
 }
 
 export async function respondToProviderInvite(input: ProviderInviteResponseInput) {
-  const response = await fetch("/api/provider-event-invite-response", {
+  const query = `?cognitoId=${encodeURIComponent(input.cognitoId)}`;
+  const response = await fetch(`/api/provider-event-invite-response${query}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -62,7 +64,7 @@ export async function respondToProviderInvite(input: ProviderInviteResponseInput
     voucher?: {
       voucher_id: string;
     };
-    alreadyApproved?: boolean;
+    alreadyAccepted?: boolean;
   };
 }
 import { buildDashboardQuery } from "@/utils/dashboardContext";

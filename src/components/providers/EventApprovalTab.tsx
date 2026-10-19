@@ -63,7 +63,7 @@ const EventApprovalTab = () => {
   const { toast } = useToast();
   const [pendingEvents, setPendingEvents] = useState(mockPendingPartnerEvents);
   const [selectedEvent, setSelectedEvent] = useState<PendingPartnerEvent | null>(null);
-  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showAcceptDialog, setShowAcceptDialog] = useState(false);
 
   const [pricingData, setPricingData] = useState({
     memberPrice: "",
@@ -83,19 +83,19 @@ const EventApprovalTab = () => {
     });
   };
 
-  const handleOpenApproval = (event: PendingPartnerEvent) => {
+  const handleOpenAccept = (event: PendingPartnerEvent) => {
     setSelectedEvent(event);
     resetPricing();
-    setShowApprovalDialog(true);
+    setShowAcceptDialog(true);
   };
 
-  const handleApprove = () => {
+  const handleAccept = () => {
     if (!selectedEvent) return;
     setPendingEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
-    setShowApprovalDialog(false);
+    setShowAcceptDialog(false);
     toast({
-      title: "Event Approved",
-      description: `You've approved "${selectedEvent.title}" with your pricing details.`,
+      title: "Event Accepted",
+      description: `You've accepted "${selectedEvent.title}" with your pricing details.`,
     });
   };
 
@@ -116,9 +116,9 @@ const EventApprovalTab = () => {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Event Approvals</CardTitle>
+          <CardTitle>Pending Events</CardTitle>
           <CardDescription>
-            Review and approve events published by your partner organizations. Set your pricing and offer details before approving.
+            Review events published by your partner organizations. Set your pricing and offer details before accepting.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -126,7 +126,7 @@ const EventApprovalTab = () => {
             <div className="text-center py-10 text-muted-foreground">
               <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-primary/40" />
               <p className="font-medium">All caught up!</p>
-              <p className="text-sm">No pending event approvals at this time.</p>
+              <p className="text-sm">No pending events at this time.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -155,8 +155,8 @@ const EventApprovalTab = () => {
                       <TableCell className="text-sm text-muted-foreground">{event.deadline}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button size="sm" onClick={() => handleOpenApproval(event)}>
-                            Approve
+                          <Button size="sm" onClick={() => handleOpenAccept(event)}>
+                            Accept Event
                           </Button>
                           <Button
                             size="sm"
@@ -177,13 +177,13 @@ const EventApprovalTab = () => {
         </CardContent>
       </Card>
 
-      {/* Approval Dialog with Pricing */}
-      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+      {/* Accept Event dialog with pricing */}
+      <Dialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
         <DialogContent className="sm:max-w-[550px] max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Approve Event</DialogTitle>
+            <DialogTitle>Accept Event</DialogTitle>
             <DialogDescription>
-              Review event details and set your pricing before approving.
+              Review event details and set your pricing before accepting.
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[65vh] pr-3">
@@ -342,16 +342,16 @@ const EventApprovalTab = () => {
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-2">
-                  <Button className="flex-1" onClick={handleApprove}>
+                  <Button className="flex-1" onClick={handleAccept}>
                     <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Approve Event
+                    Accept Event
                   </Button>
                   <Button
                     variant="outline"
                     className="text-destructive hover:text-destructive"
                     onClick={() => {
                       handleDecline(selectedEvent);
-                      setShowApprovalDialog(false);
+                      setShowAcceptDialog(false);
                     }}
                   >
                     <XCircle className="h-4 w-4 mr-2" />

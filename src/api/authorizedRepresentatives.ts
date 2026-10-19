@@ -88,8 +88,9 @@ export async function removeAuthorizedRepresentative(assignmentId: string, cogni
   };
 }
 
-export async function fetchRepresentativeAssignments() {
-  const response = await fetch("/api/rep-assignments", {
+export async function fetchRepresentativeAssignments(cognitoId?: string) {
+  const query = cognitoId ? `?cognitoId=${encodeURIComponent(cognitoId)}` : "";
+  const response = await fetch(`/api/rep-assignments${query}`, {
     credentials: "include",
   });
 
@@ -104,8 +105,13 @@ export async function fetchRepresentativeAssignments() {
   };
 }
 
-export async function respondToRepresentativeInvite(assignmentId: string, action: "accept" | "decline") {
-  const response = await fetch("/api/rep-assignments", {
+export async function respondToRepresentativeInvite(
+  assignmentId: string,
+  action: "accept" | "decline",
+  cognitoId?: string
+) {
+  const query = cognitoId ? `?cognitoId=${encodeURIComponent(cognitoId)}` : "";
+  const response = await fetch(`/api/rep-assignments${query}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

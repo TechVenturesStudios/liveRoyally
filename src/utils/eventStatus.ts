@@ -4,6 +4,7 @@ type EventLifecycleInput = {
   startDate?: Date | string | null | undefined;
   endDate?: Date | string | null | undefined;
   responseDeadline?: Date | string | null | undefined;
+  published?: boolean;
   inviteStatuses?: Array<string | null | undefined>;
   referenceDate?: Date;
 };
@@ -30,9 +31,12 @@ export function deriveEventLifecycleStatus({
   startDate,
   endDate,
   responseDeadline,
+  published = true,
   inviteStatuses = [],
   referenceDate = new Date(),
 }: EventLifecycleInput): EventLifecycleStatus {
+  if (!published) return "pending";
+
   if (isBeforeReferenceDay(endDate ?? startDate, referenceDate)) {
     return "completed";
   }

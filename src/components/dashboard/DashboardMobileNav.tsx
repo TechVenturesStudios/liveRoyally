@@ -31,8 +31,9 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
   const location = useLocation();
   const [assignments, setAssignments] = useState<RepresentativeAssignment[]>([]);
   const currentContext = getDashboardContext();
+  const userCognitoId = user?.cognitoId;
   const effectiveType = getEffectiveDashboardType(user?.userType as any, user?.cognitoId) || user?.userType;
-  const isRepView = isAuthorizedRepresentativeView();
+  const isRepView = userCognitoId ? isAuthorizedRepresentativeView(userCognitoId) : false;
   const navItems = getNavItems(effectiveType as UserTypeEnum, isRepView);
   const currentAssignment = assignments.find((assignment) => assignment.assignmentId === currentContext?.assignmentId);
 
@@ -46,9 +47,9 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
 
     const loadAssignments = async () => {
       try {
-        const data = await fetchRepresentativeAssignments();
+        const data = await fetchRepresentativeAssignments(userCognitoId);
         if (isMounted) {
-          setAssignments(data.assignments);
+          setAssignments(data.assignments.filter((assignment) => assignment.status === "accepted"));
           if (
             currentContext?.mode === "rep" &&
             currentContext.assignmentId &&
@@ -69,7 +70,7 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
     return () => {
       isMounted = false;
     };
-  }, [currentContext?.assignmentId, currentContext?.mode, user?.userType]);
+  }, [currentContext?.assignmentId, currentContext?.mode, user, userCognitoId, user?.userType]);
 
   const handleViewChange = (value: string) => {
     if (value === "member") {

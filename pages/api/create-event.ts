@@ -111,9 +111,9 @@ export default async function handler(
     }
     const totalVouchersAvailable = parseVoucherAvailability(body.totalVouchersAvailable);
 
-    if (!partnerId || !title || !startDate || !location || providerIds.length === 0) {
+    if (!partnerId || !title || !startDate || !location || !responseDeadline || providerIds.length === 0) {
       return res.status(400).json({
-        error: "partnerId, title, startDate, location, and at least one provider are required",
+        error: "partnerId, title, startDate, location, responseDeadline, and at least one provider are required",
       });
     }
 

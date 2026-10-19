@@ -87,6 +87,7 @@ export default async function handler(
             network_points: true,
             response_deadline: true,
             status: true,
+            published: true,
             users: {
               select: {
                 email: true,
@@ -111,20 +112,10 @@ export default async function handler(
       const status = deriveEventLifecycleStatus({
         startDate: invite.events.start_date,
         responseDeadline: invite.events.response_deadline,
+        published: invite.events.published,
         endDate: invite.events.end_date,
         inviteStatuses: invite.events.event_provider_invites.map((eventInvite) => eventInvite.status),
       });
-
-      if (invite.events.status !== status) {
-        await prisma.events.update({
-          where: {
-            event_id: invite.events.event_id,
-          },
-          data: {
-            status,
-          },
-        });
-      }
 
       const eventDate = formatDate(invite.events.start_date);
       const inviteStatus = invite.status;
@@ -165,7 +156,7 @@ export default async function handler(
         organizer: invite.events.users.partner_profiles?.org_name ?? invite.events.users.email ?? "Partner",
         partner: invite.events.users.partner_profiles?.org_name ?? invite.events.users.email ?? "Partner",
         status,
-        participated: status === "completed" && inviteStatus === "accepted" ? redemptions > 0 : false,
+        participated: inviteStatus === "accepted",
         networkScore: invite.events.network_points ?? 0,
         approvedDate: formatDate(invite.responded_at),
         goLiveDate: eventDate,

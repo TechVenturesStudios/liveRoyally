@@ -71,7 +71,7 @@ const ProviderUpcomingEventsPage = () => {
         <div className="flex items-start justify-between gap-2">
           <div>
             <h1 className="font-barlow font-bold text-xl sm:text-3xl text-foreground">Upcoming Events</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">Approved events not yet live</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Accepted events not yet live</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
@@ -134,11 +134,11 @@ const ProviderUpcomingEventsPage = () => {
                     <div className="flex items-center justify-between pt-2 border-t">
                       <span className="text-xs font-medium text-foreground/60 uppercase tracking-wide">Status</span>
                       <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Approved
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Accepted
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <div>Approved: {event.approvedDate || "TBD"}</div>
+                      <div>Accepted: {event.approvedDate || "TBD"}</div>
                       <div>Go Live: {event.goLiveDate || "TBD"}</div>
                     </div>
                   </CardContent>
@@ -174,7 +174,7 @@ const ProviderUpcomingEventsPage = () => {
                           <TableCell className="text-xs py-2">{event.partner}</TableCell>
                           <TableCell className="py-2">
                             <Badge variant="outline" className="bg-blue-50 text-blue-700 text-[10px] px-1.5 py-0">
-                              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Approved
+                              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Accepted
                             </Badge>
                           </TableCell>
                           <TableCell className="py-2"><PointsCircle points={event.networkScore} size="sm" /></TableCell>
@@ -189,7 +189,7 @@ const ProviderUpcomingEventsPage = () => {
         ) : (
           <Card>
             <CardContent className="py-10 text-center text-muted-foreground">
-              No upcoming approved events
+              No upcoming accepted events
             </CardContent>
           </Card>
         )}
@@ -207,9 +207,9 @@ const ProviderUpcomingEventsPage = () => {
             { label: "Location", value: selectedEvent.location },
             { label: "Date", value: selectedEvent.date },
             { label: "Time", value: selectedEvent.time },
-            { label: "Approved Date", value: selectedEvent.approvedDate || "TBD" },
+            { label: "Accepted Date", value: selectedEvent.approvedDate || "TBD" },
             { label: "Go Live Date", value: selectedEvent.goLiveDate || "TBD" },
-            { label: "Status", value: <Badge variant="outline" className="bg-blue-50 text-blue-700"><CheckCircle2 className="h-3 w-3 mr-1" /> Approved</Badge> },
+            { label: "Status", value: <Badge variant="outline" className="bg-blue-50 text-blue-700"><CheckCircle2 className="h-3 w-3 mr-1" /> Accepted</Badge> },
           ]}
         />
       )}

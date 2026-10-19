@@ -137,8 +137,8 @@ const PartnerCreateEventPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.startDate || !formData.endDate || !formData.location || selectedProviders.length === 0) {
-      toast({ title: "Missing Fields", description: "Please fill all required fields and select at least one provider.", variant: "destructive" });
+    if (!formData.title || !formData.startDate || !formData.endDate || !formData.location || !formData.deadline || selectedProviders.length === 0) {
+      toast({ title: "Missing Fields", description: "Please fill all required fields, including the provider response deadline, and select at least one provider.", variant: "destructive" });
       return;
     }
 
@@ -173,7 +173,7 @@ const PartnerCreateEventPage = () => {
           : "Event Created & Sent",
         description: result.notifications?.failed
           ? `"${formData.title}" (${result.eventId}) was created. ${result.notifications.queued}/${selectedProviders.length} provider email(s) were queued.`
-          : `"${formData.title}" (${result.eventId}) has been sent to ${selectedProviders.length} provider(s) for approval.`,
+          : `"${formData.title}" (${result.eventId}) has been sent to ${selectedProviders.length} provider(s) for acceptance.`,
       });
       navigate("/dashboard/partner-pending-events");
     } catch (error) {
@@ -292,9 +292,9 @@ const PartnerCreateEventPage = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="deadline">Provider Response Deadline</Label>
-                  <Input id="deadline" name="deadline" type="date" value={formData.deadline} onChange={handleChange} />
-                  <p className="text-xs text-muted-foreground">Optional — providers must respond by this date</p>
+                  <Label htmlFor="deadline">Provider Response Deadline <span className="text-destructive">*</span></Label>
+                  <Input id="deadline" name="deadline" type="date" value={formData.deadline} onChange={handleChange} required />
+                  <p className="text-xs text-muted-foreground">Providers must respond by this date</p>
                 </div>
               </div>
             </CardContent>

@@ -18,7 +18,7 @@ import { fetchMemberPurchaseHistory } from "@/api/memberPurchases";
 import type { MemberPurchaseRecord } from "@/utils/memberPurchaseHistory";
 
 function getPurchaseStatusVariant(status: MemberPurchaseRecord["status"]) {
-  return status === "refunded" ? "destructive" : "default";
+  return status === "refunded" ? "destructive" : status === "claimed" ? "secondary" : "default";
 }
 
 const PurchaseHistoryPage = () => {
@@ -57,7 +57,7 @@ const PurchaseHistoryPage = () => {
   }, []);
 
   const totalSaved = useMemo(
-    () => purchases.filter((purchase) => purchase.status !== "refunded").reduce((sum, purchase) => sum + purchase.discount, 0),
+    () => purchases.filter((purchase) => purchase.status === "used").reduce((sum, purchase) => sum + purchase.discount, 0),
     [purchases]
   );
 
@@ -80,7 +80,7 @@ const PurchaseHistoryPage = () => {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="font-barlow font-bold text-2xl sm:text-3xl text-foreground mb-1">Purchase History</h1>
-            <p className="text-sm text-muted-foreground">Review your past voucher redemptions and savings</p>
+            <p className="text-sm text-muted-foreground">Review your claimed vouchers, redemptions, and savings</p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-100">
@@ -183,7 +183,7 @@ const PurchaseHistoryPage = () => {
         ) : (
           <Card>
             <CardContent className="py-10 text-center text-muted-foreground">
-              No purchases found for this member
+              No claimed vouchers found for this member
             </CardContent>
           </Card>
         )}

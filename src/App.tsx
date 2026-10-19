@@ -70,7 +70,7 @@ const RoleRoute = ({ children, allowed }: { children: JSX.Element; allowed: User
 const RepresentativeRoute = ({ children, capability }: { children: JSX.Element; capability: "canCreateEvents" | "canRunReports" | "canScanVouchers" | "canManageInvites" }) => {
   const user = getUserFromStorage();
   if (!user) return <Navigate to="/login" replace />;
-  if (isAuthorizedRepresentativeView() && !getRepresentativeCapabilities()[capability]) {
+  if (isAuthorizedRepresentativeView(user.cognitoId) && !getRepresentativeCapabilities(user.cognitoId)[capability]) {
     return <Navigate to="/dashboard" replace />;
   }
   return children;
@@ -96,7 +96,7 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           
           {/* Shared routes (all authenticated users) */}
-          <Route path="/dashboard/profile" element={<ProtectedRoute>{isAuthorizedRepresentativeView() ? <Navigate to="/dashboard" replace /> : <ProfilePage />}</ProtectedRoute>} />
+          <Route path="/dashboard/profile" element={<ProtectedRoute>{isAuthorizedRepresentativeView(getUserFromStorage()?.cognitoId) ? <Navigate to="/dashboard" replace /> : <ProfilePage />}</ProtectedRoute>} />
           <Route path="/dashboard/score" element={<ProtectedRoute><EngagementScorePage /></ProtectedRoute>} />
 
           {/* ── Member-only routes ── */}

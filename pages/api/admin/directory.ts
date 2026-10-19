@@ -47,7 +47,7 @@ export default async function handler(
           events: {
             select: {
               start_date: true, end_date: true, response_deadline: true,
-              status: true, event_provider_invites: { select: { status: true } },
+              status: true, published: true, event_provider_invites: { select: { status: true } },
             },
           },
         },
@@ -83,6 +83,7 @@ export default async function handler(
         startDate: event.start_date,
         endDate: event.end_date,
         responseDeadline: event.response_deadline,
+        published: event.published,
         inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
       }) !== "pending").length;
       const pendingEvents = events.length - publishedEvents;

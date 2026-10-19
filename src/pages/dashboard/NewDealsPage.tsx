@@ -185,7 +185,7 @@ const NewDealsPage = () => {
         </div>
         <div className="flex items-center gap-2">
           <Clock className="h-3.5 w-3.5" />
-          {days === null ? "No expiry date" : `${days} day${days === 1 ? "" : "s"} left`}
+          {days === null ? "No expiration date" : `${days} day${days === 1 ? "" : "s"} left`}
         </div>
       </div>
     );
@@ -203,10 +203,10 @@ const NewDealsPage = () => {
       { label: "Discount", value: getVoucherDiscountLabel(voucher) },
       { label: "Description", value: getVoucherDescription(voucher) },
       { label: "Location", value: getVoucherLocation(voucher) },
-      { label: "Expires", value: expiry ? expiry.toLocaleDateString() : "No expiry date" },
+      { label: "Expires", value: expiry ? expiry.toLocaleDateString() : "No expiration date" },
       {
         label: "Days Left",
-        value: days === null ? "No expiry date" : `${days} day${days === 1 ? "" : "s"}`,
+        value: days === null ? "No expiration date" : `${days} day${days === 1 ? "" : "s"}`,
       },
       { label: "Status", value: getVoucherStatusLabel(voucher.status) },
       { label: "Claimed At", value: voucher.claimed_at ? new Date(voucher.claimed_at).toLocaleString() : "Unknown" },

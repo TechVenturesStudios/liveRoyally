@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/ui/logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { completeNewPasswordChallenge, confirmPasswordReset, loginWithCognito } from "@/api/auth";
+import { completeNewPasswordChallenge, confirmPasswordReset, loginWithCognito, requestPasswordReset } from "@/api/auth";
 import { saveUserToStorage } from "@/utils/userStorage";
 import { clearDashboardContext } from "@/utils/dashboardContext";
 
@@ -20,6 +20,7 @@ const Login = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [challengeSession, setChallengeSession] = useState("");
+  const [isResetRequestMode, setIsResetRequestMode] = useState(false);
   const [isResetCodeMode, setIsResetCodeMode] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,7 +46,12 @@ const Login = () => {
     e.preventDefault();
     setError("");
 
-    if (isPasswordUpdateMode) {
+    if (isResetRequestMode) {
+      if (!email) {
+        setError("Email is required");
+        return;
+      }
+    } else if (isPasswordUpdateMode) {
       if (!email) {
         setError("Email is required");
         return;
@@ -72,6 +78,19 @@ const Login = () => {
 
     try {
       setLoading(true);
+
+      if (isResetRequestMode) {
+        await requestPasswordReset(email);
+        setIsResetRequestMode(false);
+        setIsResetCodeMode(true);
+        setResetCode("");
+        setNewPassword("");
+        setConfirmPassword("");
+        toast.success("Reset email sent", {
+          description: "Check your email for the verification code.",
+        });
+        return;
+      }
 
       if (needsNewPassword) {
         const user = await completeNewPasswordChallenge(email, challengeSession, newPassword);
@@ -136,10 +155,16 @@ const Login = () => {
         <Card className="royal-card w-full max-w-md">
           <div className="space-y-6 p-6">
             <h1 className="text-2xl font-bold royal-header text-center">
-              {isPasswordUpdateMode ? "Create New Password" : "Sign In"}
+              {isResetRequestMode
+                ? "Reset Your Password"
+                : isPasswordUpdateMode
+                  ? "Create New Password"
+                  : "Sign In"}
             </h1>
             <p className="text-gray-600 text-center">
-              {isResetCodeMode
+              {isResetRequestMode
+                ? "Enter your email and we’ll send you a password reset code."
+                : isResetCodeMode
                 ? "Enter your password reset verification code and choose a new password."
                 : needsNewPassword
                   ? "Your temporary password was accepted. Choose a permanent password for your account."
@@ -166,16 +191,18 @@ const Login = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Password</Label>
-                    <Input
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
+                  {!isResetRequestMode && (
+                    <div className="space-y-2">
+                      <Label>Password</Label>
+                      <Input
+                        type="password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  )}
                 </>
               )}
 
@@ -241,6 +268,8 @@ const Login = () => {
                     : "Signing in..."
                   : isPasswordUpdateMode
                     ? "Set Password & Sign In"
+                  : isResetRequestMode
+                    ? "Send Reset Email"
                     : "Sign In"}
               </Button>
             </form>
@@ -252,6 +281,7 @@ const Login = () => {
                   className="text-royal hover:text-royal-dark"
                   onClick={() => {
                     setError("");
+                    setIsResetRequestMode(false);
                     setIsResetCodeMode((current) => !current);
                     setPassword("");
                     setResetCode("");
@@ -261,6 +291,23 @@ const Login = () => {
                 >
                   {isResetCodeMode ? "Back to sign in" : "Have a password reset code?"}
                 </button>
+
+                {!isResetCodeMode && (
+                  <button
+                    type="button"
+                    className="block w-full text-royal hover:text-royal-dark"
+                    onClick={() => {
+                      setError("");
+                      setIsResetRequestMode((current) => !current);
+                      setPassword("");
+                      setResetCode("");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                    }}
+                  >
+                    {isResetRequestMode ? "Back to sign in" : "Forgot password?"}
+                  </button>
+                )}
 
                 {!isResetCodeMode && (
                   <p>

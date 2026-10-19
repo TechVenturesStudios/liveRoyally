@@ -83,6 +83,22 @@ export async function confirmPasswordReset(
   return data as { message: string };
 }
 
+export async function requestPasswordReset(email: string) {
+  const response = await fetch("/api/auth/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await readJsonOrThrow(response, "Failed to send password reset email");
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to send password reset email");
+  }
+
+  return data as { message: string };
+}
+
 export async function logout() {
   await fetch("/api/auth/logout", {
     method: "POST",

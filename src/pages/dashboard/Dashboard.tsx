@@ -54,10 +54,7 @@ const Dashboard = () => {
             : 0;
 
         const purchaseCount = purchaseResult.status === "fulfilled"
-          ? purchaseResult.value.purchases.filter((purchase) => {
-              const status = String(purchase.status || "").trim().toLowerCase();
-              return status === "used" || status === "redeemed" || status === "completed";
-            }).length
+          ? purchaseResult.value.purchases.length
           : 0;
 
         setMemberCardStats({

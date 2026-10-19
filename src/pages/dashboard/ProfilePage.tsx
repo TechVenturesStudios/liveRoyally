@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { User, Edit, Save, X, Crown, CreditCard, CalendarDays, Users, Check, AlertTriangle, BookOpen, Link2, Unplug } from "lucide-react";
+import { User, Edit, Save, X, Crown, CreditCard, CalendarDays, Users, Check, AlertTriangle, BookOpen, Link2, Unplug, Loader2 } from "lucide-react";
 import ViewToggle from "@/components/ui/ViewToggle";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -61,7 +61,8 @@ const ProfilePage = () => {
   const [subscriptionUpdatePending, setSubscriptionUpdatePending] = useState(false);
   const [pointsGuideSending, setPointsGuideSending] = useState(false);
   const [squareConnected, setSquareConnected] = useState(false);
-  const [squareConnectionLoading, setSquareConnectionLoading] = useState(false);
+  const [squareConnectionLoading, setSquareConnectionLoading] = useState(true);
+  const [squareConnectionError, setSquareConnectionError] = useState("");
   const [squareDisconnecting, setSquareDisconnecting] = useState(false);
   const { toast } = useToast();
 
@@ -149,8 +150,20 @@ const ProfilePage = () => {
         setUser(completeUser)
         setFormData(completeUser)
         if (data.user_type === "partner") {
-          const squareResponse = await fetch("/api/square/oauth/connection", { cache: "no-store" });
-          if (squareResponse.ok) setSquareConnected(Boolean((await squareResponse.json()).connected));
+          setSquareConnectionLoading(true);
+          setSquareConnectionError("");
+          try {
+            const squareResponse = await fetch("/api/square/oauth/connection", { cache: "no-store" });
+            const squareData = await squareResponse.json();
+            if (!squareResponse.ok) {
+              throw new Error(squareData.error || "Unable to check Square connection");
+            }
+            setSquareConnected(Boolean(squareData.connected));
+          } catch (error) {
+            setSquareConnectionError(error instanceof Error ? error.message : "Unable to check Square connection");
+          } finally {
+            setSquareConnectionLoading(false);
+          }
         }
         return data;
       } 
@@ -533,18 +546,22 @@ const ProfilePage = () => {
           </CardHeader>
           <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <Badge variant={squareConnected ? "default" : "outline"}>
-                {squareConnected ? "Connected" : "Not connected"}
+              <Badge variant={squareConnectionLoading || squareConnectionError ? "outline" : squareConnected ? "default" : "outline"}>
+                {squareConnectionLoading ? "Checking connection..." : squareConnectionError ? "Unable to check" : squareConnected ? "Connected" : "Not connected"}
               </Badge>
               <p className="mt-2 text-sm text-muted-foreground">
-                Members will authorize payment to this account when claiming a paid voucher.
+                {squareConnectionError || "Members will authorize payment to this account when claiming a paid voucher."}
               </p>
             </div>
-            {squareConnected ? (
+            {squareConnectionLoading ? (
+              <Button type="button" variant="outline" size="sm" disabled>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking...
+              </Button>
+            ) : squareConnected ? (
               <Button type="button" variant="outline" size="sm" onClick={handleDisconnectSquare} disabled={squareDisconnecting}>
                 <Unplug className="mr-2 h-4 w-4" /> {squareDisconnecting ? "Disconnecting..." : "Disconnect Square"}
               </Button>
-            ) : (
+            ) : squareConnectionError ? null : (
               <Button
                 type="button"
                 size="sm"

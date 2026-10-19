@@ -132,10 +132,11 @@ export default async function handler(
 
     const purchases = await prisma.$queryRaw<
       Array<{
-        purchase_id: number;
+        purchase_id: number | null;
         voucher_id: string | null;
         purchase_date: Date | null;
         status: string | null;
+        claimed_at: Date | null;
         voucher_type: string | null;
         voucher_value: unknown;
         member_price: unknown;
@@ -143,23 +144,57 @@ export default async function handler(
         provider_name: string | null;
       }>
     >`
-      SELECT
-        p.purchase_id,
-        p.voucher_id,
-        p.purchase_date,
-        p.status,
-        v.type AS voucher_type,
-        v.value AS voucher_value,
-        v.member_price,
-        v.promo_item,
-        pp.business_name AS provider_name
-      FROM purchases p
-      LEFT JOIN vouchers v
-        ON v.voucher_id = p.voucher_id
-      LEFT JOIN provider_profiles pp
-        ON pp.user_id = v.provider_id
-      WHERE p.member_id = ${member.user_id}::uuid
-      ORDER BY p.purchase_date DESC NULLS LAST, p.purchase_id DESC;
+      WITH history AS (
+        SELECT
+          p.purchase_id,
+          p.voucher_id,
+          p.purchase_date,
+          p.status,
+          mv.created_at AS claimed_at,
+          v.type AS voucher_type,
+          v.value AS voucher_value,
+          v.member_price,
+          v.promo_item,
+          pp.business_name AS provider_name
+        FROM purchases p
+        LEFT JOIN member_vouchers mv
+          ON mv.member_id = p.member_id
+         AND mv.voucher_id = p.voucher_id
+        LEFT JOIN vouchers v
+          ON v.voucher_id = p.voucher_id
+        LEFT JOIN provider_profiles pp
+          ON pp.user_id = v.provider_id
+        WHERE p.member_id = ${member.user_id}::uuid
+
+        UNION ALL
+
+        SELECT
+          NULL::integer AS purchase_id,
+          mv.voucher_id,
+          NULL::timestamp AS purchase_date,
+          'claimed' AS status,
+          mv.created_at AS claimed_at,
+          v.type AS voucher_type,
+          v.value AS voucher_value,
+          v.member_price,
+          v.promo_item,
+          pp.business_name AS provider_name
+        FROM member_vouchers mv
+        LEFT JOIN vouchers v
+          ON v.voucher_id = mv.voucher_id
+        LEFT JOIN provider_profiles pp
+          ON pp.user_id = v.provider_id
+        WHERE mv.member_id = ${member.user_id}::uuid
+          AND NOT EXISTS (
+            SELECT 1
+            FROM purchases p
+            WHERE p.member_id = mv.member_id
+              AND p.voucher_id = mv.voucher_id
+          )
+      )
+      SELECT *
+      FROM history
+      ORDER BY COALESCE(purchase_date, claimed_at) DESC NULLS LAST, purchase_id DESC NULLS LAST;
     `;
 
     const formattedPurchases: MemberPurchaseRecord[] = purchases.map((purchase) => {
@@ -172,7 +207,9 @@ export default async function handler(
       });
 
       return {
-        id: `PH-${purchase.purchase_id}`,
+        id: purchase.purchase_id === null
+          ? `CL-${purchase.voucher_id || "UNKNOWN"}`
+          : `PH-${purchase.purchase_id}`,
         voucherId: purchase.voucher_id || "",
         title: formatPurchaseTitle({
           providerName,
@@ -184,9 +221,11 @@ export default async function handler(
         originalPrice: Number(amounts.originalPrice.toFixed(2)),
         discount: Number(amounts.discount.toFixed(2)),
         finalPrice: Number(amounts.finalPrice.toFixed(2)),
-        date: purchase.purchase_date ? purchase.purchase_date.toISOString() : "",
+        date: (purchase.purchase_date || purchase.claimed_at)?.toISOString() || "",
         status:
-          String(purchase.status || "completed").trim().toLowerCase() === "refunded"
+          String(purchase.status || "completed").trim().toLowerCase() === "claimed"
+            ? "claimed"
+            : String(purchase.status || "completed").trim().toLowerCase() === "refunded"
             ? "refunded"
             : String(purchase.status || "completed").trim().toLowerCase() === "used"
               ? "used"

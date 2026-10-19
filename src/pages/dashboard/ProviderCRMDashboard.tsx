@@ -27,7 +27,7 @@ const ProviderCRMDashboard = () => {
   const [activeEvents, setActiveEvents] = useState(0);
   const [representatives, setRepresentatives] = useState(0);
   const [loading, setLoading] = useState(true);
-  const isRepView = isAuthorizedRepresentativeView();
+  const isRepView = isAuthorizedRepresentativeView(getUserFromStorage()?.cognitoId);
 
   useEffect(() => {
     let isMounted = true;
@@ -101,7 +101,7 @@ const ProviderCRMDashboard = () => {
       action: () => navigate("/dashboard/providers/events"),
     },
     ...(!isRepView ? [{
-      title: "Pending Approvals",
+      title: "Pending Acceptances",
       description: "Handle unresponded event invitations",
       count: pendingEvents,
       icon: Clock,

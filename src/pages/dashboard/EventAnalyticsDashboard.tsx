@@ -113,7 +113,9 @@ const EventAnalyticsDashboard = () => {
           return {
             ...event,
             providerNames: event.providers.map((provider) => provider.providerName),
-            participants: analytics?.membersAttended ?? 0,
+            // The event modal's Participants field represents providers who
+            // accepted the invite, not member voucher attendance.
+            participants: event.acceptedProviderCount,
             revenue: analytics?.revenue ?? 0,
             status: normalizePublishedStatus(event),
           };
@@ -302,7 +304,7 @@ const EventAnalyticsDashboard = () => {
                   <TableHead className="text-xs">Location</TableHead>
                   <TableHead className="text-xs">Date</TableHead>
                   <TableHead className="text-xs">Providers</TableHead>
-                  <TableHead className="text-xs">Members Participating</TableHead>
+                  <TableHead className="text-xs">Accepted Providers</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                 </TableRow>
               </TableHeader>

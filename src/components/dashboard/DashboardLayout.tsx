@@ -21,6 +21,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     sessionStorage.setItem("sidebar-collapsed", String(value));
   };
 
+  const handleMainClick = () => {
+    if (!sidebarCollapsed) {
+      updateCollapsed(true);
+    }
+  };
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -38,12 +44,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           user={user}
           collapsed={sidebarCollapsed}
           onToggle={() => updateCollapsed(!sidebarCollapsed)}
-          onCollapse={() => updateCollapsed(true)}
         />
 
         <main
           className="flex-1 overflow-y-auto p-3 sm:p-6 pb-6"
-          onClick={() => { if (!sidebarCollapsed) updateCollapsed(true); }}
+          onClick={handleMainClick}
         >
           {children}
         </main>

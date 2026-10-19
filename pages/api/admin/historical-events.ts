@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           orderBy: [{ start_date: "desc" }, { created_at: "desc" }],
           select: {
             event_id: true, title: true, description: true, location: true, event_time: true,
-            start_date: true, end_date: true, response_deadline: true,
+            start_date: true, end_date: true, response_deadline: true, published: true,
             event_provider_invites: {
               orderBy: { invited_at: "desc" },
               select: { provider_id: true, status: true, provider: { select: { provider_profiles: { select: { business_name: true, business_category: true, agent_first_name: true, agent_last_name: true } } } } },
@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const partnerData = network.partners.get(partner.user_id) ?? { name: partnerName, events: [] };
 
       for (const event of partner.events) {
-        const status = deriveEventLifecycleStatus({ startDate: event.start_date, endDate: event.end_date, responseDeadline: event.response_deadline, inviteStatuses: event.event_provider_invites.map((invite) => invite.status) });
+        const status = deriveEventLifecycleStatus({ startDate: event.start_date, endDate: event.end_date, responseDeadline: event.response_deadline, published: event.published, inviteStatuses: event.event_provider_invites.map((invite) => invite.status) });
         if (status !== "completed") continue;
 
         const metrics = await prisma.$queryRaw<MetricRow[]>`

@@ -79,6 +79,7 @@ export default async function handler(
         event_time: true,
         network_points: true,
         response_deadline: true,
+        published: true,
         start_date: true,
         end_date: true,
         status: true,
@@ -114,14 +115,8 @@ export default async function handler(
         endDate: event.end_date,
         responseDeadline: event.response_deadline,
         inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
+        published: event.published,
       });
-
-      if (event.status !== status) {
-        await prisma.events.update({
-          where: { event_id: event.event_id },
-          data: { status },
-        });
-      }
 
       return {
         ...event,

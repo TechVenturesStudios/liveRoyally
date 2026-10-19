@@ -22,8 +22,8 @@ const ProviderPendingEventsPage = () => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedEvent, setSelectedEvent] = useState<ProviderPendingInvite | null>(null);
-  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
-  const [approving, setApproving] = useState(false);
+  const [showAcceptDialog, setShowAcceptDialog] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { toast } = useToast();
@@ -85,7 +85,7 @@ const ProviderPendingEventsPage = () => {
     });
   }, [events, sortOrder]);
 
-  const handleOpenApproval = (event: ProviderPendingInvite) => {
+  const handleOpenAccept = (event: ProviderPendingInvite) => {
     if (isInviteExpired(event)) {
       toast({
         title: "Invitation expired",
@@ -97,11 +97,17 @@ const ProviderPendingEventsPage = () => {
 
     setSelectedEvent(event);
     resetPricing();
-    setShowApprovalDialog(true);
+    setShowAcceptDialog(true);
   };
 
-  const handleApprove = async () => {
+  const handleAccept = async () => {
     if (!selectedEvent) return;
+
+    const activeProvider = getUserFromStorage();
+    if (!activeProvider?.cognitoId) {
+      toast({ title: "Acceptance failed", description: "Your provider session could not be verified. Please sign in again.", variant: "destructive" });
+      return;
+    }
 
     if (isInviteExpired(selectedEvent)) {
       toast({
@@ -122,10 +128,11 @@ const ProviderPendingEventsPage = () => {
       : "F";
 
     try {
-      setApproving(true);
+      setAccepting(true);
       const result = await respondToProviderInvite({
         inviteId: selectedEvent.inviteId,
-        action: "approve",
+        action: "accept",
+        cognitoId: activeProvider.cognitoId,
         voucher: {
           type: voucherType,
           value: pricingData.discountValue,
@@ -135,19 +142,19 @@ const ProviderPendingEventsPage = () => {
       });
 
       setEvents(prev => prev.filter(e => e.inviteId !== selectedEvent.inviteId));
-      setShowApprovalDialog(false);
+      setShowAcceptDialog(false);
       setSelectedEvent(null);
       toast({
-        title: result.alreadyApproved ? "Already approved" : "Event Approved",
-        description: result.alreadyApproved
+        title: result.alreadyAccepted ? "Already accepted" : "Event Accepted",
+        description: result.alreadyAccepted
           ? `You already have a deal for "${selectedEvent.eventTitle}".`
-          : `You've approved "${selectedEvent.eventTitle}" with your deal.`,
+          : `You've accepted "${selectedEvent.eventTitle}" with your deal.`,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to approve event";
-      toast({ title: "Approval failed", description: message, variant: "destructive" });
+      const message = error instanceof Error ? error.message : "Failed to accept event";
+      toast({ title: "Acceptance failed", description: message, variant: "destructive" });
     } finally {
-      setApproving(false);
+      setAccepting(false);
     }
   };
 
@@ -161,21 +168,28 @@ const ProviderPendingEventsPage = () => {
       return;
     }
 
+    const activeProvider = getUserFromStorage();
+    if (!activeProvider?.cognitoId) {
+      toast({ title: "Decline failed", description: "Your provider session could not be verified. Please sign in again.", variant: "destructive" });
+      return;
+    }
+
     try {
-      setApproving(true);
+      setAccepting(true);
       await respondToProviderInvite({
         inviteId: event.inviteId,
         action: "decline",
+        cognitoId: activeProvider.cognitoId,
       });
       setEvents(prev => prev.filter(e => e.inviteId !== event.inviteId));
       setSelectedEvent(null);
-      setShowApprovalDialog(false);
+      setShowAcceptDialog(false);
       toast({ title: "Event Declined", description: `You declined "${event.eventTitle}".`, variant: "destructive" });
     } catch (declineError) {
       const message = declineError instanceof Error ? declineError.message : "Failed to decline event";
       toast({ title: "Decline failed", description: message, variant: "destructive" });
     } finally {
-      setApproving(false);
+      setAccepting(false);
     }
   };
 
@@ -201,8 +215,8 @@ const ProviderPendingEventsPage = () => {
       <div className="space-y-2 sm:space-y-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h1 className="font-barlow font-bold text-xl sm:text-3xl text-foreground">Pending Approvals</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">Events needing your approval</p>
+        <h1 className="font-barlow font-bold text-xl sm:text-3xl text-foreground">Pending Events</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Events needing your acceptance</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-100">
@@ -227,7 +241,7 @@ const ProviderPendingEventsPage = () => {
 
         {loading ? (
           <Card>
-            <CardContent className="py-10 text-center text-muted-foreground">Loading pending approvals...</CardContent>
+            <CardContent className="py-10 text-center text-muted-foreground">Loading pending events...</CardContent>
           </Card>
         ) : sortedEvents.length > 0 ? (
           viewMode === "grid" ? (
@@ -274,8 +288,8 @@ const ProviderPendingEventsPage = () => {
                     </div>
                   </CardContent>
                   <div className="p-4 pt-0 flex gap-2">
-                    <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleOpenApproval(event)} disabled={isInviteExpired(event)}>
-                      <CheckCircle className="h-4 w-4 mr-1" /> Approve
+                    <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleOpenAccept(event)} disabled={isInviteExpired(event)}>
+                      <CheckCircle className="h-4 w-4 mr-1" /> Accept Event
                     </Button>
                     <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleDecline(event)} disabled={isInviteExpired(event)}>
                       <XCircle className="h-4 w-4 mr-1" /> Decline
@@ -303,7 +317,7 @@ const ProviderPendingEventsPage = () => {
                     </TableHeader>
                     <TableBody>
                       {sortedEvents.map((event) => (
-                        <TableRow key={event.inviteId} className="cursor-pointer hover:bg-muted/50" onClick={() => handleOpenApproval(event)}>
+                        <TableRow key={event.inviteId} className="cursor-pointer hover:bg-muted/50" onClick={() => handleOpenAccept(event)}>
                           <TableCell className="py-2">
                             <div className="font-medium text-xs">{event.eventTitle}</div>
                             <div className="text-[11px] text-muted-foreground line-clamp-1">{event.eventDescription}</div>
@@ -320,8 +334,8 @@ const ProviderPendingEventsPage = () => {
                           <TableCell className="py-2 text-right text-xs font-semibold">{event.networkPoints}</TableCell>
                           <TableCell className="py-2">
                             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                              <Button size="sm" className="h-6 px-2 text-[10px] bg-green-600 hover:bg-green-700" onClick={() => handleOpenApproval(event)} disabled={isInviteExpired(event)}>
-                                <CheckCircle className="h-2.5 w-2.5 mr-0.5" /> Approve
+                              <Button size="sm" className="h-6 px-2 text-[10px] bg-green-600 hover:bg-green-700" onClick={() => handleOpenAccept(event)} disabled={isInviteExpired(event)}>
+                                <CheckCircle className="h-2.5 w-2.5 mr-0.5" /> Accept Event
                               </Button>
                               <Button size="sm" variant="destructive" className="h-6 px-2 text-[10px]" onClick={() => handleDecline(event)} disabled={isInviteExpired(event)}>
                                 <XCircle className="h-2.5 w-2.5 mr-0.5" /> Decline
@@ -345,12 +359,12 @@ const ProviderPendingEventsPage = () => {
         )}
       </div>
 
-      {/* Approval Dialog with Pricing */}
-      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+      {/* Accept Event dialog with pricing */}
+      <Dialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
         <DialogContent className="sm:max-w-[550px] max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Approve Event</DialogTitle>
-            <DialogDescription>Review event details and set your pricing before approving.</DialogDescription>
+            <DialogTitle>Accept Event</DialogTitle>
+            <DialogDescription>Review event details and set your pricing before accepting.</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[65vh] pr-3">
             {selectedEvent && (
@@ -442,10 +456,10 @@ const ProviderPendingEventsPage = () => {
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <Button className="flex-1" onClick={handleApprove} disabled={approving || isInviteExpired(selectedEvent)}>
-                    <CheckCircle2 className="h-4 w-4 mr-2" /> {approving ? "Approving..." : "Approve Event"}
+                  <Button className="flex-1" onClick={handleAccept} disabled={accepting || isInviteExpired(selectedEvent)}>
+                    <CheckCircle2 className="h-4 w-4 mr-2" /> {accepting ? "Accepting..." : "Accept Event"}
                   </Button>
-                  <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => handleDecline(selectedEvent)} disabled={approving || isInviteExpired(selectedEvent)}>
+                  <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => handleDecline(selectedEvent)} disabled={accepting || isInviteExpired(selectedEvent)}>
                     <XCircle className="h-4 w-4 mr-2" /> Decline
                   </Button>
                 </div>

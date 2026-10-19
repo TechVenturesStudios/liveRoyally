@@ -57,10 +57,7 @@ export function useMemberDashboardStats(enabled: boolean) {
           : 0;
 
         const purchaseCount = Array.isArray(historyJson?.purchases)
-          ? historyJson.purchases.filter((purchase: any) => {
-              const status = String(purchase.status || "").trim().toLowerCase();
-              return status === "used" || status === "redeemed" || status === "completed";
-            }).length
+          ? historyJson.purchases.length
           : 0;
 
         const dealsCount = Array.isArray(dealsJson?.vouchers)

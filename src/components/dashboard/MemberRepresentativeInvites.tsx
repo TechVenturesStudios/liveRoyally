@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getUserFromStorage } from "@/utils/userStorage";
 
 const MemberRepresentativeInvites = () => {
   const [invites, setInvites] = useState<RepresentativeAssignment[]>([]);
@@ -14,7 +15,8 @@ const MemberRepresentativeInvites = () => {
 
   useEffect(() => {
     let cancelled = false;
-    fetchRepresentativeAssignments()
+    const cognitoId = getUserFromStorage()?.cognitoId;
+    fetchRepresentativeAssignments(cognitoId)
       .then((result) => {
         if (!cancelled) setInvites(result.assignments.filter((assignment) => assignment.status === "pending"));
       })
@@ -28,7 +30,7 @@ const MemberRepresentativeInvites = () => {
   const respond = async (invite: RepresentativeAssignment, action: "accept" | "decline") => {
     setRespondingId(invite.assignmentId);
     try {
-      await respondToRepresentativeInvite(invite.assignmentId, action);
+      await respondToRepresentativeInvite(invite.assignmentId, action, getUserFromStorage()?.cognitoId);
       setInvites((current) => current.filter((item) => item.assignmentId !== invite.assignmentId));
       toast({
         title: action === "accept" ? "Representative invite accepted" : "Representative invite declined",

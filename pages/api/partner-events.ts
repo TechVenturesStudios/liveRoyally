@@ -125,14 +125,8 @@ export default async function handler(
           endDate: event.end_date,
           responseDeadline: event.response_deadline,
           inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
+          published: event.published,
         });
-
-        if (event.status !== status) {
-          await prisma.events.update({
-            where: { event_id: event.event_id },
-            data: { status },
-          });
-        }
 
         const pendingProviderCount = event.event_provider_invites.filter((invite) => invite.status === "pending").length;
         const acceptedProviderCount = event.event_provider_invites.filter((invite) => invite.status === "accepted").length;

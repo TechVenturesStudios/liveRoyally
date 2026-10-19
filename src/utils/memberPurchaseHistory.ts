@@ -7,5 +7,5 @@ export type MemberPurchaseRecord = {
   discount: number;
   finalPrice: number;
   date: string;
-  status: "completed" | "refunded" | "used";
+  status: "claimed" | "completed" | "refunded" | "used";
 };

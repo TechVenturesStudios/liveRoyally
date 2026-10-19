@@ -71,6 +71,10 @@ export default async function handler(
       return res.status(404).json({ error: "Current user not found" });
     }
 
+    if (member.user_type !== "member") {
+      return res.status(403).json({ error: "Only member accounts can manage representative invitations" });
+    }
+
     if (req.method === "POST") {
       const assignmentId = String(req.body?.assignmentId || "").trim();
       const action = String(req.body?.action || "").trim().toLowerCase();

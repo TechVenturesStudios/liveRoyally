@@ -77,6 +77,7 @@ export default async function handler(
           start_date: true,
           end_date: true,
           response_deadline: true,
+          published: true,
           status: true,
           event_provider_invites: {
             select: {
@@ -137,6 +138,7 @@ export default async function handler(
         startDate: event.start_date,
         endDate: event.end_date,
         responseDeadline: event.response_deadline,
+        published: event.published,
         inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
       }) === "completed"
     ).length;

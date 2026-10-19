@@ -22,16 +22,16 @@ interface DashboardSidebarProps {
   user: UserType;
   collapsed: boolean;
   onToggle: () => void;
-  onCollapse: () => void;
 }
 
-const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSidebarProps) => {
+const DashboardSidebar = ({ user, collapsed, onToggle }: DashboardSidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [assignments, setAssignments] = useState<RepresentativeAssignment[]>([]);
   const currentContext = getDashboardContext();
+  const userCognitoId = user?.cognitoId;
   const effectiveType = getEffectiveDashboardType(user?.userType as any, user?.cognitoId) || user?.userType;
-  const isRepView = isAuthorizedRepresentativeView();
+  const isRepView = userCognitoId ? isAuthorizedRepresentativeView(userCognitoId) : false;
   const navItems = getNavItems(effectiveType as UserTypeEnum, isRepView);
   const currentAssignment = assignments.find((assignment) => assignment.assignmentId === currentContext?.assignmentId);
 
@@ -45,9 +45,9 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
 
     const loadAssignments = async () => {
       try {
-        const data = await fetchRepresentativeAssignments();
+        const data = await fetchRepresentativeAssignments(userCognitoId);
         if (isMounted) {
-          setAssignments(data.assignments);
+          setAssignments(data.assignments.filter((assignment) => assignment.status === "accepted"));
           if (
             currentContext?.mode === "rep" &&
             currentContext.assignmentId &&
@@ -68,7 +68,7 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
     return () => {
       isMounted = false;
     };
-  }, [currentContext?.assignmentId, currentContext?.mode, user?.userType]);
+  }, [currentContext?.assignmentId, currentContext?.mode, user, userCognitoId, user?.userType]);
 
   const handleViewChange = (value: string) => {
     if (value === "member") {
@@ -206,7 +206,7 @@ const DashboardSidebar = ({ user, collapsed, onToggle, onCollapse }: DashboardSi
                 className={`w-full font-medium text-gray-600 hover:text-brand-purple hover:bg-brand-purple/5 ${
                   collapsed ? "justify-center px-2" : "justify-start"
                 } ${isActive ? "bg-brand-purple/10 text-brand-purple" : ""}`}
-                onClick={() => { navigate(item.path); onCollapse(); }}
+                onClick={() => navigate(item.path)}
               >
                 <item.icon className={`h-4 w-4 ${collapsed ? "" : "mr-3"} shrink-0`} />
                 {!collapsed && item.name}

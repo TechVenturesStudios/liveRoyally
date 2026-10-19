@@ -3,7 +3,6 @@ import { randomBytes } from "crypto";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
 import { isDeadlinePassed } from "@/utils/inviteDeadline";
-import { deriveEventLifecycleStatus } from "@/utils/eventStatus";
 import { awardRewardTask } from "../../lib/rewards";
 
 type ProviderInviteResponse =
@@ -27,7 +26,7 @@ type ProviderInviteResponse =
         max_redemptions: number | null;
         created_at: Date | null;
       };
-      alreadyApproved?: boolean;
+      alreadyAccepted?: boolean;
     }
   | {
       error: string;
@@ -59,43 +58,6 @@ function parseVoucherType(value: unknown) {
   return type as UiVoucherType;
 }
 
-async function syncEventLifecycleStatus(tx: any, eventId: string) {
-  const event = await tx.events.findUnique({
-    where: { event_id: eventId },
-      select: {
-        event_id: true,
-        status: true,
-        start_date: true,
-        end_date: true,
-        response_deadline: true,
-        event_provider_invites: {
-        select: {
-          status: true,
-        },
-      },
-    },
-  });
-
-  if (!event) {
-    return;
-  }
-
-  const nextStatus = deriveEventLifecycleStatus({
-    startDate: event.start_date,
-    endDate: event.end_date,
-    responseDeadline: event.response_deadline,
-    inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
-  });
-
-  if (event.status !== nextStatus) {
-    await tx.events.update({
-      where: { event_id: event.event_id },
-      data: {
-        status: nextStatus,
-      },
-    });
-  }
-}
 
 export default async function handler(
   req: NextApiRequest,
@@ -112,6 +74,11 @@ export default async function handler(
   }
 
   try {
+    const cognitoId = String(req.query.cognitoId || req.query.cognito_id || "").trim();
+    if (!cognitoId) {
+      return res.status(400).json({ error: "cognitoId is required" });
+    }
+
     const account = await resolveDashboardAccount(req, ["provider"]);
     if (!account) {
       return res.status(500).json({ error: "Failed to resolve account" });
@@ -125,7 +92,7 @@ export default async function handler(
     const inviteId = String(body.inviteId ?? "").trim();
     const action = String(body.action ?? "").trim().toLowerCase();
 
-    if (!inviteId || !["approve", "decline"].includes(action)) {
+    if (!inviteId || !["accept", "approve", "decline"].includes(action)) {
       return res.status(400).json({ error: "inviteId and action are required" });
     }
 
@@ -165,8 +132,6 @@ export default async function handler(
         });
       }
 
-      await syncEventLifecycleStatus(prisma, invite.event_id);
-
       return res.status(410).json({ error: "This invitation has expired" });
     }
 
@@ -184,8 +149,6 @@ export default async function handler(
           voucher_id: true,
         },
       });
-
-      await syncEventLifecycleStatus(prisma, invite.event_id);
 
       return res.status(200).json({ invite: declinedInvite });
     }
@@ -269,12 +232,10 @@ export default async function handler(
         });
       }
 
-      await syncEventLifecycleStatus(tx, invite.event_id);
-
       return {
         invite: updatedInvite,
         voucher: existingVoucher,
-          alreadyApproved: true,
+          alreadyAccepted: true,
         };
       }
 
@@ -369,8 +330,6 @@ export default async function handler(
           description: "Provider invite accepted",
         });
       }
-
-      await syncEventLifecycleStatus(tx, invite.event_id);
 
       return {
         invite: updatedInvite,
