@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useAuthCheck } from "@/hooks/useAuthCheck";
@@ -17,31 +17,9 @@ import {
 } from "@/components/ui/table";
 import ViewToggle from "@/components/ui/ViewToggle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
-import { Users, Globe, ArrowLeft, UserCheck, Mail, MapPin, CalendarDays } from "lucide-react";
-
-interface MockMember {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  network: string;
-  networkCode: string;
-  zipCode: string;
-  joinDate: string;
-  status: "active" | "inactive";
-  engagementScore: number;
-}
-
-const mockMembers: MockMember[] = [
-  { id: "MEM001", firstName: "Alex", lastName: "Turner", email: "alex@example.com", network: "Royal Network", networkCode: "ROYAL1", zipCode: "10001", joinDate: "2024-01-15", status: "active", engagementScore: 720 },
-  { id: "MEM002", firstName: "Jessica", lastName: "Williams", email: "jessica@example.com", network: "Royal Network", networkCode: "ROYAL1", zipCode: "10002", joinDate: "2024-02-03", status: "active", engagementScore: 650 },
-  { id: "MEM003", firstName: "David", lastName: "Miller", email: "david@example.com", network: "Royal Network", networkCode: "ROYAL1", zipCode: "10003", joinDate: "2024-03-21", status: "inactive", engagementScore: 310 },
-  { id: "MEM004", firstName: "Sarah", lastName: "Johnson", email: "sarah@example.com", network: "Metro Alliance", networkCode: "METRO1", zipCode: "62701", joinDate: "2024-04-10", status: "active", engagementScore: 890 },
-  { id: "MEM005", firstName: "Michael", lastName: "Chen", email: "michael@example.com", network: "Metro Alliance", networkCode: "METRO1", zipCode: "62702", joinDate: "2024-05-18", status: "active", engagementScore: 540 },
-  { id: "MEM006", firstName: "Linda", lastName: "Nguyen", email: "linda@example.com", network: "Westside Connect", networkCode: "WEST1", zipCode: "90211", joinDate: "2024-11-05", status: "active", engagementScore: 420 },
-  { id: "MEM007", firstName: "James", lastName: "Lee", email: "james@example.com", network: "Westside Connect", networkCode: "WEST1", zipCode: "90212", joinDate: "2025-01-08", status: "inactive", engagementScore: 180 },
-  { id: "MEM008", firstName: "Maria", lastName: "Garcia", email: "maria@example.com", network: "Royal Network", networkCode: "ROYAL1", zipCode: "10004", joinDate: "2024-06-22", status: "active", engagementScore: 770 },
-];
+import { Users, ArrowLeft, UserCheck, Mail, MapPin, CalendarDays } from "lucide-react";
+import { fetchAdminMembers, type AdminMember } from "@/api/adminMembers";
+import { getUserFromStorage } from "@/utils/userStorage";
 
 const AdminMembersPage = () => {
   const navigate = useNavigate();
@@ -49,22 +27,35 @@ const AdminMembersPage = () => {
   const from = (location.state as any)?.from || "/dashboard/admin/analytics";
   const backLabel = from.includes("analytics") ? "Back to Analytics" : "Back to Home";
   const { isLoading } = useAuthCheck();
+  const [members, setMembers] = useState<AdminMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [membersError, setMembersError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [statusFilter, setStatusFilter] = useState<"all" | "active">("all");
-  const [selectedMember, setSelectedMember] = useState<MockMember | null>(null);
+  const [selectedMember, setSelectedMember] = useState<AdminMember | null>(null);
 
-  if (isLoading) return <LoadingSpinner />;
+  useEffect(() => {
+    if (isLoading) return;
+    let cancelled = false;
+    fetchAdminMembers(getUserFromStorage()?.cognitoId)
+      .then((result) => { if (!cancelled) setMembers(result.members); })
+      .catch((error) => { if (!cancelled) setMembersError(error instanceof Error ? error.message : "Failed to load members"); })
+      .finally(() => { if (!cancelled) setMembersLoading(false); });
+    return () => { cancelled = true; };
+  }, [isLoading]);
 
-  const activeCount = mockMembers.filter((m) => m.status === "active").length;
+  if (isLoading || membersLoading) return <LoadingSpinner />;
+
+  const activeCount = members.filter((m) => m.status === "active").length;
   const filteredMembers = statusFilter === "active"
-    ? mockMembers.filter((m) => m.status === "active")
-    : [...mockMembers].sort((a, b) => {
+    ? members.filter((m) => m.status === "active")
+    : [...members].sort((a, b) => {
         if (a.status === "inactive" && b.status === "active") return -1;
         if (a.status === "active" && b.status === "inactive") return 1;
         return 0;
       });
 
-  const getDetailRows = (m: MockMember) => [
+  const getDetailRows = (m: AdminMember) => [
     { label: "Name", value: `${m.firstName} ${m.lastName}` },
     { label: "Email", value: m.email },
     { label: "Network", value: m.network },
@@ -118,13 +109,17 @@ const AdminMembersPage = () => {
               }`}
             >
               <Users className="h-3.5 w-3.5" />
-              {mockMembers.length} total
+              {members.length} total
             </button>
             <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
           </div>
         </div>
 
-        {viewMode === "grid" ? (
+        {membersError ? (
+          <Card><div className="py-4 px-5 text-sm text-destructive">{membersError}</div></Card>
+        ) : filteredMembers.length === 0 ? (
+          <Card><div className="py-10 text-center text-sm text-muted-foreground">No members found.</div></Card>
+        ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredMembers.map((m) => (
               <Card

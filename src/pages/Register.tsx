@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import UserTypeSelector from "@/components/ui/UserTypeSelector";
 import MemberForm from "@/components/forms/MemberForm";
 import ProviderForm from "@/components/forms/ProviderForm";
@@ -11,7 +11,13 @@ import { Button } from "@/components/ui/button";
 
 const Register = () => {
   const navigate = useNavigate();
-  const [userType, setUserType] = useState<UserType | null>(null);
+  const [searchParams] = useSearchParams();
+  const [userType, setUserType] = useState<UserType | null>(() => {
+    const requestedType = searchParams.get("type");
+    return requestedType === "member" || requestedType === "provider" || requestedType === "partner"
+      ? requestedType
+      : null;
+  });
 
   const renderForm = () => {
     switch (userType) {
@@ -49,8 +55,8 @@ const Register = () => {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold royal-header mb-4">Create Your Account</h1>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Join Live Royally and connect with exclusive deals and rewards. 
-              Register now to start your royal experience.
+             Join Local Metrics and connect with your local community. 
+             Register now for experiences, exclusive deals, and rewards."
             </p>
           </div>
 

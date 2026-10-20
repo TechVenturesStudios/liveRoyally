@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { randomInt } from "crypto";
 import { UserType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { awardRewardTask } from "../../lib/rewards";
+import { awardAccountCreationReward, awardRewardTask } from "../../lib/rewards";
 import { getOrCreateRole } from "../../lib/roles";
 import { queueMemberPointsTierGuideEmail, queueWelcomeEmail } from "../../lib/notification-templates";
 import { getAppBaseUrl } from "../../lib/app-url";
@@ -140,11 +140,7 @@ export default async function handler(
         }
       }
 
-      await awardRewardTask(tx, {
-        userId: user.user_id,
-        taskKey: "member_create_account",
-        description: "Member account created",
-      });
+      await awardAccountCreationReward(tx, { userId: user.user_id, userType: UserType.member });
 
       return user;
     });

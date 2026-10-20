@@ -1,4 +1,4 @@
-import type { Prisma, RewardFrequencyPeriod } from "@prisma/client";
+import type { Prisma, RewardFrequencyPeriod, UserType } from "@prisma/client";
 
 type RewardTx = Prisma.TransactionClient;
 
@@ -29,6 +29,62 @@ type RewardTaskRecord = {
   frequency_limit: number | null;
   active: boolean;
 };
+
+const ACCOUNT_CREATION_TASKS: Record<UserType, {
+  taskKey: string;
+  name: string;
+  description: string;
+}> = {
+  member: {
+    taskKey: "member_create_account",
+    name: "Create account",
+    description: "Awarded when a member creates an account.",
+  },
+  provider: {
+    taskKey: "provider_create_business_profile",
+    name: "Create business profile",
+    description: "Awarded when a provider creates a business profile.",
+  },
+  partner: {
+    taskKey: "partner_create_organization_profile",
+    name: "Create organization profile",
+    description: "Awarded when a partner creates an organization profile.",
+  },
+  admin: {
+    taskKey: "admin_create_account",
+    name: "Create account",
+    description: "Awarded when an admin account is created.",
+  },
+};
+
+export async function awardAccountCreationReward(
+  tx: RewardTx,
+  input: { userId: string; userType: UserType }
+) {
+  const task = ACCOUNT_CREATION_TASKS[input.userType];
+
+  await tx.reward_tasks.upsert({
+    where: { task_key: task.taskKey },
+    update: {},
+    create: {
+      task_key: task.taskKey,
+      name: task.name,
+      description: task.description,
+      user_type: input.userType,
+      category: "profile",
+      points: 25,
+      frequency_period: "lifetime",
+      frequency_limit: 1,
+      display_order: 1,
+    },
+  });
+
+  return awardRewardTask(tx, {
+    userId: input.userId,
+    taskKey: task.taskKey,
+    description: `${task.name} completed`,
+  });
+}
 
 function startOfWeek(value: Date) {
   const date = new Date(value);

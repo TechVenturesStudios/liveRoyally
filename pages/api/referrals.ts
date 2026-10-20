@@ -38,11 +38,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     select: { referral_id: true, referral_token: true },
   });
   const referrer = await prisma.users.findUnique({ where: { user_id: account.actingUserId }, select: { first_name: true, last_name: true } });
+  const referralLink = `${getAppBaseUrl(req)}/register?type=member&referral=${encodeURIComponent(referral.referral_token)}`;
   await queueReferralEmail({
     referralId: referral.referral_id,
     toEmail: inviteeEmail,
     referrerName: [referrer?.first_name, referrer?.last_name].filter(Boolean).join(" ").trim() || "Your friend",
-    referralSignupLink: `${getAppBaseUrl(req)}/register?referral=${encodeURIComponent(referral.referral_token)}`,
+    referralSignupLink: referralLink,
   });
-  return res.status(201).json({ referralId: referral.referral_id, referralLink: `${getAppBaseUrl(req)}/register?referral=${encodeURIComponent(referral.referral_token)}`, emailed: true });
+  return res.status(201).json({ referralId: referral.referral_id, referralLink, emailed: true });
 }

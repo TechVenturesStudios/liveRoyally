@@ -4,7 +4,7 @@ import { BillingProvider, PartnerSubscriptionPlan, PartnerSubscriptionStatus, Us
 
 import { createOrGetCognitoUser } from "../../lib/cognito-admin";
 import { prisma } from "../../lib/prisma";
-import { awardRewardTask } from "../../lib/rewards";
+import { awardAccountCreationReward } from "../../lib/rewards";
 import { createSquareCard, createSquareCustomer, disableSquareCard, squareIdempotencyKey } from "../../lib/square-partner-billing";
 import { getOrCreateRole } from "../../lib/roles";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../src/config/subscriptionPlans";
@@ -221,11 +221,7 @@ export default async function handler(
         select: { partner_code: true },
       });
 
-      await awardRewardTask(tx, {
-        userId: user.user_id,
-        taskKey: "partner_create_organization_profile",
-        description: "Organization profile created",
-      });
+      await awardAccountCreationReward(tx, { userId: user.user_id, userType: UserType.partner });
 
       const subscriptionData = {
         plan: selectedPlan as PartnerSubscriptionPlan,

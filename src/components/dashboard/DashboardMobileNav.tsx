@@ -123,19 +123,28 @@ const DashboardMobileNav = ({ user }: DashboardMobileNavProps) => {
 
           <ScrollArea className="flex-1">
             <div className="space-y-5 px-4 py-4">
-              {!isRepView && <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-purple/10 text-brand-purple">
-                    <UserIcon className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-gray-900">{user?.displayId || "User ID"}</p>
-                    <p className="text-xs capitalize text-gray-500">
-                      {effectiveType ? effectiveType : "Member"}
-                    </p>
-                  </div>
-                </div>
-              </div>}
+              {!isRepView && (
+                <SheetClose asChild>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/dashboard/profile")}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 p-4 text-left transition-colors hover:bg-brand-purple/5"
+                    aria-label="Open profile"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-purple/10 text-brand-purple">
+                        <UserIcon className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900">{user?.displayId || "User ID"}</p>
+                        <p className="text-xs capitalize text-gray-500">
+                          {effectiveType ? effectiveType : "Member"}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </SheetClose>
+              )}
 
               {assignments.length > 0 && (
                 <div className="space-y-2">

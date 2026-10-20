@@ -4,6 +4,7 @@ import { PartnerSubscriptionStatus, UserType } from "@prisma/client";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../../src/config/subscriptionPlans";
 import { deriveEventLifecycleStatus } from "../../../src/utils/eventStatus";
 import { resolveDashboardAccount } from "../../../lib/dashboard-account";
+import { isMemberActive } from "../../../lib/member-status";
 import { prisma } from "../../../lib/prisma";
 
 type AnalyticsResponse =
@@ -62,6 +63,7 @@ export default async function handler(
           user_id: true,
           created_at: true,
           member_profiles: { select: { network_code: true, network_name: true, created_at: true } },
+          member_vouchers: { select: { voucher_id: true }, take: 1 },
           reward_accounts: {
             where: { reward_year: year },
             select: { points_balance: true, points_earned: true },
@@ -140,7 +142,7 @@ export default async function handler(
       if (!profile) return;
       const { existing } = ensureNetwork(profile.network_code, profile.network_name, profile.created_at ?? member.created_at);
       existing.members += 1;
-      if (member.reward_accounts.some((account) => account.points_earned > 0 || account.points_balance > 0)) {
+      if (isMemberActive(member.created_at, member.member_vouchers.length > 0)) {
         existing.activeMembers += 1;
       }
     });
