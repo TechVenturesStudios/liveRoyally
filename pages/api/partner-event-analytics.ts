@@ -122,6 +122,7 @@ export default async function handler(
         responseDeadline: event.response_deadline,
         published: event.published,
         inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
+        status: event.status,
       });
 
       const pendingProviderCount = event.event_provider_invites.filter((invite) => invite.status === "pending").length;

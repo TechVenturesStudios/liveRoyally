@@ -7,6 +7,7 @@ const PartnerRegistrationSuccess = () => {
   const navigate = useNavigate();
   const { userType } = useParams<{ userType: "member" | "provider" | "partner" }>();
   const isPartner = userType === "partner";
+  const isProvider = userType === "provider";
 
   if (!isPartner) {
     return (
@@ -33,13 +34,17 @@ const PartnerRegistrationSuccess = () => {
               Registration Received
             </h1>
             <p className="mx-auto max-w-md text-base leading-relaxed text-gray-600 md:text-lg">
-              Your temporary password will be sent to the email address you provided in your registration.
+              {isProvider
+                ? "Your application has been submitted to the partner you selected for review."
+                : "Your temporary password will be sent to the email address you provided in your registration."}
             </p>
 
             <div className="mt-8 flex items-start gap-4 rounded-lg border border-[#ddd4e8] bg-[#faf9fc] px-5 py-4 text-left text-base leading-snug text-[#294671]">
               <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-[#51239b]" strokeWidth={2} aria-hidden="true" />
               <p>
-                Check your inbox for the temporary password, then sign in to your account. If it doesn’t arrive within a few minutes, check your spam folder.
+                {isProvider
+                  ? "The partner is reviewing your application. You will receive an email when they approve or decline it, and you will not be able to sign in until it is approved."
+                  : "Check your inbox for the temporary password, then sign in to your account. If it doesn’t arrive within a few minutes, check your spam folder."}
               </p>
             </div>
 
@@ -104,7 +109,7 @@ const PartnerRegistrationSuccess = () => {
           <div className="mt-8 flex items-start gap-4 rounded-lg border border-[#ddd4e8] bg-[#faf9fc] px-5 py-4 text-left text-base leading-snug text-[#294671]">
             <Mail className="mt-0.5 h-5 w-5 shrink-0 text-[#51239b]" strokeWidth={2} aria-hidden="true" />
             <p>
-              Your application is being reviewed by the Live Royally team. Once it’s approved, watch your inbox for the temporary password you’ll use to sign in.
+              Your application is being reviewed by the Local Metrics team. Once it’s approved, watch your inbox for the temporary password you’ll use to sign in.
             </p>
           </div>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">

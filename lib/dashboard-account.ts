@@ -37,7 +37,8 @@ type AssignmentLookupRow = {
 
 export async function resolveDashboardAccount(
   req: NextApiRequest,
-  expectedTypes?: DashboardAccountType[]
+  expectedTypes?: DashboardAccountType[],
+  allowInactiveProvider = false
 ): Promise<DashboardAccount | { error: string; status: number } | null> {
   const cognitoId = getCognitoIdFromRequest(req);
 
@@ -54,6 +55,7 @@ export async function resolveDashboardAccount(
         select: {
           network_code: true,
           network_name: true,
+          application_status: true,
         },
       },
       partner_profiles: {
@@ -135,6 +137,24 @@ export async function resolveDashboardAccount(
 
     if (subscription?.status !== PartnerSubscriptionStatus.active) {
       return { error: "Your partner account is not approved for Local Metrics access", status: 403 };
+    }
+  }
+
+  if (actingAccount.actingUserType === "provider" && !allowInactiveProvider) {
+    const providerProfile = await prisma.provider_profiles.findUnique({
+      where: { user_id: actingAccount.actingUserId },
+      select: { application_status: true },
+    });
+    if (providerProfile && providerProfile.application_status !== "active") {
+      return { error: providerProfile.application_status === "declined" ? "Your provider application was declined." : "Your provider application is still being reviewed by the partner you selected.", status: 403 };
+    }
+    const subscription = await prisma.provider_subscriptions.findFirst({
+      where: { provider_id: actingAccount.actingUserId },
+      orderBy: { created_at: "desc" },
+      select: { status: true },
+    });
+    if (subscription && subscription.status !== "active") {
+      return { error: "Your provider subscription is not active. Renew your Live Royally subscription to continue.", status: 403 };
     }
   }
 

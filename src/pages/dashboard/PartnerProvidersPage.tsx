@@ -29,7 +29,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import FormField from "@/components/ui/FormField";
-import { Users, Plus, Trash2, Search, UserPlus } from "lucide-react";
+import { Users, Plus, Trash2, Search, UserPlus, Clock3, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getUserFromStorage } from "@/utils/userStorage";
 
@@ -91,6 +91,22 @@ type MyProvidersApiProvider = {
   businessZip: string | null;
 };
 
+type ProviderApplication = {
+  id: string;
+  businessName: string | null;
+  businessCategory: string | null;
+  businessEmail: string | null;
+  businessPhone: string | null;
+  agentFirstName: string | null;
+  agentLastName: string | null;
+  agentPhone: string | null;
+  businessAddress: string | null;
+  businessCity: string | null;
+  businessState: string | null;
+  businessZip: string | null;
+  submittedAt: string | null;
+};
+
 
 const mapApiProvider = (provider: MyProvidersApiProvider): ProviderEntry => {
   return {
@@ -123,6 +139,7 @@ const PartnerProvidersPage = () => {
   const navigate = useNavigate();
   const { isLoading } = useAuthCheck();
   const [providers, setProviders] = useState<ProviderEntry[]>([]);
+  const [applications, setApplications] = useState<ProviderApplication[]>([]);
   const [providersLoading, setProvidersLoading] = useState(true);
   const [providersError, setProvidersError] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
@@ -131,6 +148,7 @@ const PartnerProvidersPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<ProviderEntry | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+  const [applicationActionId, setApplicationActionId] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [providerLimit, setProviderLimit] = useState<number | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
@@ -171,6 +189,11 @@ const PartnerProvidersPage = () => {
           setProviderLimit(data.subscription?.maxProviders ?? null);
           setSubscriptionStatus(data.subscription?.status ?? null);
         }
+
+        const applicationsResponse = await fetch(`/api/partner/provider-applications${query}`);
+        const applicationsData = await applicationsResponse.json();
+        if (!applicationsResponse.ok) throw new Error(applicationsData.error || "Failed to load provider applications");
+        if (isMounted) setApplications(Array.isArray(applicationsData.applications) ? applicationsData.applications : []);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to load providers";
         if (isMounted) {
@@ -230,6 +253,31 @@ const PartnerProvidersPage = () => {
       toast.error(error instanceof Error ? error.message : "Failed to remove provider");
     } finally {
       setIsRemoving(false);
+    }
+  };
+
+  const handleApplicationAction = async (application: ProviderApplication, action: "approve" | "decline") => {
+    if (applicationActionId) return;
+    setApplicationActionId(application.id);
+    try {
+      const response = await fetch("/api/partner/provider-applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ providerId: application.id, action }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to update provider application");
+      setApplications((current) => current.filter((item) => item.id !== application.id));
+      if (action === "approve") {
+        toast.success(`${application.businessName || "Provider"} approved`, { description: "They will receive a temporary password and welcome email." });
+      } else {
+        toast.success(`${application.businessName || "Provider"} declined`);
+      }
+      window.location.reload();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update provider application");
+    } finally {
+      setApplicationActionId(null);
     }
   };
 
@@ -338,6 +386,36 @@ const PartnerProvidersPage = () => {
         {!hasActiveSubscription && !providersError && (
           <Card className="border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
             Your subscription is not active. Renew or upgrade your plan to add providers.
+          </Card>
+        )}
+
+        {applications.length > 0 && (
+          <Card className="border-amber-300 bg-amber-50/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg text-amber-950">
+                <Clock3 className="h-5 w-5" /> Provider Applications ({applications.length})
+              </CardTitle>
+              <CardDescription className="text-amber-900/80">Review providers who registered with your partner code before they can join your network.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {applications.map((application) => (
+                <div key={application.id} className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground">{application.businessName || "Unnamed provider"}</p>
+                    <p className="text-sm text-muted-foreground">{application.businessCategory || "Other"} · {application.agentFirstName} {application.agentLastName}</p>
+                    <p className="text-xs text-muted-foreground">{application.businessEmail} · Submitted {application.submittedAt ? new Date(application.submittedAt).toLocaleDateString() : "recently"}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Button size="sm" className="gap-1.5 bg-royal text-white hover:bg-royal-dark" disabled={Boolean(applicationActionId)} onClick={() => handleApplicationAction(application, "approve")}>
+                      <CheckCircle2 className="h-4 w-4" /> Approve
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/5" disabled={Boolean(applicationActionId)} onClick={() => handleApplicationAction(application, "decline")}>
+                      <XCircle className="h-4 w-4" /> Decline
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
           </Card>
         )}
 

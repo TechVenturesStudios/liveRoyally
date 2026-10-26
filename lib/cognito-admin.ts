@@ -17,6 +17,7 @@ type CreateCognitoUserArgs = {
   lastName?: string | null;
   phoneNumber?: string | null;
   userType?: string | null;
+  allowExisting?: boolean;
 };
 
 export class CognitoUserAlreadyExistsError extends Error {
@@ -105,7 +106,9 @@ export async function createOrGetCognitoUser(args: CreateCognitoUserArgs) {
       throw error;
     }
 
-    throw new CognitoUserAlreadyExistsError();
+    if (!args.allowExisting) {
+      throw new CognitoUserAlreadyExistsError();
+    }
   }
 
   const cognitoSub = await getSub(cognito, userPoolId, username);

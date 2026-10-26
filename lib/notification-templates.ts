@@ -52,6 +52,7 @@ export async function queueTemporaryPasswordEmail(input: {
   email: string;
   temporaryPassword: string;
   userType?: string | null;
+  idempotencyKey?: string;
 }) {
   const loginUrl = new URL(
     "/login",
@@ -75,7 +76,7 @@ export async function queueTemporaryPasswordEmail(input: {
   const htmlBody = layout(preheader, `<p>Welcome to Local Metrics!</p><p>Your <strong>${escapeHtml(accountType)}</strong> account is ready. Use the details below to sign in:</p><p><strong>Email:</strong> ${escapeHtml(input.email)}<br /><strong>Temporary password:</strong> <code>${escapeHtml(input.temporaryPassword)}</code></p><p><a href="${escapeHtml(loginLink)}">Sign in to Local Metrics</a></p><p>You will be prompted to create a new password after signing in.</p>`);
 
   return queueEmail({
-    idempotencyKey: `temporary-password:${input.email.trim().toLowerCase()}`,
+    idempotencyKey: input.idempotencyKey || `temporary-password:${input.email.trim().toLowerCase()}`,
     templateKey: "account.temporary_password",
     toEmail: input.email,
     subject,
@@ -557,6 +558,46 @@ export async function queueEventChangedEmail(input: EventChangedEmailInput) {
   });
 }
 
+export type EventCancellationEmailInput = {
+  eventId: string;
+  recipientId: string;
+  toEmail: string;
+  firstName?: string | null;
+  recipientRole: "member" | "provider";
+  partnerName: string;
+  eventName: string;
+  eventDate: string;
+  eventLocation: string;
+  partnerContactEmail?: string | null;
+};
+
+export async function queueEventCancellationEmail(input: EventCancellationEmailInput) {
+  if (!(await notificationsEnabled(input.recipientId))) return null;
+  const firstName = input.firstName?.trim() || "there";
+  const subject = `Cancelled: ${input.eventName}`;
+  const preheader = `${input.partnerName} cancelled this event.`;
+  const contactLine = input.partnerContactEmail
+    ? `Questions? Contact ${input.partnerName} at ${input.partnerContactEmail}.`
+    : "Please contact the partner if you have questions.";
+  const textBody = [
+    `Hi ${firstName},`, "", `${input.partnerName} cancelled the following event:`, "",
+    input.eventName, `Date: ${input.eventDate}`, `Location: ${input.eventLocation}`, "", contactLine, "", "The Local Metrics Team",
+  ].join("\n");
+  const htmlBody = layout(preheader, `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${escapeHtml(input.partnerName)}</strong> cancelled the following event:</p><p><strong>${escapeHtml(input.eventName)}</strong><br />Date: ${escapeHtml(input.eventDate)}<br />Location: ${escapeHtml(input.eventLocation)}</p><p>${escapeHtml(contactLine)}</p>`);
+  return queueEmail({
+    idempotencyKey: `event-cancelled:${input.eventId}:${input.recipientRole}:${input.recipientId}`,
+    templateKey: `${input.recipientRole}.event_cancelled`,
+    toEmail: input.toEmail,
+    subject,
+    textBody,
+    htmlBody,
+    userId: input.recipientId,
+    relatedEntityType: "event",
+    relatedEntityId: input.eventId,
+    payload: { ...input, firstName },
+  });
+}
+
 export type ReferralEmailInput = {
   referralId: string;
   toEmail: string;
@@ -648,6 +689,142 @@ export async function queuePartnerDeclinedEmail(input: PartnerDeclinedEmailInput
   });
 }
 
+export async function queueProviderApplicationReviewEmail(input: {
+  providerId: string;
+  toEmail: string;
+  firstName?: string | null;
+  partnerName: string;
+  applicationKey?: string;
+}) {
+  const firstName = input.firstName?.trim() || "there";
+  const subject = "Your Local Metrics provider application is being reviewed";
+  const preheader = `${input.partnerName} is reviewing your provider application.`;
+  const textBody = [
+    `Hi ${firstName},`, "",
+    `Thank you for applying to join ${input.partnerName} as a Provider on Local Metrics.`,
+    "", `${input.partnerName} is reviewing your application now. You will receive another email when they approve or decline your request.`,
+    "", "You will not be able to sign in until your application is approved.", "", "The Local Metrics Team",
+  ].join("\n");
+  const htmlBody = layout(preheader, `<p>Hi ${escapeHtml(firstName)},</p><p>Thank you for applying to join <strong>${escapeHtml(input.partnerName)}</strong> as a Provider on Local Metrics.</p><p>${escapeHtml(input.partnerName)} is reviewing your application now. You will receive another email when they approve or decline your request.</p><p>You will not be able to sign in until your application is approved.</p>`);
+  return queueEmail({
+    idempotencyKey: `provider-application-review:${input.providerId}:${input.applicationKey || "initial"}`,
+    templateKey: "provider.application_review",
+    toEmail: input.toEmail,
+    subject,
+    textBody,
+    htmlBody,
+    userId: input.providerId,
+    relatedEntityType: "user",
+    relatedEntityId: input.providerId,
+    payload: input,
+  });
+}
+
+export async function queuePartnerProviderApplicationEmail(input: {
+  providerId: string;
+  partnerId: string;
+  toEmail: string;
+  firstName?: string | null;
+  partnerName: string;
+  provider: {
+    businessName?: string | null;
+    businessCategory?: string | null;
+    businessEmail?: string | null;
+    businessPhone?: string | null;
+    agentFirstName?: string | null;
+    agentLastName?: string | null;
+    agentPhone?: string | null;
+    businessAddress?: string | null;
+    businessCity?: string | null;
+    businessState?: string | null;
+    businessZip?: string | null;
+  };
+  reviewLink: string;
+  applicationKey?: string;
+}) {
+  const firstName = input.firstName?.trim() || "there";
+  const provider = input.provider;
+  const providerName = provider.businessName?.trim() || "A new provider";
+  const contactName = [provider.agentFirstName, provider.agentLastName].filter(Boolean).join(" ").trim() || "Not provided";
+  const address = [provider.businessAddress, provider.businessCity, provider.businessState, provider.businessZip]
+    .filter(Boolean)
+    .join(", ") || "Not provided";
+  const subject = `New provider application from ${providerName}`;
+  const preheader = `${providerName} submitted an application for your review.`;
+  const textBody = [
+    `Hi ${firstName},`, "",
+    `${providerName} submitted a provider application to join ${input.partnerName}.`, "",
+    "Provider information:",
+    `Business: ${providerName}`,
+    `Category: ${provider.businessCategory || "Not provided"}`,
+    `Contact: ${contactName}`,
+    `Contact email: ${provider.businessEmail || "Not provided"}`,
+    `Contact phone: ${provider.agentPhone || "Not provided"}`,
+    `Business phone: ${provider.businessPhone || "Not provided"}`,
+    `Address: ${address}`, "",
+    `Review the application: ${input.reviewLink}`, "", "The Local Metrics Team",
+  ].join("\n");
+  const htmlBody = layout(preheader, `
+    <p>Hi ${escapeHtml(firstName)},</p>
+    <p><strong>${escapeHtml(providerName)}</strong> submitted a provider application to join <strong>${escapeHtml(input.partnerName)}</strong>.</p>
+    <p><strong>Provider information</strong></p>
+    <ul>
+      <li><strong>Business:</strong> ${escapeHtml(providerName)}</li>
+      <li><strong>Category:</strong> ${escapeHtml(provider.businessCategory || "Not provided")}</li>
+      <li><strong>Contact:</strong> ${escapeHtml(contactName)}</li>
+      <li><strong>Contact email:</strong> ${escapeHtml(provider.businessEmail || "Not provided")}</li>
+      <li><strong>Contact phone:</strong> ${escapeHtml(provider.agentPhone || "Not provided")}</li>
+      <li><strong>Business phone:</strong> ${escapeHtml(provider.businessPhone || "Not provided")}</li>
+      <li><strong>Address:</strong> ${escapeHtml(address)}</li>
+    </ul>
+    <p><a href="${escapeHtml(input.reviewLink)}">Review provider application</a></p>
+  `);
+  return queueEmail({
+    idempotencyKey: `partner-provider-application:${input.providerId}:${input.applicationKey || "initial"}`,
+    templateKey: "partner.provider_application_submitted",
+    toEmail: input.toEmail,
+    subject,
+    textBody,
+    htmlBody,
+    userId: input.partnerId,
+    relatedEntityType: "user",
+    relatedEntityId: input.providerId,
+    payload: { ...input, firstName, providerName, contactName, address },
+  });
+}
+
+export async function queueProviderApprovedEmail(input: {
+  providerId: string;
+  toEmail: string;
+  firstName?: string | null;
+  partnerName: string;
+  loginLink: string;
+  applicationKey?: string;
+}) {
+  const firstName = input.firstName?.trim() || "there";
+  const subject = "You're approved! Welcome to Local Metrics as a Provider";
+  const preheader = `${input.partnerName} approved your provider application.`;
+  const textBody = [`Hi ${firstName},`, "", `Great news — ${input.partnerName} approved your provider application. Your account is now active.`, "", `Log in to get started: ${input.loginLink}`, "", "Welcome to Local Metrics,", "The Local Metrics Team"].join("\n");
+  const htmlBody = layout(preheader, `<p>Hi ${escapeHtml(firstName)},</p><p>Great news — <strong>${escapeHtml(input.partnerName)}</strong> approved your provider application. Your account is now active.</p><p><a href="${escapeHtml(input.loginLink)}">Log in to get started</a></p><p>Welcome to Local Metrics,</p>`);
+  return queueEmail({ idempotencyKey: `provider-approved:${input.providerId}:${input.applicationKey || "initial"}`, templateKey: "provider.account_approved", toEmail: input.toEmail, subject, textBody, htmlBody, userId: input.providerId, relatedEntityType: "user", relatedEntityId: input.providerId, payload: { ...input, firstName } });
+}
+
+export async function queueProviderDeclinedEmail(input: {
+  providerId: string;
+  toEmail: string;
+  firstName?: string | null;
+  partnerName: string;
+  supportEmail: string;
+  applicationKey?: string;
+}) {
+  const firstName = input.firstName?.trim() || "there";
+  const subject = "Your Local Metrics provider application was declined";
+  const preheader = "An update about your Local Metrics provider application.";
+  const textBody = [`Hi ${firstName},`, "", `Thank you for applying to join ${input.partnerName} as a Provider on Local Metrics. After review, ${input.partnerName} declined your application.`, "", `If you believe this was a mistake, please contact ${input.supportEmail}.`, "", "The Local Metrics Team"].join("\n");
+  const htmlBody = layout(preheader, `<p>Hi ${escapeHtml(firstName)},</p><p>Thank you for applying to join <strong>${escapeHtml(input.partnerName)}</strong> as a Provider on Local Metrics. After review, ${escapeHtml(input.partnerName)} declined your application.</p><p>If you believe this was a mistake, please contact us at <a href="mailto:${escapeHtml(input.supportEmail)}">${escapeHtml(input.supportEmail)}</a>.</p>`);
+  return queueEmail({ idempotencyKey: `provider-declined:${input.providerId}:${input.applicationKey || "initial"}`, templateKey: "provider.account_declined", toEmail: input.toEmail, subject, textBody, htmlBody, userId: input.providerId, relatedEntityType: "user", relatedEntityId: input.providerId, payload: { ...input, firstName } });
+}
+
 export type ProviderInvitationEmailInput = {
   inviteId: string;
   providerId: string;
@@ -671,6 +848,50 @@ export async function queueProviderInvitationEmail(input: ProviderInvitationEmai
   const textBody = [`Hi ${firstName},`, "", `${input.partnerName} has invited you to join Local Metrics as a Provider${eventCopy}.`, "", "As a Provider, you'll be able to:", "- Participate in partner events", "- Reach a network of engaged members", "- Grow your local business network", "", `Accept invitation: ${input.acceptInviteLink}`, input.inviteExpirationDate ? "" : null, input.inviteExpirationDate ? `This invite expires on ${input.inviteExpirationDate}.` : null, "", "The Local Metrics Team"].filter((line): line is string => line !== null).join("\n");
   const htmlBody = layout(preheader, `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${escapeHtml(input.partnerName)}</strong> has invited you to join Local Metrics as a Provider${input.eventName ? ` for <strong>${escapeHtml(input.eventName)}</strong>` : ""}.</p><ul><li>Participate in partner events</li><li>Reach a network of engaged members</li><li>Grow your local business network</li></ul><p><a href="${escapeHtml(input.acceptInviteLink)}">Accept invitation</a></p>${input.inviteExpirationDate ? `<p>This invite expires on ${escapeHtml(input.inviteExpirationDate)}.</p>` : ""}`);
   return queueEmail({ idempotencyKey: `provider-invitation:${input.inviteId}`, templateKey: "provider.invitation", toEmail: input.toEmail, subject, textBody, htmlBody, userId: input.providerId, relatedEntityType: "event_provider_invite", relatedEntityId: input.inviteId, payload: { ...input, firstName } });
+}
+
+export type ProviderEventResponseDeadlineChangedEmailInput = {
+  inviteId: string;
+  providerId: string;
+  toEmail: string;
+  firstName?: string | null;
+  partnerName: string;
+  eventName: string;
+  eventDate: string;
+  eventTime?: string | null;
+  eventLocation: string;
+  responseDeadline: string;
+  eventLink: string;
+};
+
+export async function queueProviderEventResponseDeadlineChangedEmail(input: ProviderEventResponseDeadlineChangedEmailInput) {
+  if (!(await notificationsEnabled(input.providerId))) return null;
+  const firstName = input.firstName?.trim() || "there";
+  const subject = `Response deadline changed: ${input.eventName}`;
+  const preheader = `${input.partnerName} updated the deadline for your event invitation.`;
+  const textBody = [
+    `Hi ${firstName}`, "",
+    `${input.partnerName} changed the provider response deadline for ${input.eventName}.`,
+    "Your invitation is available again for you to accept or decline.", "",
+    `Event date: ${input.eventDate}`,
+    input.eventTime ? `Event time: ${input.eventTime}` : null,
+    `Location: ${input.eventLocation}`,
+    `Respond by: ${input.responseDeadline}`, "",
+    `Review the invitation: ${input.eventLink}`, "", "The Local Metrics Team",
+  ].filter((line): line is string => line !== null).join("\n");
+  const htmlBody = layout(preheader, `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${escapeHtml(input.partnerName)}</strong> changed the provider response deadline for <strong>${escapeHtml(input.eventName)}</strong>.</p><p>Your invitation is available again for you to accept or decline.</p><p><strong>Event date:</strong> ${escapeHtml(input.eventDate)}${input.eventTime ? `<br /><strong>Event time:</strong> ${escapeHtml(input.eventTime)}` : ""}<br /><strong>Location:</strong> ${escapeHtml(input.eventLocation)}<br /><strong>Respond by:</strong> ${escapeHtml(input.responseDeadline)}</p><p><a href="${escapeHtml(input.eventLink)}">Review the invitation</a></p>`);
+  return queueEmail({
+    idempotencyKey: `provider-event-deadline-changed:${input.inviteId}:${input.responseDeadline}`,
+    templateKey: "provider.event_response_deadline_changed",
+    toEmail: input.toEmail,
+    subject,
+    textBody,
+    htmlBody,
+    userId: input.providerId,
+    relatedEntityType: "event_provider_invite",
+    relatedEntityId: input.inviteId,
+    payload: { ...input, firstName },
+  });
 }
 
 export type ProviderNetworkInvitationEmailInput = {
@@ -748,15 +969,16 @@ export type ProviderRemovedEmailInput = {
   partnerName: string;
   lrnJoinLink: string;
   supportEmail: string;
+  idempotencyKey?: string;
 };
 
 export async function queueProviderRemovedEmail(input: ProviderRemovedEmailInput) {
   const firstName = input.firstName?.trim() || "there";
   const subject = `You've been removed from ${input.partnerName} — explore Local Metrics's Local Rewards Network`;
-  const preheader = "Stay connected with new opportunities on Local Metrics.";
-  const textBody = [`Hi ${firstName},`, "", `${input.partnerName} has removed you as a participating provider on their Local Metrics account.`, "", "You're still a valued part of the Local Metrics community. Consider joining LRN (Local Rewards Network) to connect with other partners and continue participating in events:", "", `Join LRN: ${input.lrnJoinLink}`, "", `Questions? Reach out to us at ${input.supportEmail}.`, "", "The Local Metrics Team"].join("\n");
-  const htmlBody = layout(preheader, `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${escapeHtml(input.partnerName)}</strong> has removed you as a participating provider on their Local Metrics account.</p><p>You're still a valued part of the Local Metrics community. Consider joining LRN (Local Rewards Network) to connect with other partners and continue participating in events:</p><p><a href="${escapeHtml(input.lrnJoinLink)}">Join LRN</a></p><p>Questions? Reach out to us at <a href="mailto:${escapeHtml(input.supportEmail)}">${escapeHtml(input.supportEmail)}</a>.</p>`);
-  return queueEmail({ idempotencyKey: `provider-removed:${input.providerId}:${Date.now()}`, templateKey: "provider.removed_from_partner", toEmail: input.toEmail, subject, textBody, htmlBody, userId: input.providerId, relatedEntityType: "user", relatedEntityId: input.providerId, payload: { ...input, firstName } });
+  const preheader = "Keep your provider account active with Live Royally.";
+  const textBody = [`Hi ${firstName},`, "", `${input.partnerName} has removed you as a participating provider on their Local Metrics account.`, "", "You can keep your existing provider account active by joining the Live Royally Network for $100 per year.", "", `Join the Live Royally Network: ${input.lrnJoinLink}`, "", `Questions? Reach out to us at ${input.supportEmail}.`, "", "The Live Royally Team"].join("\n");
+  const htmlBody = layout(preheader, `<p>Hi ${escapeHtml(firstName)},</p><p><strong>${escapeHtml(input.partnerName)}</strong> has removed you as a participating provider on their Local Metrics account.</p><p>You can keep your existing provider account active by joining the <strong>Live Royally Network</strong> for $100 per year.</p><p><a href="${escapeHtml(input.lrnJoinLink)}">Join the Live Royally Network</a></p><p>Questions? Reach out to us at <a href="mailto:${escapeHtml(input.supportEmail)}">${escapeHtml(input.supportEmail)}</a>.</p>`);
+  return queueEmail({ idempotencyKey: input.idempotencyKey || `provider-removed:${input.providerId}:${Date.now()}`, templateKey: "provider.removed_from_partner", toEmail: input.toEmail, subject, textBody, htmlBody, userId: input.providerId, relatedEntityType: "user", relatedEntityId: input.providerId, payload: { ...input, firstName } });
 }
 
 export async function queueWelcomeEmail(userId: string, role: Role) {

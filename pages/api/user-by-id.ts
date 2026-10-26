@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
+import { LIVE_ROYALLY_PARTNER_EMAIL } from "../../lib/live-royally";
 
 type UserByIdResponse =
   | {
@@ -96,6 +97,19 @@ export default async function handler(
             created_at: true,
           },
         },
+        provider_subscriptions: {
+          orderBy: { created_at: "desc" },
+          take: 1,
+          select: {
+            status: true,
+            annual_price_cents: true,
+            currency: true,
+            current_period_start: true,
+            current_period_end: true,
+            cancel_at_period_end: true,
+            created_at: true,
+          },
+        },
       },
     });
 
@@ -113,6 +127,7 @@ export default async function handler(
     const providerProfile = user.provider_profiles;
     const partnerProfile = user.partner_profiles;
     const partnerSubscription = user.partner_subscriptions[0] ?? null;
+    const providerSubscription = user.provider_subscriptions[0] ?? null;
     const providerPartnerProfile = providerProfile?.partner_id
       ? await prisma.partner_profiles.findUnique({
           where: { user_id: providerProfile.partner_id },
@@ -122,6 +137,20 @@ export default async function handler(
           },
         })
       : null;
+    const liveRoyallyPartnerProfile =
+      user.user_type === "provider" &&
+      providerSubscription?.status === "active" &&
+      !providerPartnerProfile
+        ? await prisma.users.findUnique({
+            where: { email: LIVE_ROYALLY_PARTNER_EMAIL },
+            select: {
+              user_id: true,
+              partner_profiles: { select: { org_name: true, partner_code: true } },
+            },
+          })
+        : null;
+    const assignedPartner = providerPartnerProfile ?? liveRoyallyPartnerProfile?.partner_profiles;
+    const assignedPartnerId = providerProfile?.partner_id ?? liveRoyallyPartnerProfile?.user_id ?? null;
     const currentProviderCount = partnerProfile
       ? await prisma.$queryRaw<[{ count: number }]>`
           SELECT COUNT(*)::int AS count
@@ -167,9 +196,9 @@ export default async function handler(
         gender: memberProfile?.gender ?? null,
         birthday: memberProfile?.birthday ?? null,
 
-        partnerId: providerProfile?.partner_id ?? null,
-        partnerName: providerPartnerProfile?.org_name ?? null,
-        partnerCode: partnerProfile?.partner_code ?? providerPartnerProfile?.partner_code ?? null,
+        partnerId: assignedPartnerId,
+        partnerName: assignedPartner?.org_name ?? null,
+        partnerCode: partnerProfile?.partner_code ?? assignedPartner?.partner_code ?? null,
         agentFirstName: providerProfile?.agent_first_name ?? null,
         agentLastName: providerProfile?.agent_last_name ?? null,
         agentPhone: providerProfile?.agent_phone ?? null,
@@ -211,6 +240,12 @@ export default async function handler(
         pendingChangeEffectiveAt: partnerSubscription?.pending_change_effective_at ?? null,
         cancelAtPeriodEnd: partnerSubscription?.cancel_at_period_end ?? false,
         currentProviders: currentProviderCount?.[0]?.count ?? null,
+        providerSubscriptionStatus: providerSubscription?.status ?? null,
+        providerSubscriptionPrice: providerSubscription ? providerSubscription.annual_price_cents / 100 : null,
+        providerSubscriptionCurrency: providerSubscription?.currency ?? null,
+        providerSubscriptionStartDate: providerSubscription?.current_period_start ?? providerSubscription?.created_at ?? null,
+        providerSubscriptionEndDate: providerSubscription?.current_period_end ?? null,
+        providerSubscriptionCancelAtPeriodEnd: providerSubscription?.cancel_at_period_end ?? false,
       },
     });
   } catch (error) {

@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!subscription) return res.status(403).json({ error: "Your subscription is not active. Please renew or upgrade to add providers." });
     if (provider) return res.status(409).json({ error: "This provider is already in your network" });
 
-    const currentProviders = await prisma.provider_profiles.count({ where: { partner_id: account.actingUserId } });
+    const currentProviders = await prisma.provider_profiles.count({ where: { partner_id: account.actingUserId, application_status: { in: ["pending", "active"] } } });
     if (subscription.max_providers !== null && currentProviders >= subscription.max_providers) {
       return res.status(409).json({ error: `Your current plan allows ${subscription.max_providers} providers. Upgrade to add more.` });
     }

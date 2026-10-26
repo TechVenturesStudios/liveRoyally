@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createOrGetCognitoUser, mapCognitoError } from "../../lib/cognito-admin";
 import { queueTemporaryPasswordEmail } from "../../lib/notification-templates";
+import { prisma } from "../../lib/prisma";
 
 type CreateCognitoUserResponse =
   | {
@@ -59,15 +60,35 @@ export default async function handler(
       return res.status(400).json({ error: "You must be at least 16 years old to create an account" });
     }
 
+    let allowExisting = false;
+    if (body.userType === "provider") {
+      const existingProvider = await prisma.users.findUnique({
+        where: { email: email.toLowerCase() },
+        select: {
+          user_type: true,
+          provider_profiles: { select: { partner_id: true, application_status: true } },
+        },
+      });
+
+      allowExisting = Boolean(
+        existingProvider?.user_type === "provider" &&
+        existingProvider.provider_profiles &&
+        existingProvider.provider_profiles.application_status !== "pending" &&
+        (existingProvider.provider_profiles.partner_id === null ||
+          existingProvider.provider_profiles.application_status === "declined")
+      );
+    }
+
     const { cognitoSub, username, created, temporaryPassword } = await createOrGetCognitoUser({
       email,
       firstName: body.firstName,
       lastName: body.lastName,
       phoneNumber: body.phoneNumber,
       userType: body.userType,
+      allowExisting,
     });
 
-    if (created && temporaryPassword) {
+    if (created && temporaryPassword && body.userType !== "provider") {
       await queueTemporaryPasswordEmail({
         email,
         temporaryPassword,

@@ -142,8 +142,76 @@ export function squareIdempotencyKey(prefix: string, seed: string) {
   return `${prefix}-${hash.slice(0, allowedHashLength)}`;
 }
 
+export async function createSquarePayment(params: {
+  accessToken: string;
+  locationId: string;
+  sourceId: string;
+  amountCents: number;
+  referenceId: string;
+  buyerEmail?: string | null;
+  note?: string | null;
+}) {
+  if (!params.accessToken.trim()) {
+    throw new Error("Missing Square partner access token");
+  }
+
+  if (!params.locationId.trim()) {
+    throw new Error("The partner's Square location is not configured");
+  }
+
+  if (!Number.isInteger(params.amountCents) || params.amountCents <= 0) {
+    throw new Error("Payment amount must be a positive whole number of cents");
+  }
+
+  const response = await fetch(`${squareBaseUrl}/v2/payments`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${params.accessToken.trim()}`,
+      "Content-Type": "application/json",
+      "Square-Version": squareApiVersion,
+    },
+    body: JSON.stringify({
+      source_id: params.sourceId,
+      idempotency_key: squareIdempotencyKey("lr-voucher", params.referenceId),
+      amount_money: { amount: params.amountCents, currency: "USD" },
+      location_id: params.locationId.trim(),
+      autocomplete: true,
+      buyer_email_address: params.buyerEmail?.trim() || undefined,
+      note: params.note?.trim() || undefined,
+    }),
+  });
+
+  const payload = await response.json().catch(() => null) as {
+    payment?: { id?: string; status?: string };
+    errors?: Array<{ category?: string; code?: string; detail?: string }>;
+  } | null;
+
+  if (!response.ok) {
+    throw new Error(
+      `Square payment failed: ${payload?.errors?.map((error) => error.detail || error.code || "Unknown error").join("; ") || "Unknown error"}`
+    );
+  }
+
+  if (!payload?.payment?.id || String(payload.payment.status || "").toUpperCase() !== "COMPLETED") {
+    throw new Error("Square did not complete the voucher payment");
+  }
+
+  return payload.payment;
+}
+
 export function getSquarePlanVariationId(plan: PartnerSubscriptionPlan) {
   return squarePlanVariationIds[plan];
+}
+
+export const LIVE_ROYALLY_PROVIDER_ANNUAL_PRICE_CENTS = 10000;
+
+export function getLiveRoyallyProviderPlanVariationId() {
+  return readFirstEnv(
+    "SQUARE_PLAN_VARIATION_LIVE_ROYALLY_PROVIDER_ANNUAL_ID",
+    "SQUARE_PLAN_VARIATION_LIVE_ROYALLY_ANNUAL_ID",
+    "SQUARE_PLAN_VARIATION_STARTER_ANNUAL_ID",
+    "SQUARE_PLAN_VARIATION_STARTER_ID"
+  );
 }
 
 export async function createSquareCustomer(params: {

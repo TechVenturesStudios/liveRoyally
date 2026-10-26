@@ -17,7 +17,7 @@ import {
 import { fetchPartnerAccountOverview } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
 
-type PublishedEventRow = PartnerDashboardEvent & {
+type PublishedEventRow = Omit<PartnerDashboardEvent, "status"> & {
   providerNames: string[];
   participants: number;
   revenue: number;

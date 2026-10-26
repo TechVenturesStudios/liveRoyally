@@ -45,11 +45,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return finish(res, "exchange_error");
     }
 
+    let locationId: string | null = null;
+    try {
+      const locationsResponse = await fetch(`${squareOauthApiBaseUrl}/v2/locations`, {
+        headers: {
+          Authorization: `Bearer ${payload.access_token}`,
+          "Square-Version": process.env.SQUARE_VERSION || "2026-09-16",
+        },
+      });
+      const locationsPayload = await locationsResponse.json() as {
+        locations?: Array<{ id?: string; status?: string }>;
+      };
+      locationId = locationsPayload.locations?.find((location) => location.status === "ACTIVE")?.id || null;
+    } catch (locationError) {
+      console.error("Square location lookup failed", locationError);
+    }
+
     await prisma.partner_square_connections.upsert({
       where: { user_id: user.user_id },
       create: {
         user_id: user.user_id,
         merchant_id: payload.merchant_id,
+        location_id: locationId,
         access_token_ciphertext: encryptSquareToken(payload.access_token),
         refresh_token_ciphertext: encryptSquareToken(payload.refresh_token),
         access_token_expires_at: payload.expires_at ? new Date(payload.expires_at) : null,
@@ -57,6 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       update: {
         merchant_id: payload.merchant_id,
+        ...(locationId ? { location_id: locationId } : {}),
         access_token_ciphertext: encryptSquareToken(payload.access_token),
         refresh_token_ciphertext: encryptSquareToken(payload.refresh_token),
         access_token_expires_at: payload.expires_at ? new Date(payload.expires_at) : null,

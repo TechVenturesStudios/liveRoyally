@@ -38,14 +38,14 @@ export async function fetchMemberVouchers(cognitoId?: string) {
   return (await readJsonOrThrow(response, "Failed to fetch member vouchers")) as MemberNetworkResponse;
 }
 
-export async function claimMemberVoucher(voucherId: string, cognitoId?: string) {
+export async function claimMemberVoucher(voucherId: string, cognitoId?: string, paymentToken?: string) {
   const response = await fetch(`/api/claim-member-voucher${buildDashboardQuery(cognitoId)}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     credentials: "include",
-    body: JSON.stringify({ voucherId }),
+    body: JSON.stringify({ voucherId, paymentToken }),
   });
 
   return (await readJsonOrThrow(response, "Failed to claim voucher")) as {
@@ -53,5 +53,6 @@ export async function claimMemberVoucher(voucherId: string, cognitoId?: string) 
     alreadyClaimed?: boolean;
     voucherId: string;
     qrCodeData?: string;
+    paymentId?: string;
   };
 }

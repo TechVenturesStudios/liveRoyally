@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { PartnerSubscriptionStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
+import { offboardPartnerProviders } from "../../lib/partner-provider-offboarding";
 import {
   cancelSquareSubscription,
   createSquareSubscription,
@@ -82,7 +83,7 @@ export default async function handler(
     if (!subscription) return res.status(404).json({ error: "No active subscription found" });
 
     const providerCount = await prisma.provider_profiles.count({
-      where: { partner_id: account.actingUserId, users: { user_type: "provider" } },
+      where: { partner_id: account.actingUserId, application_status: "active", users: { user_type: "provider" } },
     });
 
     if (isCancellation) {
@@ -104,6 +105,8 @@ export default async function handler(
           pending_change_effective_at: end,
         },
       });
+
+      await offboardPartnerProviders({ partnerId: account.actingUserId });
 
       return res.status(200).json({
         canceled: true,

@@ -107,6 +107,7 @@ export default async function handler(
     const providerCount = await prisma.provider_profiles.count({
       where: {
         partner_id: partnerId,
+        application_status: "active",
         users: {
           user_type: "provider",
           user_id: {

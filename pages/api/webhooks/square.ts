@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { PartnerSubscriptionStatus } from "@prisma/client";
 
 import { prisma } from "../../../lib/prisma";
+import { offboardPartnerProviders } from "../../../lib/partner-provider-offboarding";
 import { normalizeSquareStatus } from "../../../lib/square-partner-billing";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../../src/config/subscriptionPlans";
 
@@ -153,6 +154,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   if (!existing) {
+    const providerSubscription = await prisma.provider_subscriptions.findUnique({
+      where: { billing_provider_subscription_id: squareSubscriptionId },
+      select: { subscription_id: true },
+    });
+    if (providerSubscription) {
+      const providerStatus = isPaymentMadeEvent(eventType)
+        ? PartnerSubscriptionStatus.active
+        : isPaymentFailedEvent(eventType)
+          ? PartnerSubscriptionStatus.past_due
+          : eventType === "subscription.deleted"
+            ? PartnerSubscriptionStatus.canceled
+            : normalizeSquareStatus(subscription?.status);
+      const updatedProvider = await prisma.provider_subscriptions.update({
+        where: { subscription_id: providerSubscription.subscription_id },
+        data: {
+          status: providerStatus,
+          updated_at: new Date(),
+          ...(providerStatus === PartnerSubscriptionStatus.active ? { canceled_at: null } : {}),
+          ...(providerStatus === PartnerSubscriptionStatus.canceled ? { canceled_at: toDate(subscription?.canceled_date) || new Date() } : {}),
+          ...(subscription?.current_period_start_date ? { current_period_start: toDate(subscription.current_period_start_date) } : {}),
+          ...(subscription?.current_period_end_date ? { current_period_end: toDate(subscription.current_period_end_date) } : {}),
+        },
+        select: { subscription_id: true, provider_id: true, status: true, billing_provider_subscription_id: true },
+      });
+      return res.status(200).json({ received: true, handled: true, subscription: updatedProvider });
+    }
     console.warn("Square webhook subscription was not found", { eventType, squareSubscriptionId });
     return res.status(200).json({ received: true, handled: false });
   }
@@ -214,6 +241,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       billing_provider_subscription_id: true,
     },
   });
+
+  if (status !== PartnerSubscriptionStatus.active) {
+    await offboardPartnerProviders({ partnerId: updated.partner_id });
+  }
 
   return res.status(200).json({ received: true, handled: true, subscription: updated });
 }

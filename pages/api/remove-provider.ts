@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
 import { getAppBaseUrl } from "../../lib/app-url";
-import { queueProviderRemovedEmail } from "../../lib/notification-templates";
+import { offboardPartnerProviders } from "../../lib/partner-provider-offboarding";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -11,15 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (account.isRepresentative) return res.status(403).json({ error: "Authorized representatives cannot remove providers" });
   try {
     const providerId = String(req.body?.providerId || "").trim();
-    const provider = await prisma.provider_profiles.findFirst({ where: { user_id: providerId, partner_id: account.actingUserId }, select: { user_id: true, business_email: true, users: { select: { email: true, first_name: true }, }, } });
+    const provider = await prisma.provider_profiles.findFirst({ where: { user_id: providerId, partner_id: account.actingUserId }, select: { user_id: true } });
     if (!provider) return res.status(404).json({ error: "Provider is not linked to this partner" });
-    const recipientEmail = provider.users.email?.trim() || provider.business_email?.trim();
-    if (!recipientEmail) {
-      return res.status(422).json({ error: "Provider does not have an email address for the removal notification" });
-    }
-    const partner = await prisma.users.findUnique({ where: { user_id: account.actingUserId }, select: { email: true, partner_profiles: { select: { org_name: true } } } });
-    await prisma.provider_profiles.update({ where: { user_id: providerId }, data: { partner_id: null } });
-    await queueProviderRemovedEmail({ providerId, toEmail: recipientEmail, firstName: provider.users.first_name, partnerName: partner?.partner_profiles?.org_name?.trim() || "Your partner", lrnJoinLink: `${getAppBaseUrl(req)}/join-network`, supportEmail: process.env.SUPPORT_EMAIL || process.env.SES_FROM_EMAIL || "support@localmetrics.com" });
+    await offboardPartnerProviders({ partnerId: account.actingUserId, providerIds: [providerId], baseUrl: getAppBaseUrl(req) });
     return res.status(200).json({ removed: true });
   } catch (error) {
     console.error("remove-provider error:", error);

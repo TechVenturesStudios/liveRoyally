@@ -134,6 +134,7 @@ export default async function handler(
     const providers = await prisma.provider_profiles.findMany({
       where: {
         partner_id: account.actingUserId,
+        application_status: "active",
         users: {
           user_type: "provider",
         },

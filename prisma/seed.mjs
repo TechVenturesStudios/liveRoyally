@@ -3,6 +3,25 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const roles = ["member", "provider", "partner", "admin"];
+// Update these placeholder values when using the seeded partner in another environment.
+const liveRoyallyPartner = {
+  email: "liveroyally22+partner@gmail.com",
+  cognito_id: "00000000-0000-4000-8000-000000000022",
+  display_id: "PT-LIVE-ROYALLY",
+  partner_code: "LRN-PARTNER",
+  network_name: "Live Royally Network",
+  network_code: "LIVE_ROYALLY",
+  agent_first_name: "Live Royally",
+  agent_last_name: "Partner",
+  agent_phone: "555-555-0122",
+  org_name: "Live Royally",
+  org_address: "123 Main Street",
+  org_city: "Your City",
+  org_state: "LA",
+  org_zip: "70001",
+  org_category: "Community",
+  org_phone: "555-555-0122",
+};
 const networkSeeds = [
   {
     // Reserved non-ZIP key for networks that do not use ZIP-based assignment.
@@ -224,6 +243,112 @@ async function main() {
       .map((network) => `${network.network_name} (${network.network_code})`)
       .join(", ")}`
   );
+
+  const partner = await prisma.users.upsert({
+    where: { email: liveRoyallyPartner.email },
+    update: {
+      cognito_id: liveRoyallyPartner.cognito_id,
+      first_name: liveRoyallyPartner.agent_first_name,
+      last_name: liveRoyallyPartner.agent_last_name,
+      phone_number: liveRoyallyPartner.agent_phone,
+      user_type: "partner",
+      display_id: liveRoyallyPartner.display_id,
+    },
+    create: {
+      cognito_id: liveRoyallyPartner.cognito_id,
+      email: liveRoyallyPartner.email,
+      first_name: liveRoyallyPartner.agent_first_name,
+      last_name: liveRoyallyPartner.agent_last_name,
+      phone_number: liveRoyallyPartner.agent_phone,
+      user_type: "partner",
+      display_id: liveRoyallyPartner.display_id,
+    },
+  });
+
+  await prisma.partner_profiles.upsert({
+    where: { user_id: partner.user_id },
+    update: {
+      network_name: liveRoyallyPartner.network_name,
+      network_code: liveRoyallyPartner.network_code,
+      partner_code: liveRoyallyPartner.partner_code,
+      agent_first_name: liveRoyallyPartner.agent_first_name,
+      agent_last_name: liveRoyallyPartner.agent_last_name,
+      agent_phone: liveRoyallyPartner.agent_phone,
+      org_name: liveRoyallyPartner.org_name,
+      org_address: liveRoyallyPartner.org_address,
+      org_city: liveRoyallyPartner.org_city,
+      org_state: liveRoyallyPartner.org_state,
+      org_zip: liveRoyallyPartner.org_zip,
+      org_category: liveRoyallyPartner.org_category,
+      org_email: liveRoyallyPartner.email,
+      org_phone: liveRoyallyPartner.org_phone,
+      notification_enabled: true,
+      terms_accepted: true,
+    },
+    create: {
+      user_id: partner.user_id,
+      network_name: liveRoyallyPartner.network_name,
+      network_code: liveRoyallyPartner.network_code,
+      partner_code: liveRoyallyPartner.partner_code,
+      agent_first_name: liveRoyallyPartner.agent_first_name,
+      agent_last_name: liveRoyallyPartner.agent_last_name,
+      agent_phone: liveRoyallyPartner.agent_phone,
+      org_name: liveRoyallyPartner.org_name,
+      org_address: liveRoyallyPartner.org_address,
+      org_city: liveRoyallyPartner.org_city,
+      org_state: liveRoyallyPartner.org_state,
+      org_zip: liveRoyallyPartner.org_zip,
+      org_category: liveRoyallyPartner.org_category,
+      org_email: liveRoyallyPartner.email,
+      org_phone: liveRoyallyPartner.org_phone,
+      notification_enabled: true,
+      terms_accepted: true,
+    },
+  });
+
+  const partnerRole = await prisma.roles.upsert({
+    where: { role_name: "partner" },
+    update: {},
+    create: { role_name: "partner" },
+  });
+  await prisma.user_roles.upsert({
+    where: { user_id_role_id: { user_id: partner.user_id, role_id: partnerRole.role_id } },
+    update: {},
+    create: { user_id: partner.user_id, role_id: partnerRole.role_id },
+  });
+
+  const existingSubscription = await prisma.partner_subscriptions.findFirst({
+    where: { partner_id: partner.user_id },
+    orderBy: { created_at: "desc" },
+    select: { subscription_id: true },
+  });
+  const subscriptionData = {
+    plan: "starter",
+    status: "active",
+    billing_provider: "square",
+    billing_provider_customer_id: null,
+    billing_provider_card_id: null,
+    billing_provider_subscription_id: null,
+    monthly_price_cents: 0,
+    currency: "usd",
+    max_providers: 2,
+    approved_at: new Date(),
+    current_period_start: new Date(),
+    canceled_at: null,
+    updated_at: new Date(),
+  };
+  if (existingSubscription) {
+    await prisma.partner_subscriptions.update({
+      where: { subscription_id: existingSubscription.subscription_id },
+      data: subscriptionData,
+    });
+  } else {
+    await prisma.partner_subscriptions.create({
+      data: { partner_id: partner.user_id, ...subscriptionData },
+    });
+  }
+
+  console.log(`Seeded Live Royally partner: ${liveRoyallyPartner.email} (${liveRoyallyPartner.partner_code})`);
 
   for (const roleName of roles) {
     await prisma.roles.upsert({

@@ -1,10 +1,11 @@
-export type EventLifecycleStatus = "pending" | "active" | "completed";
+export type EventLifecycleStatus = "pending" | "active" | "completed" | "cancelled" | "expired";
 
 type EventLifecycleInput = {
   startDate?: Date | string | null | undefined;
   endDate?: Date | string | null | undefined;
   responseDeadline?: Date | string | null | undefined;
   published?: boolean;
+  status?: string | null;
   inviteStatuses?: Array<string | null | undefined>;
   referenceDate?: Date;
 };
@@ -32,9 +33,11 @@ export function deriveEventLifecycleStatus({
   endDate,
   responseDeadline,
   published = true,
+  status,
   inviteStatuses = [],
   referenceDate = new Date(),
 }: EventLifecycleInput): EventLifecycleStatus {
+  if (String(status ?? "").trim().toLowerCase() === "cancelled") return "cancelled";
   if (!published) return "pending";
 
   if (isBeforeReferenceDay(endDate ?? startDate, referenceDate)) {
@@ -49,7 +52,7 @@ export function deriveEventLifecycleStatus({
   }
 
   if (isBeforeReferenceDay(responseDeadline, referenceDate)) {
-    return "active";
+    return "expired";
   }
 
   return "pending";
@@ -62,6 +65,10 @@ export function normalizeEventStage(status: EventLifecycleStatus): "needs_approv
     case "active":
       return "upcoming";
     case "completed":
+      return "past";
+    case "cancelled":
+      return "past";
+    case "expired":
       return "past";
   }
 }

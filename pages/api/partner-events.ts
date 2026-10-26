@@ -15,7 +15,7 @@ type PartnerEventsResponse =
         networkPoints: number;
         createdDate: string;
         responseDeadline: string;
-        status: "pending" | "active" | "completed";
+        status: "pending" | "active" | "completed" | "cancelled" | "expired";
         published: boolean;
         stage: "needs_approval" | "upcoming" | "past";
         providerCount: number;
@@ -126,6 +126,7 @@ export default async function handler(
           responseDeadline: event.response_deadline,
           inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
           published: event.published,
+          status: event.status,
         });
 
         const pendingProviderCount = event.event_provider_invites.filter((invite) => invite.status === "pending").length;

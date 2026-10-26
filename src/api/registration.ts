@@ -56,6 +56,6 @@ export async function registerPartner(input: Record<string, unknown>) {
     subscriptionId: string;
     squareCustomerId: string | null;
     squareCardId: string | null;
-    subscriptionStatus: "pending" | "active" | "past_due" | "canceled" | "expired";
+    subscriptionStatus: "pending" | "active" | "past_due" | "declined" | "canceled" | "expired";
   };
 }

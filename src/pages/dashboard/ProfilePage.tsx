@@ -59,6 +59,7 @@ const ProfilePage = () => {
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
   const [subscriptionTargetPlan, setSubscriptionTargetPlan] = useState<PartnerSubscriptionPlan | null>(null);
   const [subscriptionUpdatePending, setSubscriptionUpdatePending] = useState(false);
+  const [providerCanceling, setProviderCanceling] = useState(false);
   const [pointsGuideSending, setPointsGuideSending] = useState(false);
   const [squareConnected, setSquareConnected] = useState(false);
   const [squareConnectionLoading, setSquareConnectionLoading] = useState(true);
@@ -145,6 +146,11 @@ const ProfilePage = () => {
             businessZip: data.profile.businessZip,
             businessEmail: data.profile.businessEmail,
             businessPhone: data.profile.businessPhone
+            ,providerSubscriptionStatus: data.profile.providerSubscriptionStatus,
+            providerSubscriptionPrice: data.profile.providerSubscriptionPrice,
+            providerSubscriptionStartDate: data.profile.providerSubscriptionStartDate,
+            providerSubscriptionEndDate: data.profile.providerSubscriptionEndDate,
+            providerSubscriptionCancelAtPeriodEnd: data.profile.providerSubscriptionCancelAtPeriodEnd,
           })
         }
         setUser(completeUser)
@@ -286,6 +292,20 @@ const ProfilePage = () => {
     }
   };
 
+  const handleProviderSubscriptionCancel = async () => {
+    if (providerCanceling) return;
+    setProviderCanceling(true);
+    try {
+      const response = await fetch("/api/provider-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to cancel subscription");
+      setUser((current) => current ? ({ ...(current as any), providerSubscriptionCancelAtPeriodEnd: true } as UserType) : current);
+      toast({ title: "Cancellation scheduled", description: "Your subscription will remain active through the current billing period." });
+    } catch (error) {
+      toast({ title: "Unable to cancel subscription", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally { setProviderCanceling(false); }
+  };
+
   if (!user) {
     return (
       <DashboardLayout>
@@ -363,6 +383,7 @@ const ProfilePage = () => {
         <p className="font-semibold text-foreground mt-1">{user.partnerName}</p>
         {/* <p className="text-xs text-muted-foreground">ID: {user.partnerId}</p> */}
       </div>
+      {(user as any).providerSubscriptionStatus && <Card className="mt-4 border-primary/20"><CardHeader className="pb-3"><CardTitle className="font-barlow font-bold flex items-center gap-2 text-base"><Crown className="h-5 w-5 text-primary" /> Live Royally Subscription</CardTitle><CardDescription>Status: {formatPlanName((user as any).providerSubscriptionStatus)}</CardDescription></CardHeader><CardContent className="space-y-4"><div className="flex items-center justify-between rounded-lg border bg-primary/5 p-4"><div><p className="text-sm text-muted-foreground">Annual membership</p><p className="text-2xl font-bold">${Number((user as any).providerSubscriptionPrice || 100).toFixed(2)}/year</p></div><Badge>{formatPlanName((user as any).providerSubscriptionStatus)}</Badge></div><p className="text-sm text-muted-foreground">Active from {((user as any).providerSubscriptionStartDate ? new Date((user as any).providerSubscriptionStartDate).toLocaleDateString() : "—")} through {((user as any).providerSubscriptionEndDate ? new Date((user as any).providerSubscriptionEndDate).toLocaleDateString() : "—")}.</p>{(user as any).providerSubscriptionCancelAtPeriodEnd ? <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Your subscription will remain active through the current billing period and will not renew.</p> : <Button type="button" variant="outline" className="text-destructive hover:text-destructive" onClick={handleProviderSubscriptionCancel} disabled={providerCanceling}>{providerCanceling ? "Scheduling cancellation..." : "Cancel at renewal"}</Button>}</CardContent></Card>}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="agentFirstName">Agent First Name</Label>

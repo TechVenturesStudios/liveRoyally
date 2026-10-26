@@ -32,7 +32,7 @@ import EmailManagementPage from "./pages/dashboard/EmailManagementPage";
 import PurchaseHistoryPage from "./pages/dashboard/PurchaseHistoryPage";
 import NewDealsPage from "./pages/dashboard/NewDealsPage";
 import EngagementScorePage from "./pages/dashboard/EngagementScorePage";
-import ProviderNetworkFinder from "./pages/ProviderNetworkFinder";
+import LiveRoyallyJoinPage from "./pages/LiveRoyallyJoinPage";
 import Waitlist from "./pages/Waitlist";
 import ProviderPendingEventsPage from "./pages/dashboard/ProviderPendingEventsPage";
 import ProviderUpcomingEventsPage from "./pages/dashboard/ProviderUpcomingEventsPage";
@@ -90,7 +90,7 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/registration-success/:userType" element={<PartnerRegistrationSuccess />} />
           <Route path="/waitlist" element={<Waitlist />} />
-          <Route path="/join-network" element={<ProviderNetworkFinder />} />
+          <Route path="/join-network" element={<LiveRoyallyJoinPage />} />
           
           {/* Dashboard home — redirects each role to their landing page */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

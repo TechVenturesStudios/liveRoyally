@@ -23,6 +23,7 @@ const CampaignManagementTab = () => {
   const [editingEvent, setEditingEvent] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
+  const [resendProviderIds, setResendProviderIds] = useState<string[]>([]);
   const [events, setEvents] = useState<PartnerDashboardEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState("");
@@ -211,13 +212,14 @@ const CampaignManagementTab = () => {
       title: event.title,
       description: event.description,
       startDate: event.date,
-      endDate: event.date,
+      endDate: event.endDate,
       eventTime: event.time,
       location: event.location,
       memberPrice: event.memberPrice == null ? "" : String(event.memberPrice),
       totalVouchersAvailable: event.totalVouchersAvailable == null ? "" : String(event.totalVouchersAvailable),
       responseDeadline: event.responseDeadline,
     });
+    setResendProviderIds([]);
     setEditingEvent(true);
   };
 
@@ -229,8 +231,8 @@ const CampaignManagementTab = () => {
     if (!selectedEvent) return;
     try {
       setSavingEdit(true);
-      const result = await updateEvent({ ...editForm, cognitoId: getUserFromStorage()?.cognitoId });
-      toast({ title: result.changed ? "Event updated" : "No changes found", description: result.changed ? "Members and accepted providers were notified when enabled." : "Nothing needed to be updated." });
+      const result = await updateEvent({ ...editForm, resendProviderIds, cognitoId: getUserFromStorage()?.cognitoId });
+      toast({ title: result.changed ? "Event updated" : "No changes found", description: result.changed ? "Notifications were sent only to eligible members and the providers you selected." : "Nothing needed to be updated." });
       setEditingEvent(false);
       setSelectedEvent(null);
       await loadEvents();
@@ -554,6 +556,15 @@ const CampaignManagementTab = () => {
                   <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Time</Label><Input name="eventTime" value={editForm.eventTime || ""} onChange={handleEditChange} /></div><div className="space-y-1"><Label>Location</Label><Input name="location" value={editForm.location || ""} onChange={handleEditChange} /></div></div>
                   <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Member price</Label><Input type="number" name="memberPrice" value={editForm.memberPrice || ""} onChange={handleEditChange} /></div></div>
                   <div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Voucher availability</Label><Input type="number" name="totalVouchersAvailable" value={editForm.totalVouchersAvailable || ""} onChange={handleEditChange} /></div><div className="space-y-1"><Label>Provider deadline</Label><Input type="date" name="responseDeadline" value={editForm.responseDeadline || ""} onChange={handleEditChange} /></div></div>
+                  <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+                    <div><Label>Resend invite to providers</Label><p className="text-[11px] text-muted-foreground">Select providers who should receive this update. This is required to resend a deadline change.</p></div>
+                    <div className="space-y-1.5">
+                      {selectedEvent.providers.map((provider) => {
+                        const selected = resendProviderIds.includes(provider.providerId);
+                        return <button type="button" key={provider.providerId} onClick={() => setResendProviderIds((current) => selected ? current.filter((id) => id !== provider.providerId) : [...current, provider.providerId])} className={`flex w-full items-center justify-between rounded border px-2 py-1.5 text-left text-xs ${selected ? "border-primary bg-primary/5" : ""}`}><span>{provider.providerName}</span><Badge variant="outline" className="text-[10px]">{selected ? "Selected" : provider.status}</Badge></button>;
+                      })}
+                    </div>
+                  </div>
                 </div>
               ) : <ScrollArea className="max-h-[400px]">
                 <div className="space-y-3 pr-3">

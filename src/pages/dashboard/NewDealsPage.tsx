@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Clock, Store, MapPin, Star, ArrowUp, ArrowDown, Globe, Loader2 } from "lucide-react";
+import { Clock, Store, MapPin, Star, ArrowUp, ArrowDown, Globe, Loader2, DollarSign } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ViewToggle from "@/components/ui/ViewToggle";
 import EventDetailDialog from "@/components/ui/EventDetailDialog";
@@ -14,6 +15,7 @@ import {
   fetchMemberNetworkVouchers,
 } from "@/api/memberVouchers";
 import { getUserFromStorage } from "@/utils/userStorage";
+import SquareCardCheckout from "@/components/forms/SquareCardCheckout";
 import {
   MemberVoucherRecord,
   getDaysUntilExpiry,
@@ -63,6 +65,8 @@ const NewDealsPage = () => {
   const [loading, setLoading] = useState(true);
   const [claimingVoucherId, setClaimingVoucherId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [paymentDeal, setPaymentDeal] = useState<MemberVoucherRecord | null>(null);
+  const [paymentError, setPaymentError] = useState("");
   const cognitoId = getUserFromStorage()?.cognitoId;
 
   useEffect(() => {
@@ -141,12 +145,14 @@ const NewDealsPage = () => {
 
   const selectedNetworkName = networkOptions.find((network) => network.code === selectedNetwork)?.name || memberName || "My Network";
 
-  const handleClaimDeal = async (voucher: MemberVoucherRecord) => {
+  const requiresPayment = (voucher: MemberVoucherRecord) => Number(voucher.member_price ?? 0) > 0;
+
+  const handleClaimDeal = async (voucher: MemberVoucherRecord, paymentToken?: string) => {
     if (claimingVoucherId) return;
 
     setClaimingVoucherId(voucher.voucher_id);
     try {
-      const result = await claimMemberVoucher(voucher.voucher_id, cognitoId);
+      const result = await claimMemberVoucher(voucher.voucher_id, cognitoId, paymentToken);
 
       if (result.alreadyClaimed) {
         toast.info("This deal was already claimed.");
@@ -156,6 +162,8 @@ const NewDealsPage = () => {
 
       setAvailableDeals((prev) => prev.filter((item) => item.voucher_id !== voucher.voucher_id));
       setSelectedDeal((current) => (current?.voucher_id === voucher.voucher_id ? null : current));
+      setPaymentDeal(null);
+      setPaymentError("");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to claim deal");
     } finally {
@@ -175,6 +183,10 @@ const NewDealsPage = () => {
 
     return (
       <div className="space-y-1.5 text-sm text-muted-foreground mb-5">
+        <div className="flex items-center gap-2 font-semibold text-foreground">
+          <DollarSign className="h-3.5 w-3.5 text-primary" />
+          {requiresPayment(voucher) ? `Voucher cost: ${formatVoucherMemberPrice(voucher.member_price)}` : "No cost to claim"}
+        </div>
         <div className="flex items-center gap-2">
           <Store className="h-3.5 w-3.5" />
           {voucher.provider_name}
@@ -313,7 +325,7 @@ const NewDealsPage = () => {
                         size="sm"
                         className="px-3 text-xs"
                         disabled={claimingVoucherId === deal.voucher_id}
-                        onClick={() => handleClaimDeal(deal)}
+                        onClick={() => requiresPayment(deal) ? setPaymentDeal(deal) : handleClaimDeal(deal)}
                       >
                         {claimingVoucherId === deal.voucher_id ? "Claiming..." : "Claim Deal"}
                       </Button>
@@ -381,7 +393,7 @@ const NewDealsPage = () => {
                                 disabled={claimingVoucherId === deal.voucher_id}
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  handleClaimDeal(deal);
+                                  if (requiresPayment(deal)) setPaymentDeal(deal); else void handleClaimDeal(deal);
                                 }}
                               >
                                 {claimingVoucherId === deal.voucher_id ? "Claiming..." : "Claim"}
@@ -416,12 +428,35 @@ const NewDealsPage = () => {
             <Button
               className="w-full"
               disabled={claimingVoucherId === selectedDeal.voucher_id}
-              onClick={() => handleClaimDeal(selectedDeal)}
+              onClick={() => requiresPayment(selectedDeal) ? setPaymentDeal(selectedDeal) : handleClaimDeal(selectedDeal)}
             >
-              {claimingVoucherId === selectedDeal.voucher_id ? "Claiming..." : "Claim Deal"}
+              {claimingVoucherId === selectedDeal.voucher_id ? "Claiming..." : requiresPayment(selectedDeal) ? `Pay ${formatVoucherMemberPrice(selectedDeal.member_price)} & Claim` : "Claim Deal"}
             </Button>
           }
         />
+      )}
+
+      {paymentDeal && (
+        <Dialog open={!!paymentDeal} onOpenChange={(open) => { if (!open && !claimingVoucherId) setPaymentDeal(null); }}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Purchase your voucher</DialogTitle>
+              <DialogDescription>
+                {getVoucherTitle(paymentDeal)} · Secure payment processed by Square.
+              </DialogDescription>
+            </DialogHeader>
+            <SquareCardCheckout
+              total={Number(paymentDeal.member_price || 0)}
+              isSubmitting={claimingVoucherId === paymentDeal.voucher_id}
+              billingContact={{ countryCode: "US" }}
+              onSubmitToken={(paymentToken) => handleClaimDeal(paymentDeal, paymentToken)}
+              submitError={paymentError}
+              buttonLabel={`Pay ${formatVoucherMemberPrice(paymentDeal.member_price)} and claim`}
+              securityMessage="Your card is charged once. Your voucher will appear in Your Vouchers after payment succeeds."
+              paymentIntent="CHARGE"
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </DashboardLayout>
   );

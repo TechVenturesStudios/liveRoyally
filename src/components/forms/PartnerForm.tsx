@@ -29,6 +29,13 @@ const PartnerForm = () => {
   const [showCheckout, setShowCheckout] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [applicationKey] = useState(() => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  });
   const [formData, setFormData] = useState<Partial<PartnerUser>>({
     networkName: "",
     networkCode: "",
@@ -120,6 +127,7 @@ const PartnerForm = () => {
       const payload: Record<string, unknown> = {
         ...formData,
         membershipPlan,
+        applicationKey,
       };
 
       if (paymentToken) {
@@ -268,7 +276,7 @@ const PartnerForm = () => {
   return (
     <Card className="royal-card w-full max-w-4xl mx-auto p-8 md:p-10">
       <h2 className="text-2xl font-barlow font-bold mb-2 royal-header">Partner Registration</h2>
-      <p className="text-sm text-muted-foreground mb-8">Set up your partner account and choose a yearly membership plan.</p>
+      <p className="text-sm text-muted-foreground mb-8">Set up your partner account and choose a yearly membership plan. If a previous application was declined, you can re-apply with this same email address.</p>
       
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Membership Plan Selection */}

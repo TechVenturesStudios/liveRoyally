@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { randomInt } from "crypto";
+import { randomInt, randomUUID } from "crypto";
 import { BillingProvider, PartnerSubscriptionPlan, PartnerSubscriptionStatus, UserType } from "@prisma/client";
 
 import { createOrGetCognitoUser } from "../../lib/cognito-admin";
@@ -87,10 +87,23 @@ export default async function handler(
 
     const existingUserByEmail = await prisma.users.findUnique({
       where: { email },
-      select: { user_id: true },
+      select: {
+        user_id: true,
+        user_type: true,
+        partner_subscriptions: {
+          orderBy: { created_at: "desc" },
+          take: 1,
+          select: { status: true, billing_provider_customer_id: true },
+        },
+      },
     });
 
-    if (existingUserByEmail) {
+    const isReapplication = Boolean(
+      existingUserByEmail?.user_type === UserType.partner &&
+      existingUserByEmail.partner_subscriptions[0]?.status === PartnerSubscriptionStatus.declined
+    );
+
+    if (existingUserByEmail && !isReapplication) {
       return res.status(409).json({ error: "An account already exists with that email" });
     }
 
@@ -101,6 +114,7 @@ export default async function handler(
       lastName: body.agentLastName,
       phoneNumber: body.agentPhone,
       userType: "partner",
+      allowExisting: isReapplication,
     });
 
     const displayId = `PT-${randomInt(100000000, 999999999)}`;
@@ -108,7 +122,11 @@ export default async function handler(
     // Keep this stable across retries, including retries with a different
     // client-supplied payment token. Square's idempotency keys then prevent
     // duplicate customer/card creation for the same partner registration.
-    const referenceSeed = email;
+    // Each application gets its own Square idempotency scope. This preserves
+    // safe retries for one submission without reusing a declined application's
+    // card idempotency key on a later re-application.
+    const applicationKey = String(body.applicationKey || randomUUID()).trim();
+    const referenceSeed = `${email}:${applicationKey}`;
     const referenceId = squareIdempotencyKey("partner-registration", referenceSeed);
     const cardholderName = normalizeCardholderName(
       body.agentFirstName,
@@ -120,18 +138,22 @@ export default async function handler(
     let squareCardId: string | null = null;
 
     if (!isFreePlan) {
-      squareCustomerId = await createSquareCustomer({
-        email,
-        firstName: body.agentFirstName,
-        lastName: body.agentLastName,
-        organizationName: body.organizationName,
-        organizationPhone: body.organizationPhone,
-        organizationAddress: body.organizationAddress,
-        organizationCity: body.organizationCity,
-        organizationState: body.organizationState,
-        organizationZip: body.organizationZip,
-        referenceId,
-      });
+      squareCustomerId = existingUserByEmail?.partner_subscriptions[0]?.billing_provider_customer_id ?? null;
+
+      if (!squareCustomerId) {
+        squareCustomerId = await createSquareCustomer({
+          email,
+          firstName: body.agentFirstName,
+          lastName: body.agentLastName,
+          organizationName: body.organizationName,
+          organizationPhone: body.organizationPhone,
+          organizationAddress: body.organizationAddress,
+          organizationCity: body.organizationCity,
+          organizationState: body.organizationState,
+          organizationZip: body.organizationZip,
+          referenceId,
+        });
+      }
 
       squareCardId = await createSquareCard({
         paymentToken,
@@ -172,16 +194,41 @@ export default async function handler(
     const result = await prisma.$transaction(async (tx) => {
       const existingUser = await tx.users.findFirst({
         where: { OR: [{ email }, { cognito_id: cognitoUser.cognitoSub }] },
-        select: { user_id: true },
+        select: {
+          user_id: true,
+          display_id: true,
+          user_type: true,
+          partner_subscriptions: {
+            orderBy: { created_at: "desc" },
+            take: 1,
+            select: { status: true },
+          },
+        },
       });
 
-      if (existingUser) {
+      const existingUserIsReapplication = Boolean(
+        existingUser?.user_type === UserType.partner &&
+        existingUser.partner_subscriptions[0]?.status === PartnerSubscriptionStatus.declined
+      );
+
+      if (existingUser && !existingUserIsReapplication) {
         const error = new Error("An account already exists with that email") as Error & { statusCode?: number };
         error.statusCode = 409;
         throw error;
       }
 
-      const user = await tx.users.create({
+      const user = existingUser
+        ? await tx.users.update({
+            where: { user_id: existingUser.user_id },
+            data: {
+              email,
+              first_name: optionalString(body.agentFirstName),
+              last_name: optionalString(body.agentLastName),
+              phone_number: optionalString(body.agentPhone),
+            },
+            select: { user_id: true, display_id: true },
+          })
+        : await tx.users.create({
             data: {
               cognito_id: cognitoUser.cognitoSub,
               email,
@@ -221,7 +268,9 @@ export default async function handler(
         select: { partner_code: true },
       });
 
-      await awardAccountCreationReward(tx, { userId: user.user_id, userType: UserType.partner });
+      if (!existingUser) {
+        await awardAccountCreationReward(tx, { userId: user.user_id, userType: UserType.partner });
+      }
 
       const subscriptionData = {
         plan: selectedPlan as PartnerSubscriptionPlan,
@@ -239,29 +288,17 @@ export default async function handler(
         canceled_at: null,
       };
 
-      const existingSubscription = await tx.partner_subscriptions.findFirst({
-        where: { partner_id: user.user_id },
-        orderBy: { created_at: "desc" },
+      const subscription = await tx.partner_subscriptions.create({
+        data: {
+          partner_id: user.user_id,
+          ...subscriptionData,
+        },
         select: { subscription_id: true },
       });
 
-      const subscription = existingSubscription
-        ? await tx.partner_subscriptions.update({
-            where: { subscription_id: existingSubscription.subscription_id },
-            data: subscriptionData,
-            select: { subscription_id: true },
-          })
-        : await tx.partner_subscriptions.create({
-            data: {
-              partner_id: user.user_id,
-              ...subscriptionData,
-            },
-            select: { subscription_id: true },
-          });
-
       return {
         user,
-        created: true,
+        created: !existingUser,
         partnerCode: partnerProfile.partner_code || partnerCode,
         subscription,
       };

@@ -23,7 +23,7 @@ export type PartnerPendingEvent = {
   networkPoints: number;
   createdDate: string;
   responseDeadline: string;
-  status: string;
+  status: "pending" | "active" | "completed" | "cancelled" | "expired";
   providers: PartnerPendingEventProvider[];
 };
 
@@ -40,7 +40,7 @@ export type PartnerDashboardEvent = {
   totalVouchersAvailable: number | null;
   createdDate: string;
   responseDeadline: string;
-  status: string;
+  status: "pending" | "active" | "completed" | "cancelled" | "expired";
   published: boolean;
   stage: "needs_approval" | "upcoming" | "past";
   providerCount: number;
@@ -81,6 +81,28 @@ export async function fetchPartnerDashboardEvents(cognitoId?: string) {
   }
 
   return Array.isArray(data.events) ? (data.events as PartnerDashboardEvent[]) : [];
+}
+
+export async function cancelPartnerEvent(eventId: string) {
+  const response = await fetch("/api/cancel-event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Failed to cancel event");
+  return data as { eventId: string; cancelled: boolean; published: boolean; notifications: { queued: number; failed: number } };
+}
+
+export async function addProviderToPartnerEvent(eventId: string, providerId: string) {
+  const response = await fetch("/api/add-event-provider", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId, providerId }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Failed to add provider to event");
+  return data as { inviteId: string; providerId: string; notificationQueued: boolean };
 }
 
 export async function fetchPartnerEventAnalytics(cognitoId?: string) {

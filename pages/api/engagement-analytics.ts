@@ -279,6 +279,7 @@ export default async function handler(
         ? prisma.provider_profiles.count({
             where: {
               partner_id: account.actingUserId,
+              application_status: "active",
             },
           })
         : Promise.resolve(0),
@@ -492,6 +493,7 @@ export default async function handler(
       const partnerProviderRows = await prisma.provider_profiles.findMany({
         where: {
           partner_id: rankingPartnerId,
+          application_status: "active",
           users: {
             user_type: "provider",
           },

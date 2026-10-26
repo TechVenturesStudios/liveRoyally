@@ -3,6 +3,8 @@ import { prisma } from "../../lib/prisma";
 import { getCognitoIdFromRequest } from "../../lib/api-auth";
 import { buildMemberVoucherQrCodeData } from "../../lib/qr-code";
 import { awardRewardTask } from "../../lib/rewards";
+import { createSquarePayment } from "../../lib/square-partner-billing";
+import { decryptSquareToken } from "../../lib/square-oauth";
 
 type ClaimMemberVoucherResponse =
   | {
@@ -10,6 +12,7 @@ type ClaimMemberVoucherResponse =
       alreadyClaimed?: boolean;
       voucherId: string;
       qrCodeData?: string;
+      paymentId?: string;
     }
   | {
       error: string;
@@ -45,6 +48,7 @@ export default async function handler(
       where: { cognito_id: cognitoId },
       select: {
         user_id: true,
+        email: true,
         user_type: true,
         member_profiles: { select: { network_code: true } },
       },
@@ -68,6 +72,11 @@ export default async function handler(
       status: string | null;
       event_published: boolean;
       total_vouchers_available: number | null;
+      member_price: number | null;
+      partner_id: string | null;
+      partner_email: string | null;
+      partner_square_access_token: string | null;
+      partner_square_location_id: string | null;
     }>>`
       SELECT
         v.voucher_id,
@@ -78,11 +87,20 @@ export default async function handler(
         v.status,
         e.published AS event_published,
         e.total_vouchers_available
+        ,e.member_price
+        ,e.partner_id
+        ,u.email AS partner_email
+        ,psc.access_token_ciphertext AS partner_square_access_token
+        ,psc.location_id AS partner_square_location_id
       FROM vouchers v
       JOIN provider_profiles pp
         ON pp.user_id = v.provider_id
       JOIN events e
         ON e.event_id = v.event_id
+      LEFT JOIN users u
+        ON u.user_id = e.partner_id
+      LEFT JOIN partner_square_connections psc
+        ON psc.user_id = e.partner_id
       WHERE v.voucher_id = ${voucherId}
       LIMIT 1;
     `;
@@ -106,6 +124,38 @@ export default async function handler(
 
     if (voucherRecord.expiration_date && voucherRecord.expiration_date < new Date()) {
       return res.status(400).json({ error: "This voucher has expired" });
+    }
+
+    const requestedPaymentToken = String(req.body?.paymentToken || "").trim();
+    const memberPrice = Number(voucherRecord.member_price ?? 0);
+    const isPaidVoucher = Number.isFinite(memberPrice) && memberPrice > 0;
+    if (isPaidVoucher && !requestedPaymentToken) {
+      return res.status(402).json({ error: "A card payment is required for this voucher" });
+    }
+
+    const existingClaim = await prisma.member_vouchers.findUnique({
+      where: { member_id_voucher_id: { member_id: member.user_id, voucher_id: voucherId } },
+      select: { member_id: true },
+    });
+    if (existingClaim) {
+      return res.status(200).json({ success: true, alreadyClaimed: true, voucherId });
+    }
+
+    let paymentId: string | undefined;
+    if (isPaidVoucher) {
+      if (!voucherRecord.partner_square_access_token || !voucherRecord.partner_square_location_id) {
+        return res.status(400).json({ error: "This partner is not ready to accept voucher payments" });
+      }
+
+      paymentId = (await createSquarePayment({
+        accessToken: decryptSquareToken(voucherRecord.partner_square_access_token),
+        locationId: voucherRecord.partner_square_location_id,
+        sourceId: requestedPaymentToken,
+        amountCents: Math.round(memberPrice * 100),
+        referenceId: `${member.user_id}:${voucherId}`,
+        buyerEmail: member.email,
+        note: `Voucher ${voucherId}`,
+      })).id;
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -155,11 +205,22 @@ export default async function handler(
         });
       }
 
+      if (paymentId) {
+        await tx.purchases.create({
+          data: {
+            member_id: member.user_id,
+            voucher_id: voucherId,
+            status: "completed",
+          },
+        });
+      }
+
       return {
         success: true,
         alreadyClaimed: Boolean(existingClaim),
         voucherId,
         qrCodeData,
+        paymentId,
       };
     });
 

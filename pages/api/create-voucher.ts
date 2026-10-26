@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { randomBytes } from "crypto";
 import { prisma } from "../../lib/prisma";
+import { resolveDashboardAccount } from "../../lib/dashboard-account";
 
 type UiVoucherType = "P" | "A" | "F";
 type DbVoucherType = "A" | "B" | "C";
@@ -70,6 +71,10 @@ export default async function handler(
     if (!eventId || !providerId) {
       return res.status(400).json({ error: "Missing eventId, providerId, or type" });
     }
+
+    const account = await resolveDashboardAccount(req, ["provider"]);
+    if (!account || "error" in account) return res.status(account && "error" in account ? account.status : 401).json({ error: account && "error" in account ? account.error : "Not authenticated" });
+    if (account.actingUserId !== providerId) return res.status(403).json({ error: "You can only create vouchers for your provider account" });
 
     if (hasDiscount && !isUiVoucherType(uiType)) {
       return res.status(400).json({ error: "Invalid voucher type. Use N, P, A, or F." });

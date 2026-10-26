@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { fetchEngagementAnalytics } from "@/api/engagementAnalytics";
 import { fetchAuthorizedRepresentatives, type AuthorizedRepresentative } from "@/api/authorizedRepresentatives";
-import { fetchPartnerDashboardEvents, type PartnerDashboardEvent } from "@/api/partnerEvents";
+import { addProviderToPartnerEvent, cancelPartnerEvent, fetchPartnerDashboardEvents, type PartnerDashboardEvent } from "@/api/partnerEvents";
 import { createEvent, publishEvent, updateEvent } from "@/api/events";
 import { fetchPartnerProviders, type PartnerProvider } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
@@ -38,7 +38,10 @@ import {
   Tag,
   Search,
   CheckCircle2,
-  MapPin
+  MapPin,
+  UserRoundCheck,
+  XCircle,
+  UserPlus,
 } from "lucide-react";
 
 type PartnerAccountProfile = {
@@ -64,6 +67,7 @@ type RepresentativeContact = {
 
 type DashboardEventContact = {
   id: string;
+  providerId: string;
   name: string;
   role: string;
 };
@@ -80,7 +84,7 @@ type DashboardEventRow = {
   memberPrice: number | null;
   totalVouchersAvailable: number | null;
   deadline: string;
-  status: "pending" | "active" | "completed";
+  status: "pending" | "active" | "completed" | "cancelled";
   published: boolean;
   purchaseCount: number;
   contacts: DashboardEventContact[];
@@ -110,11 +114,12 @@ const mapPartnerEventToDashboardRow = (event: PartnerDashboardEvent): DashboardE
   memberPrice: event.memberPrice,
   totalVouchersAvailable: event.totalVouchersAvailable,
   deadline: event.responseDeadline,
-  status: event.status === "active" ? "active" : event.status === "completed" ? "completed" : "pending",
+  status: event.status === "active" ? "active" : event.status === "completed" ? "completed" : event.status === "cancelled" ? "cancelled" : "pending",
   published: event.published,
   purchaseCount: event.purchaseCount,
   contacts: event.providers.map((provider) => ({
     id: provider.inviteId,
+    providerId: provider.providerId,
     name: provider.providerName,
     role: provider.status,
   })),
@@ -134,6 +139,7 @@ const PartnersDashboard = () => {
   });
   const [rewardPoints, setRewardPoints] = useState(0);
   const [eventsCreatedCount, setEventsCreatedCount] = useState(0);
+  const [pendingProviderApplications, setPendingProviderApplications] = useState(0);
   const [createEventForm, setCreateEventForm] = useState({
     title: "",
     description: "",
@@ -154,7 +160,12 @@ const PartnersDashboard = () => {
   const [providersError, setProvidersError] = useState("");
   const [submittingEvent, setSubmittingEvent] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
+  const [resendProviderIds, setResendProviderIds] = useState<string[]>([]);
   const [publishingEventId, setPublishingEventId] = useState<string | null>(null);
+  const [cancellingEventId, setCancellingEventId] = useState<string | null>(null);
+  const [addingProviderEvent, setAddingProviderEvent] = useState<DashboardEventRow | null>(null);
+  const [addingProviderId, setAddingProviderId] = useState("");
+  const [addingProvider, setAddingProvider] = useState(false);
   const [squareConnected, setSquareConnected] = useState(false);
   const [squareConnectionLoading, setSquareConnectionLoading] = useState(true);
   const { toast } = useToast();
@@ -177,7 +188,7 @@ const PartnersDashboard = () => {
           return;
         }
 
-        const [profileResult, representativesResult, analyticsResult, partnerEventsResult] = await Promise.allSettled([
+        const [profileResult, representativesResult, analyticsResult, partnerEventsResult, pendingApplicationsResult] = await Promise.allSettled([
           fetch(`/api/user-by-id?cognitoId=${encodeURIComponent(user.cognitoId)}`, {
             method: "GET",
             headers: { Accept: "application/json" },
@@ -198,6 +209,14 @@ const PartnersDashboard = () => {
           fetchAuthorizedRepresentatives(user.cognitoId),
           fetchEngagementAnalytics(user.cognitoId),
           fetchPartnerDashboardEvents(user.cognitoId),
+          fetch(`/api/partner/provider-applications?cognitoId=${encodeURIComponent(user.cognitoId)}`, {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          }).then(async (response) => {
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Failed to load provider applications");
+            return data;
+          }),
         ]);
 
         if (isMounted) {
@@ -264,6 +283,15 @@ const PartnersDashboard = () => {
             setEvents([]);
             setEventsCreatedCount(0);
           }
+
+          if (pendingApplicationsResult.status === "fulfilled") {
+            setPendingProviderApplications(Array.isArray(pendingApplicationsResult.value.applications)
+              ? pendingApplicationsResult.value.applications.length
+              : 0);
+          } else {
+            console.error("failed to load provider applications:", pendingApplicationsResult.reason);
+            setPendingProviderApplications(0);
+          }
         }
       } catch (error) {
         console.error("failed to load partner profile:", error);
@@ -273,6 +301,7 @@ const PartnersDashboard = () => {
           setEvents([]);
           setRewardPoints(0);
           setEventsCreatedCount(0);
+          setPendingProviderApplications(0);
         }
       } finally {
         if (isMounted) {
@@ -422,6 +451,46 @@ const sortedProviders = useMemo(() => {
     }
   };
 
+  const handleCancelEvent = async (event: DashboardEventRow) => {
+    if (event.status === "cancelled" || new Date(event.date) < new Date(new Date().toISOString().slice(0, 10))) return;
+    if (!window.confirm(`Cancel "${event.title}"? This will notify ${event.published ? "network members and " : ""}providers.`)) return;
+    try {
+      setCancellingEventId(event.id);
+      await cancelPartnerEvent(event.id);
+      setEvents((previous) => previous.map((item) => item.id === event.id ? { ...item, status: "cancelled" } : item));
+      toast({ title: "Event cancelled", description: "The event status was updated and the appropriate notifications were queued." });
+    } catch (error) {
+      toast({ title: "Could not cancel event", description: error instanceof Error ? error.message : "Failed to cancel event", variant: "destructive" });
+    } finally {
+      setCancellingEventId(null);
+    }
+  };
+
+  const handleAddProvider = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addingProviderEvent || !addingProviderId) return;
+    try {
+      setAddingProvider(true);
+      await addProviderToPartnerEvent(addingProviderEvent.id, addingProviderId);
+      const provider = providers.find((item) => item.id === addingProviderId);
+      if (provider) {
+        setEvents((previous) => previous.map((event) => event.id === addingProviderEvent.id ? {
+          ...event,
+          contacts: [...event.contacts, { id: `new-${provider.id}`, providerId: provider.id, name: provider.businessName, role: "pending" }],
+        } : event));
+      }
+      setAddingProviderEvent(null);
+      setAddingProviderId("");
+      toast({ title: "Provider invited", description: "The provider was added to the event and notified by email." });
+    } catch (error) {
+      toast({ title: "Could not add provider", description: error instanceof Error ? error.message : "Failed to add provider to event", variant: "destructive" });
+    } finally {
+      setAddingProvider(false);
+    }
+  };
+
+  const canAddProvider = (event: DashboardEventRow) => event.status !== "cancelled" && new Date(event.date) >= new Date(new Date().toISOString().slice(0, 10)) && (!event.deadline || new Date(event.deadline) >= new Date(new Date().toISOString().slice(0, 10)));
+
   const handleCreateEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -518,6 +587,7 @@ const sortedProviders = useMemo(() => {
 
   const handleOpenEditEvent = (event: DashboardEventRow) => {
     setEditingEvent(event);
+    setResendProviderIds([]);
     setEditEventForm({
       title: event.title,
       description: event.description,
@@ -555,6 +625,7 @@ const sortedProviders = useMemo(() => {
         memberPrice: editEventForm.memberPrice,
         totalVouchersAvailable: editEventForm.totalVouchersAvailable,
         responseDeadline: editEventForm.deadline,
+        resendProviderIds,
       });
 
       setEvents((previous) => previous.map((event) => event.id === editingEvent.id ? {
@@ -574,7 +645,7 @@ const sortedProviders = useMemo(() => {
         title: result.notifications.failed ? "Event saved with email warnings" : "Event updated",
         description: result.notifications.failed
           ? `The event was saved, but ${result.notifications.failed} notification(s) could not be queued.`
-          : "Network members and participating providers were notified of the changes.",
+          : "Notifications were sent only to eligible members and the providers you selected.",
       });
     } catch (error) {
       toast({ title: "Could not update event", description: error instanceof Error ? error.message : "Failed to update event", variant: "destructive" });
@@ -619,10 +690,14 @@ const sortedProviders = useMemo(() => {
             <p className="text-xs font-bold text-amber-900">{rewardPoints}</p>
           </div>
         </div>
+        <button type="button" className="flex-1 px-2 py-1.5 rounded-md bg-blue-50 text-left" onClick={() => navigate("/dashboard/my-providers")}>
+          <p className="text-[9px] font-medium text-blue-800 truncate">Applications</p>
+          <p className="text-xs font-bold text-blue-900">{pendingProviderApplications}</p>
+        </button>
       </div>
 
       {/* Desktop: full KPI cards */}
-      <div className="hidden sm:grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="hidden sm:grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -658,6 +733,31 @@ const sortedProviders = useMemo(() => {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-amber-600">{rewardPoints}</p>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-royal"
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate("/dashboard/my-providers")}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              navigate("/dashboard/my-providers");
+            }
+          }}
+          aria-label="Review pending provider applications"
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <UserRoundCheck className="h-5 w-5 text-blue-600" />
+              Provider Applications
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-blue-600">{pendingProviderApplications}</p>
+            <p className="text-xs text-muted-foreground mt-1">Click to review</p>
           </CardContent>
         </Card>
       </div>
@@ -733,6 +833,7 @@ const sortedProviders = useMemo(() => {
                             <TableCell>
                               <div className="flex gap-2">
                                 <Button variant="outline" size="sm" onClick={() => handleOpenEditEvent(event)}>Edit</Button>
+                                {canAddProvider(event) && <Button variant="outline" size="sm" onClick={() => setAddingProviderEvent(event)}><UserPlus className="h-4 w-4 mr-1" />Add provider</Button>}
                                 <Button
                                   size="sm"
                                   className="bg-green-600 hover:bg-green-700"
@@ -740,6 +841,9 @@ const sortedProviders = useMemo(() => {
                                   disabled={publishingEventId === event.id || event.published}
                                 >
                                   {publishingEventId === event.id ? "Publishing..." : event.published ? "Published" : "Publish"}
+                                </Button>
+                                <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => void handleCancelEvent(event)} disabled={cancellingEventId === event.id || event.status === "cancelled"}>
+                                  <XCircle className="h-4 w-4 mr-1" />{cancellingEventId === event.id ? "Cancelling..." : "Cancel"}
                                 </Button>
                               </div>
                             </TableCell>
@@ -830,7 +934,9 @@ const sortedProviders = useMemo(() => {
                             <TableCell>
                               <div className="flex flex-wrap gap-1">
                                 <Badge className={
-                                  event.status === "pending"
+                                  event.status === "cancelled"
+                                    ? "bg-red-100 text-red-800 border-red-200"
+                                    : event.status === "pending"
                                     ? "bg-amber-100 text-amber-800 border-amber-200"
                                     : event.status === "active"
                                       ? "bg-blue-100 text-blue-800 border-blue-200"
@@ -841,6 +947,8 @@ const sortedProviders = useMemo(() => {
                                 <Badge variant="outline" className={event.published ? "bg-green-50 text-green-700 border-green-200" : "bg-muted text-muted-foreground"}>
                                   {event.published ? "Published" : "Unpublished"}
                                 </Badge>
+                                {event.status !== "cancelled" && new Date(event.date) >= new Date(new Date().toISOString().slice(0, 10)) && <Button variant="ghost" size="sm" className="text-red-600" onClick={() => void handleCancelEvent(event)} disabled={cancellingEventId === event.id}>{cancellingEventId === event.id ? "Cancelling..." : "Cancel"}</Button>}
+                                {canAddProvider(event) && <Button variant="ghost" size="sm" className="text-primary" onClick={() => setAddingProviderEvent(event)}><UserPlus className="h-4 w-4 mr-1" />Add provider</Button>}
                               </div>
                             </TableCell>
                             <TableCell>{event.purchaseCount}</TableCell>
@@ -858,7 +966,7 @@ const sortedProviders = useMemo(() => {
               <form onSubmit={handleEditEventSubmit} className="flex max-h-[85vh] flex-col">
                 <DialogHeader className="px-6 pt-6 pb-2">
                   <DialogTitle>Edit Event</DialogTitle>
-                  <DialogDescription>Update the event details. Network members and accepted providers will be emailed after saving.</DialogDescription>
+                  <DialogDescription>Update the event details. Eligible members and participating providers receive updates only for event name, dates, time, or location changes.</DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[calc(85vh-140px)] px-6 pb-2">
                   <div className="space-y-4 pr-2">
@@ -881,11 +989,45 @@ const sortedProviders = useMemo(() => {
                       <div className="space-y-2"><Label htmlFor="edit-event-price">Member Price ($)</Label><Input id="edit-event-price" name="memberPrice" type="number" min="0" step="0.01" value={editEventForm.memberPrice} onChange={handleEditEventChange} disabled={squareConnectionLoading || !squareConnected} />{!squareConnected && <p className="text-xs text-muted-foreground">Connect your Square account on your profile to enable member pricing for vouchers.</p>}</div>
                       <div className="space-y-2"><Label htmlFor="edit-event-vouchers">Vouchers / Provider</Label><Input id="edit-event-vouchers" name="totalVouchersAvailable" type="number" min="1" value={editEventForm.totalVouchersAvailable} onChange={handleEditEventChange} /></div>
                     </div>
+                    <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+                      <div><Label>Resend invite to providers</Label><p className="text-xs text-muted-foreground">Select providers who should receive this update. This is required to resend a deadline change.</p></div>
+                      <div className="space-y-1.5">
+                        {editingEvent?.contacts?.map((contact) => {
+                          const selected = resendProviderIds.includes(contact.providerId);
+                          return <button type="button" key={contact.providerId} onClick={() => setResendProviderIds((current) => selected ? current.filter((id) => id !== contact.providerId) : [...current, contact.providerId])} className={`flex w-full items-center justify-between rounded border px-2 py-1.5 text-left text-xs ${selected ? "border-primary bg-primary/5" : ""}`}><span>{contact.name}</span><Badge variant="outline" className="text-[10px]">{selected ? "Selected" : contact.role}</Badge></button>;
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </ScrollArea>
                 <DialogFooter className="px-6 py-4 border-t">
                   <Button type="button" variant="outline" size="sm" onClick={() => setEditingEvent(null)} disabled={savingEvent}>Cancel</Button>
                   <Button type="submit" size="sm" disabled={savingEvent || !editEventForm.title || !editEventForm.date || !editEventForm.location}>{savingEvent ? "Saving..." : "Save Changes"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={Boolean(addingProviderEvent)} onOpenChange={(open) => { if (!open && !addingProvider) { setAddingProviderEvent(null); setAddingProviderId(""); } }}>
+            <DialogContent className="sm:max-w-[500px]">
+              <form onSubmit={handleAddProvider}>
+                <DialogHeader>
+                  <DialogTitle>Add provider to event</DialogTitle>
+                  <DialogDescription>
+                    Invite another provider to {addingProviderEvent?.title || "this event"}. The existing response deadline still applies.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-5 space-y-2">
+                  <Label htmlFor="add-event-provider">Provider</Label>
+                  <select id="add-event-provider" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={addingProviderId} onChange={(event) => setAddingProviderId(event.target.value)}>
+                    <option value="">Select a provider</option>
+                    {addingProviderEvent && providers.filter((provider) => !addingProviderEvent.contacts.some((contact) => contact.providerId === provider.id)).map((provider) => (
+                      <option key={provider.id} value={provider.id}>{provider.businessName}</option>
+                    ))}
+                  </select>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setAddingProviderEvent(null)} disabled={addingProvider}>Cancel</Button>
+                  <Button type="submit" disabled={addingProvider || !addingProviderId}>{addingProvider ? "Inviting..." : "Invite provider"}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>

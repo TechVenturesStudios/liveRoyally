@@ -76,6 +76,8 @@ const ProviderEventsPage = () => {
         return <Badge variant="outline" className="bg-green-50 text-green-700">Active</Badge>;
       case "completed":
         return <Badge variant="outline" className="bg-muted text-muted-foreground">Completed</Badge>;
+      case "expired":
+        return <Badge variant="outline" className="bg-slate-100 text-slate-600">Expired</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -105,7 +107,7 @@ const ProviderEventsPage = () => {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {["all", "pending", "active", "completed"].map(filter => (
+          {["all", "pending", "active", "completed", "expired"].map(filter => (
             <Button
               key={filter}
               variant={activeFilter === filter ? "default" : "outline"}

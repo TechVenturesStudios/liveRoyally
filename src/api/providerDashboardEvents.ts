@@ -1,4 +1,4 @@
-export type ProviderDashboardEventStatus = "pending" | "active" | "completed";
+export type ProviderDashboardEventStatus = "pending" | "active" | "completed" | "expired";
 
 export type ProviderDashboardEvent = {
   id: string;
@@ -22,7 +22,7 @@ export type ProviderDashboardEvent = {
 };
 
 function isDashboardEventStatus(value: string): value is ProviderDashboardEventStatus {
-  return value === "pending" || value === "active" || value === "completed";
+  return value === "pending" || value === "active" || value === "completed" || value === "expired";
 }
 
 export async function fetchProviderDashboardEvents(cognitoId?: string) {

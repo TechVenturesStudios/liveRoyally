@@ -116,6 +116,7 @@ export default async function handler(
         responseDeadline: event.response_deadline,
         inviteStatuses: event.event_provider_invites.map((invite) => invite.status),
         published: event.published,
+        status: event.status,
       });
 
       return {

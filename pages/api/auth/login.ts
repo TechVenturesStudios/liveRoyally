@@ -105,11 +105,20 @@ async function signInWithAuthResult(
       display_id: true,
       first_name: true,
       last_name: true,
+      provider_profiles: { select: { application_status: true } },
     },
   });
 
   if (!user?.user_type) {
     return res.status(404).json({ error: "User does not exist in database" });
+  }
+
+  if (user.user_type === "provider" && user.provider_profiles?.application_status !== "active") {
+    return res.status(403).json({
+      error: user.provider_profiles?.application_status === "declined"
+        ? "Your provider application was declined."
+        : "Your provider application is still being reviewed by the partner you selected.",
+    });
   }
 
   if (user.user_type === "partner") {
@@ -184,6 +193,7 @@ export default async function handler(
       where: { email },
       select: {
         user_type: true,
+        provider_profiles: { select: { application_status: true } },
         partner_subscriptions: { select: { status: true } },
       },
     });
@@ -191,6 +201,14 @@ export default async function handler(
     if (partner?.user_type === "partner" && isDeclinedWithoutActiveSubscription(partner.partner_subscriptions)) {
       return res.status(403).json({
         error: "Your partner account application was declined.",
+      });
+    }
+
+    if (partner?.user_type === "provider" && partner.provider_profiles?.application_status !== "active") {
+      return res.status(403).json({
+        error: partner.provider_profiles?.application_status === "declined"
+          ? "Your provider application was declined."
+          : "Your provider application is still being reviewed by the partner you selected.",
       });
     }
 

@@ -56,7 +56,7 @@ const Register = () => {
             <h1 className="text-4xl font-bold royal-header mb-4">Create Your Account</h1>
             <p className="text-gray-600 max-w-2xl mx-auto">
              Join Local Metrics and connect with your local community. 
-             Register now for experiences, exclusive deals, and rewards."
+             Register now to access local experiences, exclusive deals, and rewards.
             </p>
           </div>
 

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { resolveDashboardAccount } from "../../lib/dashboard-account";
 import { deriveEventLifecycleStatus } from "@/utils/eventStatus";
+import { isDeadlinePassed } from "@/utils/inviteDeadline";
 
 type ProviderEventsResponse =
   | {
@@ -14,7 +15,7 @@ type ProviderEventsResponse =
         location: string;
         organizer: string;
         partner: string;
-        status: "pending" | "active" | "completed";
+        status: "pending" | "active" | "completed" | "cancelled" | "expired";
         participated: boolean;
         networkScore: number;
         approvedDate: string | null;
@@ -109,13 +110,16 @@ export default async function handler(
     });
 
     const events = await Promise.all(invites.map(async (invite) => {
-      const status = deriveEventLifecycleStatus({
-        startDate: invite.events.start_date,
-        responseDeadline: invite.events.response_deadline,
-        published: invite.events.published,
-        endDate: invite.events.end_date,
-        inviteStatuses: invite.events.event_provider_invites.map((eventInvite) => eventInvite.status),
-      });
+      const status = ["pending", "expired"].includes(String(invite.status).toLowerCase()) && isDeadlinePassed(invite.events.response_deadline)
+        ? "expired"
+        : deriveEventLifecycleStatus({
+            startDate: invite.events.start_date,
+            responseDeadline: invite.events.response_deadline,
+            published: invite.events.published,
+            endDate: invite.events.end_date,
+            inviteStatuses: invite.events.event_provider_invites.map((eventInvite) => eventInvite.status),
+            status: invite.events.status,
+          });
 
       const eventDate = formatDate(invite.events.start_date);
       const inviteStatus = invite.status;

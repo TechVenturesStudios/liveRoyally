@@ -48,43 +48,69 @@ type SquareCardCheckoutProps = {
   };
   onSubmitToken: (paymentToken: string) => Promise<void>;
   submitError?: string;
+  buttonLabel?: string;
+  securityMessage?: string;
+  paymentIntent?: "STORE" | "CHARGE";
 };
 
-const loadSquareScript = async (environment: string) => {
+let squareScriptPromise: Promise<void> | null = null;
+
+const loadSquareScript = (environment: string) => {
   if (window.Square) {
-    return;
+    return Promise.resolve();
   }
 
-  const existingScript = document.querySelector<HTMLScriptElement>("script[data-square-web-payments]");
+  if (squareScriptPromise) {
+    return squareScriptPromise;
+  }
 
-  if (existingScript) {
-    await new Promise<void>((resolve, reject) => {
-      if (window.Square) {
-        resolve();
-        return;
-      }
+  squareScriptPromise = new Promise<void>((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>("script[data-square-web-payments]");
 
+    if (existingScript) {
       existingScript.addEventListener("load", () => resolve(), { once: true });
       existingScript.addEventListener("error", () => reject(new Error("Failed to load Square SDK")), {
         once: true,
       });
-    });
-    return;
-  }
+      return;
+    }
 
-  const script = document.createElement("script");
-  script.src =
-    environment === "production" || environment === "prod"
-      ? "https://web.squarecdn.com/v1/square.js"
-      : "https://sandbox.web.squarecdn.com/v1/square.js";
-  script.async = true;
-  script.dataset.squareWebPayments = "true";
-
-  await new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src =
+      environment === "production" || environment === "prod"
+        ? "https://web.squarecdn.com/v1/square.js"
+        : "https://sandbox.web.squarecdn.com/v1/square.js";
+    script.async = true;
+    script.dataset.squareWebPayments = "true";
     script.onload = () => resolve();
     script.onerror = () => reject(new Error("Failed to load Square SDK"));
     document.head.appendChild(script);
+  }).catch((error) => {
+    squareScriptPromise = null;
+    throw error;
   });
+
+  return squareScriptPromise;
+};
+
+const waitForNextPaint = () =>
+  new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+
+const createSquareCard = async (payments: SquarePayments) => {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await payments.card();
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => window.setTimeout(resolve, 250 * (attempt + 1)));
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Failed to initialize Square card entry");
 };
 
 const SquareCardCheckout = ({
@@ -93,6 +119,9 @@ const SquareCardCheckout = ({
   billingContact,
   onSubmitToken,
   submitError,
+  buttonLabel = "Save Card & Submit for Approval",
+  securityMessage = "Secure Square card entry. Your card will be charged after admin approval.",
+  paymentIntent = "STORE",
 }: SquareCardCheckoutProps) => {
   const cardRef = useRef<SquareCard | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -119,8 +148,15 @@ const SquareCardCheckout = ({
           return;
         }
 
+        // The provider checkout is mounted conditionally. Let the newly-created
+        // card container reach the DOM before asking Square to initialize it.
+        await waitForNextPaint();
+        if (cancelled) {
+          return;
+        }
+
         const payments = window.Square.payments(config.applicationId, config.locationId);
-        const card = await payments.card();
+        const card = await createSquareCard(payments);
 
         if (cancelled) {
           await card.destroy();
@@ -163,7 +199,8 @@ const SquareCardCheckout = ({
     try {
       const tokenResult = await card.tokenize({
         billingContact,
-        intent: "STORE",
+        intent: paymentIntent,
+        ...(paymentIntent === "CHARGE" ? { amount: total.toFixed(2), currencyCode: "USD" } : {}),
         customerInitiated: true,
         sellerKeyedIn: false,
       });
@@ -208,7 +245,7 @@ const SquareCardCheckout = ({
         className="w-full bg-royal hover:bg-royal-dark text-white h-12 text-base font-semibold gap-2"
       >
         {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
-        {isSubmitting ? "Saving card..." : `Save Card & Submit for Approval`}
+        {isSubmitting ? "Saving card..." : buttonLabel}
       </Button>
 
       {(submitError || paymentError) && (
@@ -217,7 +254,7 @@ const SquareCardCheckout = ({
 
       <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
         <Shield className="h-3.5 w-3.5" />
-        Secure Square card entry. Your card will be charged after admin approval.
+        {securityMessage}
       </div>
     </div>
   );

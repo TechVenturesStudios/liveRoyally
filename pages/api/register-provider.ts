@@ -5,7 +5,11 @@ import { prisma } from "../../lib/prisma";
 import { awardAccountCreationReward } from "../../lib/rewards";
 import { getOrCreateRole } from "../../lib/roles";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../src/config/subscriptionPlans";
-import { queueWelcomeEmail } from "../../lib/notification-templates";
+import {
+  queuePartnerProviderApplicationEmail,
+  queueProviderApplicationReviewEmail,
+} from "../../lib/notification-templates";
+import { getAppBaseUrl } from "../../lib/app-url";
 
 type RegisterProviderResponse =
   | {
@@ -56,10 +60,19 @@ export default async function handler(
       const normalizedEmail = String(body.businessEmail || "").toLowerCase().trim();
       const existingUser = await tx.users.findFirst({
         where: { OR: [{ email: normalizedEmail }, { cognito_id: String(cognitoId) }] },
-        select: { user_id: true },
+        select: {
+          user_id: true,
+          user_type: true,
+          provider_profiles: { select: { partner_id: true, application_status: true } },
+        },
       });
 
-      if (existingUser) {
+      if (existingUser && (
+        existingUser.user_type !== UserType.provider ||
+        !existingUser.provider_profiles ||
+        existingUser.provider_profiles.application_status === "pending" ||
+        (existingUser.provider_profiles.partner_id && existingUser.provider_profiles.application_status === "active")
+      )) {
         const error = new Error("An account already exists with that email") as Error & { statusCode?: number };
         error.statusCode = 409;
         throw error;
@@ -74,6 +87,7 @@ export default async function handler(
           network_name: true,
           network_code: true,
           org_name: true,
+          users: { select: { email: true, first_name: true } },
         },
       });
 
@@ -113,6 +127,7 @@ export default async function handler(
         SELECT COUNT(*)::int AS count
         FROM provider_profiles
         WHERE partner_id = ${partner.user_id}::uuid
+          AND application_status IN ('pending', 'active')
       `;
 
       const currentProviderCount = providerCountResult[0]?.count ?? 0;
@@ -128,31 +143,35 @@ export default async function handler(
         throw error;
       }
 
-      const user = await tx.users.create({
-        data: {
-          cognito_id: String(cognitoId),
-          email: normalizedEmail,
-          first_name: body.agentFirstName || null,
-          last_name: body.agentLastName || null,
-          phone_number: body.agentPhone || null,
-          user_type: UserType.provider,
-          display_id: displayId,
-        },
-        select: { user_id: true },
-      });
+      const user = existingUser
+        ? await tx.users.update({
+            where: { user_id: existingUser.user_id },
+            data: {
+              first_name: body.agentFirstName || null,
+              last_name: body.agentLastName || null,
+              phone_number: body.agentPhone || null,
+            },
+            select: { user_id: true },
+          })
+        : await tx.users.create({
+            data: {
+              cognito_id: String(cognitoId),
+              email: normalizedEmail,
+              first_name: body.agentFirstName || null,
+              last_name: body.agentLastName || null,
+              phone_number: body.agentPhone || null,
+              user_type: UserType.provider,
+              display_id: displayId,
+            },
+            select: { user_id: true },
+          });
 
-      const role = await getOrCreateRole(tx, "provider");
+      if (!existingUser) {
+        const role = await getOrCreateRole(tx, "provider");
+        await tx.user_roles.create({ data: { user_id: user.user_id, role_id: role.role_id } });
+      }
 
-      await tx.user_roles.create({
-        data: {
-          user_id: user.user_id,
-          role_id: role.role_id,
-        },
-      });
-
-      await tx.provider_profiles.create({
-        data: {
-          user_id: user.user_id,
+      const providerProfileData = {
           partner_id: partner.user_id,
           network_name: partner.network_name || null,
           network_code: partner.network_code || null,
@@ -169,15 +188,57 @@ export default async function handler(
           agent_phone: body.agentPhone || null,
           notification_enabled: Boolean(body.notificationEnabled),
           terms_accepted: Boolean(body.termsAccepted),
-        },
+          application_status: "pending",
+          approved_at: null,
+          declined_at: null,
+          approval_email_sent_at: null,
+      };
+
+      await tx.provider_profiles.upsert({
+        where: { user_id: user.user_id },
+        update: providerProfileData,
+        create: { user_id: user.user_id, ...providerProfileData },
       });
 
-      await awardAccountCreationReward(tx, { userId: user.user_id, userType: UserType.provider });
+      if (!existingUser) {
+        await awardAccountCreationReward(tx, { userId: user.user_id, userType: UserType.provider });
+      }
 
       return { user, partner };
     });
 
-    await queueWelcomeEmail(result.user.user_id, "provider");
+    await queueProviderApplicationReviewEmail({
+      providerId: result.user.user_id,
+      toEmail: String(body.businessEmail).trim(),
+      firstName: String(body.agentFirstName || "").trim(),
+      partnerName: result.partner.org_name || "Your partner",
+      applicationKey: new Date().toISOString(),
+    });
+
+    if (result.partner.users.email) {
+      await queuePartnerProviderApplicationEmail({
+        providerId: result.user.user_id,
+        partnerId: result.partner.user_id,
+        toEmail: result.partner.users.email,
+        firstName: result.partner.users.first_name,
+        partnerName: result.partner.org_name || "Your partner",
+        provider: {
+          businessName: body.businessName,
+          businessCategory: body.businessCategory,
+          businessEmail: body.businessEmail,
+          businessPhone: body.businessPhone,
+          agentFirstName: body.agentFirstName,
+          agentLastName: body.agentLastName,
+          agentPhone: body.agentPhone,
+          businessAddress: body.businessAddress,
+          businessCity: body.businessCity,
+          businessState: body.businessState,
+          businessZip: body.businessZip,
+        },
+        reviewLink: `${getAppBaseUrl(req)}/dashboard/my-providers`,
+        applicationKey: new Date().toISOString(),
+      });
+    }
 
     return res.status(200).json({
       message: "Provider registered successfully",

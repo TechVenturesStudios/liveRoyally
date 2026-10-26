@@ -28,16 +28,17 @@ export default async function handler(
     if (!eventId) return res.status(400).json({ error: "eventId is required" });
 
     const event = await prisma.events.updateMany({
-      where: { event_id: eventId, partner_id: account.actingUserId, published: false },
+      where: { event_id: eventId, partner_id: account.actingUserId, published: false, NOT: { status: "cancelled" } },
       data: { published: true, published_at: new Date() },
     });
 
     if (event.count === 0) {
       const existing = await prisma.events.findFirst({
         where: { event_id: eventId, partner_id: account.actingUserId },
-        select: { published: true },
+        select: { published: true, status: true },
       });
       if (!existing) return res.status(404).json({ error: "Event not found" });
+      if (String(existing.status || "").toLowerCase() === "cancelled") return res.status(409).json({ error: "Cancelled events cannot be published" });
       return res.status(200).json({
         event: { id: eventId, published: true, publishedAt: new Date().toISOString() },
       });
