@@ -12,6 +12,10 @@ import { completeNewPasswordChallenge, confirmPasswordReset, loginWithCognito, r
 import { saveUserToStorage } from "@/utils/userStorage";
 import { clearDashboardContext } from "@/utils/dashboardContext";
 
+function resetSidebarOnLogin() {
+  sessionStorage.setItem("sidebar-collapsed", "false");
+}
+
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -99,6 +103,7 @@ const Login = () => {
         const user = await completeNewPasswordChallenge(email, challengeSession, newPassword);
         saveUserToStorage(user);
         clearDashboardContext();
+        resetSidebarOnLogin();
         toast.success("Password updated", { description: "Welcome to Local Metrics!" });
         const returnTo = new URLSearchParams(location.search).get("returnTo");
         navigate(returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard");
@@ -130,6 +135,7 @@ const Login = () => {
       const user = result.user;
       saveUserToStorage(user);
       clearDashboardContext();
+      resetSidebarOnLogin();
       toast.success("Login successful", { description: "Welcome back!" });
       const returnTo = new URLSearchParams(location.search).get("returnTo");
       navigate(returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard");

@@ -110,6 +110,8 @@ export default async function handler(
         v.member_price,
         v.max_redemptions,
         e.title AS event_title,
+        partner.org_name AS partner_organization_name,
+        e.location AS event_location,
         e.start_date AS event_start_date,
         e.end_date AS event_end_date,
         pp.business_name AS provider_name,
@@ -127,6 +129,8 @@ export default async function handler(
         ON pp.user_id = v.provider_id
       JOIN events e
         ON e.event_id = v.event_id
+      LEFT JOIN partner_profiles partner
+        ON partner.user_id = e.partner_id
       WHERE pp.network_code = ${networkCode}
         AND LOWER(TRIM(COALESCE(v.status, ''))) = 'active'
         AND e.published = TRUE

@@ -66,7 +66,6 @@ const EventApprovalTab = () => {
   const [showAcceptDialog, setShowAcceptDialog] = useState(false);
 
   const [pricingData, setPricingData] = useState({
-    memberPrice: "",
     maxRedemptions: "",
     discountType: "none" as "none" | "percent" | "dollar" | "free_item",
     discountValue: "",
@@ -75,7 +74,6 @@ const EventApprovalTab = () => {
 
   const resetPricing = () => {
     setPricingData({
-      memberPrice: "",
       maxRedemptions: "",
       discountType: "none",
       discountValue: "",
@@ -227,20 +225,6 @@ const EventApprovalTab = () => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="memberPrice">Member Price ($)</Label>
-                      <Input
-                        id="memberPrice"
-                        name="memberPrice"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={pricingData.memberPrice}
-                        onChange={handlePricingChange}
-                        placeholder="0.00"
-                      />
-                      <p className="text-xs text-muted-foreground">Enter 0 or leave blank for free</p>
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="maxRedemptions">Max Redemptions</Label>
                       <Input

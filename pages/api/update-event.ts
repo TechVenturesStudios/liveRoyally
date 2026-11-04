@@ -17,6 +17,28 @@ function formatDate(value: Date | null) {
   return value ? value.toISOString().slice(0, 10) : "TBD";
 }
 
+function hasEventStarted(startDate: Date | null, eventTime: string | null) {
+  if (!startDate) return true;
+
+  const now = new Date();
+  const startDateKey = startDate.toISOString().slice(0, 10);
+  const todayKey = now.toISOString().slice(0, 10);
+  if (startDateKey < todayKey) return true;
+  if (startDateKey > todayKey) return false;
+
+  const timeMatch = String(eventTime || "").trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (!timeMatch) return true;
+  let hours = Number(timeMatch[1]);
+  const minutes = Number(timeMatch[2] || 0);
+  const meridiem = timeMatch[3]?.toUpperCase();
+  if (minutes > 59 || hours > 23 || (meridiem && hours > 12)) return true;
+  if (meridiem) {
+    if (hours === 12) hours = 0;
+    if (meridiem === "PM") hours += 12;
+  }
+  return hours * 60 + minutes <= now.getUTCHours() * 60 + now.getUTCMinutes();
+}
+
 function changed(label: string, before: unknown, after: unknown) {
   const left = before instanceof Date ? formatDate(before) : String(before ?? "").trim();
   const right = after instanceof Date ? formatDate(after) : String(after ?? "").trim();
@@ -35,6 +57,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const existing = await prisma.events.findFirst({ where: { event_id: eventId, partner_id: account.actingUserId } });
     if (!existing) return res.status(404).json({ error: "Event not found" });
     if (String(existing.status || "").toLowerCase() === "cancelled") return res.status(409).json({ error: "Cancelled events cannot be edited" });
+    const today = new Date().toISOString().slice(0, 10);
+    if (hasEventStarted(existing.start_date, existing.event_time)) {
+      return res.status(409).json({ error: "Events cannot be edited after they have started" });
+    }
 
     const requestedMemberPrice = req.body?.memberPrice === undefined
       ? existing.member_price
@@ -68,6 +94,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       end_date: req.body?.endDate === undefined ? existing.end_date : parseDate(req.body.endDate),
     };
     if (!next.title || !next.location || !next.start_date) return res.status(400).json({ error: "Title, start date, and location are required" });
+    if (next.start_date.toISOString().slice(0, 10) < today) {
+      return res.status(400).json({ error: "The event start date must be today or later" });
+    }
 
     const eventChangeSummary = [
       changed("Title", existing.title, next.title),
@@ -130,7 +159,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           JOIN users u ON u.user_id = i.provider_id
           JOIN provider_profiles pp ON pp.user_id = u.user_id
           WHERE i.event_id = ${eventId} AND i.provider_id IN (${Prisma.join(resendProviderIds)})
-            AND pp.notification_enabled = TRUE AND NULLIF(TRIM(u.email), '') IS NOT NULL
+            AND NULLIF(TRIM(u.email), '') IS NOT NULL
         `
       : [];
     const baseUrl = getAppBaseUrl(req);
@@ -152,9 +181,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       eventLocation: event.location || "TBD",
       eventLink: `${baseUrl}/dashboard/deals?eventId=${encodeURIComponent(eventId)}`,
       partnerContactEmail: partner?.partner_profiles?.org_email || partner?.email,
+      ignoreNotificationPreference: resendProviders.some((provider) => provider.user_id === recipient.recipientId),
     })));
     const allResults = results;
-    return res.status(200).json({ eventId, changed: true, notifications: { queued: allResults.filter((result) => result.status === "fulfilled").length, failed: allResults.filter((result) => result.status === "rejected").length } });
+    return res.status(200).json({ eventId, changed: true, notifications: { queued: allResults.filter((result) => result.status === "fulfilled" && result.value !== null).length, failed: allResults.filter((result) => result.status === "rejected").length } });
   } catch (error) {
     console.error("update-event error:", error);
     return res.status(500).json({ error: error instanceof Error ? error.message : "Failed to update event" });

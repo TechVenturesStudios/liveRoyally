@@ -102,7 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data: { application_status: "active", approved_at: now, declined_at: null },
       });
       const temporaryPassword = await setCognitoTemporaryPassword(provider.users.email);
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://liveroyally.com";
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://localmetrics.com";
       await Promise.all([
         queueTemporaryPasswordEmail({ email: provider.users.email, temporaryPassword, userType: "provider", idempotencyKey: `provider-temporary-password:${provider.user_id}:${now.toISOString()}` }),
         queueProviderApprovedEmail({ providerId: provider.user_id, toEmail: provider.users.email, firstName: provider.users.first_name, partnerName, loginLink: `${baseUrl}/login`, applicationKey: now.toISOString() }),

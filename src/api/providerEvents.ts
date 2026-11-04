@@ -9,7 +9,6 @@ export type ProviderPendingInvite = {
   eventTime: string;
   location: string;
   networkPoints: number;
-  memberPrice: number | null;
   totalVouchersAvailable: number | null;
   deadline: string;
   partnerName: string;
@@ -24,7 +23,6 @@ export type ProviderInviteResponseInput = {
     type: "N" | "P" | "A" | "F";
     value?: string | number;
     promoItem?: string;
-    memberPrice?: string | number;
     maxRedemptions?: string | number;
   };
 };

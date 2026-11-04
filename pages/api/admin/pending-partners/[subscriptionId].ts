@@ -30,7 +30,7 @@ function getSubscriptionId(req: NextApiRequest) {
 
 async function sendPartnerApprovalEmail(user: { user_id: string; email: string; first_name?: string | null; partner_profiles: { org_name: string | null } | null }) {
   const temporaryPassword = await setCognitoTemporaryPassword(user.email);
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://liveroyally.com";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://localmetrics.com";
   await Promise.all([
     queueTemporaryPasswordEmail({ email: user.email, temporaryPassword, userType: "partner" }),
     queuePartnerApprovedEmail({

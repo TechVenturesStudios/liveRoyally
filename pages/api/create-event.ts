@@ -241,8 +241,8 @@ export default async function handler(
       })
     );
 
-    const queued = emailResults.filter((result) => result.status === "fulfilled").length;
-    const failed = emailResults.length - queued;
+    const queued = emailResults.filter((result) => result.status === "fulfilled" && result.value !== null).length;
+    const failed = emailResults.filter((result) => result.status === "rejected").length;
 
     return res.status(200).json({
       message: "Event created",

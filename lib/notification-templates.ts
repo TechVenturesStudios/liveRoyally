@@ -520,10 +520,11 @@ export type EventChangedEmailInput = {
   eventLocation: string;
   eventLink: string;
   partnerContactEmail?: string | null;
+  ignoreNotificationPreference?: boolean;
 };
 
 export async function queueEventChangedEmail(input: EventChangedEmailInput) {
-  if (!(await notificationsEnabled(input.recipientId))) return null;
+  if (!input.ignoreNotificationPreference && !(await notificationsEnabled(input.recipientId))) return null;
   const firstName = input.firstName?.trim() || "there";
   const subject = `Update: ${input.eventName} details have changed`;
   const preheader = "Here's what changed for the event you're part of.";
@@ -840,7 +841,6 @@ export type ProviderInvitationEmailInput = {
 };
 
 export async function queueProviderInvitationEmail(input: ProviderInvitationEmailInput) {
-  if (!(await notificationsEnabled(input.providerId))) return null;
   const firstName = input.firstName?.trim() || "there";
   const subject = `${input.partnerName} invited you to join Local Metrics as a Provider`;
   const preheader = "Accept the invite to start participating in their events.";
@@ -865,7 +865,6 @@ export type ProviderEventResponseDeadlineChangedEmailInput = {
 };
 
 export async function queueProviderEventResponseDeadlineChangedEmail(input: ProviderEventResponseDeadlineChangedEmailInput) {
-  if (!(await notificationsEnabled(input.providerId))) return null;
   const firstName = input.firstName?.trim() || "there";
   const subject = `Response deadline changed: ${input.eventName}`;
   const preheader = `${input.partnerName} updated the deadline for your event invitation.`;

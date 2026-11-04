@@ -50,15 +50,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const locationsResponse = await fetch(`${squareOauthApiBaseUrl}/v2/locations`, {
         headers: {
           Authorization: `Bearer ${payload.access_token}`,
+          Accept: "application/json",
           "Square-Version": process.env.SQUARE_VERSION || "2026-09-16",
         },
       });
-      const locationsPayload = await locationsResponse.json() as {
+      const locationsPayload = await locationsResponse.json().catch(() => null) as {
         locations?: Array<{ id?: string; status?: string }>;
-      };
-      locationId = locationsPayload.locations?.find((location) => location.status === "ACTIVE")?.id || null;
+        errors?: Array<{ category?: string; code?: string; detail?: string }>;
+      } | null;
+
+      if (!locationsResponse.ok) {
+        const details = locationsPayload?.errors?.map((error) => error.detail || error.code || error.category || "Unknown error").join("; ") || "Unknown Square error";
+        throw new Error(`Square locations request failed (${locationsResponse.status}): ${details}`);
+      }
+
+      const activeLocation = locationsPayload?.locations?.find(
+        (location) => String(location.status || "").toUpperCase() === "ACTIVE" && location.id
+      );
+
+      if (!activeLocation?.id) {
+        throw new Error("Square returned no active location for the connected merchant");
+      }
+
+      locationId = activeLocation.id;
     } catch (locationError) {
-      console.error("Square location lookup failed", locationError);
+      console.error("Square location lookup failed", {
+        merchantId: payload.merchant_id,
+        error: locationError instanceof Error ? locationError.message : locationError,
+      });
+      return finish(res, "location_error");
     }
 
     await prisma.partner_square_connections.upsert({
@@ -74,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       update: {
         merchant_id: payload.merchant_id,
-        ...(locationId ? { location_id: locationId } : {}),
+        location_id: locationId,
         access_token_ciphertext: encryptSquareToken(payload.access_token),
         refresh_token_ciphertext: encryptSquareToken(payload.refresh_token),
         access_token_expires_at: payload.expires_at ? new Date(payload.expires_at) : null,

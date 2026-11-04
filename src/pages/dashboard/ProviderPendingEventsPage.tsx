@@ -396,11 +396,6 @@ const ProviderPendingEventsPage = () => {
                     <h3 className="font-semibold">Your Pricing & Offer</h3>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm sm:col-span-2">
-                          {selectedEvent.memberPrice === null
-                            ? "This event allows free vouchers."
-                            : `Members will pay $${selectedEvent.memberPrice.toFixed(2)} for every voucher you create for this event.`}
-                        </div>
                         <div className="space-y-2">
                           <Label htmlFor="maxRedemptions">Max Uses per Member</Label>
                           <Input id="maxRedemptions" name="maxRedemptions" type="number" min="1" value={pricingData.maxRedemptions} onChange={handlePricingChange} placeholder="Unlimited" />

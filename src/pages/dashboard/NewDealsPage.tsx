@@ -208,8 +208,8 @@ const NewDealsPage = () => {
     const days = getDaysUntilExpiry(voucher);
 
     return [
-      { label: "Provider", value: voucher.provider_name || "Unknown provider" },
-      { label: "Network", value: getVoucherNetworkLabel(voucher) },
+      { label: "Partner", value: voucher.partner_organization_name || "Unknown partner" },
+      { label: "Event", value: voucher.event_title || "No event linked" },
       { label: "Voucher ID", value: voucher.voucher_id },
       { label: "Category", value: voucher.provider_category || "Unspecified" },
       { label: "Discount", value: getVoucherDiscountLabel(voucher) },
@@ -222,9 +222,9 @@ const NewDealsPage = () => {
       },
       { label: "Status", value: getVoucherStatusLabel(voucher.status) },
       { label: "Claimed At", value: voucher.claimed_at ? new Date(voucher.claimed_at).toLocaleString() : "Unknown" },
-       { label: "Member Price", value: formatVoucherMemberPrice(voucher.member_price) || "Not set" },
+      { label: "Member Price", value: formatVoucherMemberPrice(voucher.member_price) || "Not set" },
       { label: "Max Redemptions", value: voucher.max_redemptions ?? "Unlimited" },
-      { label: "Event", value: voucher.event_title || "No event linked" },
+      { label: "Provider", value: voucher.provider_name || "Unknown provider" },
       { label: "Provider Phone", value: voucher.provider_phone || "Not provided" },
       { label: "Provider Email", value: voucher.provider_email || "Not provided" },
     ];

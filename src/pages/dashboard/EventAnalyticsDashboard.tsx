@@ -14,7 +14,6 @@ import {
   type PartnerDashboardEvent,
   type PartnerEventAnalytics,
 } from "@/api/partnerEvents";
-import { fetchPartnerAccountOverview } from "@/api/myProviders";
 import { getUserFromStorage } from "@/utils/userStorage";
 
 type PublishedEventRow = Omit<PartnerDashboardEvent, "status"> & {
@@ -54,7 +53,6 @@ const EventAnalyticsDashboard = () => {
   const [activeTab, setActiveTab] = useState("analytics");
   const [partnerEvents, setPartnerEvents] = useState<PartnerDashboardEvent[]>([]);
   const [analyticsEvents, setAnalyticsEvents] = useState<PartnerEventAnalytics[]>([]);
-  const [totalPartnerProviders, setTotalPartnerProviders] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<PublishedEventRow | null>(null);
   const [selectedPendingEvent, setSelectedPendingEvent] = useState<PartnerDashboardEvent | null>(null);
@@ -68,23 +66,20 @@ const EventAnalyticsDashboard = () => {
     Promise.all([
       fetchPartnerDashboardEvents(cognitoId),
       fetchPartnerEventAnalytics(cognitoId),
-      fetchPartnerAccountOverview(cognitoId),
     ])
-      .then(([dashboardEvents, analytics, accountOverview]) => {
+      .then(([dashboardEvents, analytics]) => {
         if (cancelled) {
           return;
         }
 
         setPartnerEvents(dashboardEvents);
         setAnalyticsEvents(analytics);
-        setTotalPartnerProviders(accountOverview.providers.length);
       })
       .catch((error) => {
         if (!cancelled) {
           console.error("Failed to load partner dashboard analytics:", error);
           setPartnerEvents([]);
           setAnalyticsEvents([]);
-          setTotalPartnerProviders(0);
         }
       })
       .finally(() => {
@@ -136,14 +131,11 @@ const EventAnalyticsDashboard = () => {
   const totalVouchersRedeemed = analyticsEvents.reduce((sum, event) => sum + event.membersAttended, 0);
   const engagementPercent = totalVouchersClaimed > 0 ? Math.round((totalVouchersRedeemed / totalVouchersClaimed) * 100) : 0;
 
-  const participatingProviders = new Set(
-    partnerEvents.flatMap((event) =>
-      event.providers
-        .filter((provider) => provider.status === "accepted")
-        .map((provider) => provider.providerId)
-    )
-  ).size;
-  const totalProviders = totalPartnerProviders;
+  const participatingProviders = partnerEvents.reduce(
+    (count, event) => count + event.providers.filter((provider) => provider.status === "accepted").length,
+    0,
+  );
+  const totalProviders = partnerEvents.reduce((count, event) => count + event.providers.length, 0);
   const participationPercent = totalProviders > 0 ? Math.round((participatingProviders / totalProviders) * 100) : 0;
 
   return (
@@ -183,7 +175,7 @@ const EventAnalyticsDashboard = () => {
               <div>
                 <p className="text-xs font-medium text-purple-800">Provider Participation</p>
                 <p className="text-xl font-bold text-purple-900">{participationPercent}%</p>
-                <p className="text-[11px] text-purple-600">{participatingProviders} / {totalProviders} providers accepted invites</p>
+                <p className="text-[11px] text-purple-600">{participatingProviders} / {totalProviders} invites accepted</p>
               </div>
               <div className="rounded-full p-2 bg-purple-100">
                 <TrendingUp className="h-4 w-4 text-purple-600" />

@@ -77,6 +77,8 @@ export default async function handler(
         mv.qr_code_payload,
         mv.created_at AS claimed_at,
         e.title AS event_title,
+        partner.org_name AS partner_organization_name,
+        e.location AS event_location,
         e.start_date AS event_start_date,
         e.end_date AS event_end_date,
         pp.business_name AS provider_name,
@@ -96,6 +98,8 @@ export default async function handler(
         ON pp.user_id = v.provider_id
       LEFT JOIN events e
         ON e.event_id = v.event_id
+      LEFT JOIN partner_profiles partner
+        ON partner.user_id = e.partner_id
       WHERE mv.member_id = ${member.user_id}::uuid
         AND LOWER(TRIM(COALESCE(v.status, ''))) = 'active'
         AND (v.expiration_date IS NULL OR v.expiration_date >= CURRENT_DATE)

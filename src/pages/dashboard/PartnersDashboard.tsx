@@ -601,13 +601,49 @@ const sortedProviders = useMemo(() => {
     });
   };
 
+  const eventHasStarted = (event: Pick<DashboardEventRow, "date" | "time">) => {
+    if (!event.date) return true;
+
+    const today = new Date();
+    const [year, month, day] = event.date.split("-").map(Number);
+    if (![year, month, day].every(Number.isFinite)) return true;
+
+    const eventDate = new Date(year, month - 1, day);
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (eventDate < todayDate) return true;
+    if (eventDate > todayDate) return false;
+
+    // An event scheduled for today is editable until its start time. If the
+    // time is missing or cannot be parsed, treat it as already started.
+    const timeMatch = event.time.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    if (!timeMatch) return true;
+    let hours = Number(timeMatch[1]);
+    const minutes = Number(timeMatch[2] || 0);
+    const meridiem = timeMatch[3]?.toUpperCase();
+    if (minutes > 59 || hours > 23 || (meridiem && hours > 12)) return true;
+    if (meridiem) {
+      if (hours === 12) hours = 0;
+      if (meridiem === "PM") hours += 12;
+    }
+    return hours * 60 + minutes <= today.getHours() * 60 + today.getMinutes();
+  };
+
+  const canEditEvent = (event: DashboardEventRow) =>
+    event.status !== "cancelled" &&
+    event.status !== "completed" &&
+    !eventHasStarted(event);
+
   const handleEditEventChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setEditEventForm((previous) => ({ ...previous, [e.target.name]: e.target.value }));
   };
 
   const handleEditEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingEvent || !editEventForm.title || !editEventForm.date || !editEventForm.location) {
+    if (!editingEvent || !canEditEvent(editingEvent)) {
+      toast({ title: "Event cannot be edited", description: "Events cannot be edited once they have started or happened.", variant: "destructive" });
+      return;
+    }
+    if (!editEventForm.title || !editEventForm.date || !editEventForm.location) {
       toast({ title: "Missing fields", description: "Title, start date, and location are required.", variant: "destructive" });
       return;
     }
@@ -832,7 +868,7 @@ const sortedProviders = useMemo(() => {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={() => handleOpenEditEvent(event)}>Edit</Button>
+                                {canEditEvent(event) && <Button variant="outline" size="sm" onClick={() => handleOpenEditEvent(event)}>Edit</Button>}
                                 {canAddProvider(event) && <Button variant="outline" size="sm" onClick={() => setAddingProviderEvent(event)}><UserPlus className="h-4 w-4 mr-1" />Add provider</Button>}
                                 <Button
                                   size="sm"
@@ -948,6 +984,7 @@ const sortedProviders = useMemo(() => {
                                   {event.published ? "Published" : "Unpublished"}
                                 </Badge>
                                 {event.status !== "cancelled" && new Date(event.date) >= new Date(new Date().toISOString().slice(0, 10)) && <Button variant="ghost" size="sm" className="text-red-600" onClick={() => void handleCancelEvent(event)} disabled={cancellingEventId === event.id}>{cancellingEventId === event.id ? "Cancelling..." : "Cancel"}</Button>}
+                                {canEditEvent(event) && <Button variant="ghost" size="sm" onClick={() => handleOpenEditEvent(event)}>Edit</Button>}
                                 {canAddProvider(event) && <Button variant="ghost" size="sm" className="text-primary" onClick={() => setAddingProviderEvent(event)}><UserPlus className="h-4 w-4 mr-1" />Add provider</Button>}
                               </div>
                             </TableCell>
@@ -972,29 +1009,29 @@ const sortedProviders = useMemo(() => {
                   <div className="space-y-4 pr-2">
                     <div className="space-y-2">
                       <Label htmlFor="edit-event-title">Event Title *</Label>
-                      <Input id="edit-event-title" name="title" value={editEventForm.title} onChange={handleEditEventChange} />
+                      <Input id="edit-event-title" name="title" value={editEventForm.title} onChange={handleEditEventChange} disabled={!editingEvent || !canEditEvent(editingEvent)} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-event-description">Description</Label>
-                      <Textarea id="edit-event-description" name="description" value={editEventForm.description} onChange={handleEditEventChange} rows={3} />
+                      <Textarea id="edit-event-description" name="description" value={editEventForm.description} onChange={handleEditEventChange} rows={3} disabled={!editingEvent || !canEditEvent(editingEvent)} />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-2"><Label htmlFor="edit-event-date">Start Date *</Label><Input id="edit-event-date" name="date" type="date" value={editEventForm.date} onChange={handleEditEventChange} /></div>
-                      <div className="space-y-2"><Label htmlFor="edit-event-end-date">End Date</Label><Input id="edit-event-end-date" name="endDate" type="date" value={editEventForm.endDate} onChange={handleEditEventChange} /></div>
-                      <div className="space-y-2"><Label htmlFor="edit-event-time">Time</Label><Input id="edit-event-time" name="time" value={editEventForm.time} onChange={handleEditEventChange} /></div>
-                      <div className="space-y-2"><Label htmlFor="edit-event-deadline">Provider Response Deadline</Label><Input id="edit-event-deadline" name="deadline" type="date" value={editEventForm.deadline} onChange={handleEditEventChange} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-date">Start Date *</Label><Input id="edit-event-date" name="date" type="date" value={editEventForm.date} onChange={handleEditEventChange} disabled={!editingEvent || !canEditEvent(editingEvent)} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-end-date">End Date</Label><Input id="edit-event-end-date" name="endDate" type="date" value={editEventForm.endDate} onChange={handleEditEventChange} disabled={!editingEvent || !canEditEvent(editingEvent)} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-time">Time</Label><Input id="edit-event-time" name="time" value={editEventForm.time} onChange={handleEditEventChange} disabled={!editingEvent || !canEditEvent(editingEvent)} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-deadline">Provider Response Deadline</Label><Input id="edit-event-deadline" name="deadline" type="date" value={editEventForm.deadline} onChange={handleEditEventChange} disabled={!editingEvent || !canEditEvent(editingEvent)} /></div>
                     </div>
-                    <div className="space-y-2"><Label htmlFor="edit-event-location">Location *</Label><Input id="edit-event-location" name="location" value={editEventForm.location} onChange={handleEditEventChange} /></div>
+                    <div className="space-y-2"><Label htmlFor="edit-event-location">Location *</Label><Input id="edit-event-location" name="location" value={editEventForm.location} onChange={handleEditEventChange} disabled={!editingEvent || !canEditEvent(editingEvent)} /></div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="space-y-2"><Label htmlFor="edit-event-price">Member Price ($)</Label><Input id="edit-event-price" name="memberPrice" type="number" min="0" step="0.01" value={editEventForm.memberPrice} onChange={handleEditEventChange} disabled={squareConnectionLoading || !squareConnected} />{!squareConnected && <p className="text-xs text-muted-foreground">Connect your Square account on your profile to enable member pricing for vouchers.</p>}</div>
-                      <div className="space-y-2"><Label htmlFor="edit-event-vouchers">Vouchers / Provider</Label><Input id="edit-event-vouchers" name="totalVouchersAvailable" type="number" min="1" value={editEventForm.totalVouchersAvailable} onChange={handleEditEventChange} /></div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-price">Member Price ($)</Label><Input id="edit-event-price" name="memberPrice" type="number" min="0" step="0.01" value={editEventForm.memberPrice} onChange={handleEditEventChange} disabled={!editingEvent || !canEditEvent(editingEvent) || squareConnectionLoading || !squareConnected} />{!squareConnected && <p className="text-xs text-muted-foreground">Connect your Square account on your profile to enable member pricing for vouchers.</p>}</div>
+                      <div className="space-y-2"><Label htmlFor="edit-event-vouchers">Vouchers / Provider</Label><Input id="edit-event-vouchers" name="totalVouchersAvailable" type="number" min="1" value={editEventForm.totalVouchersAvailable} onChange={handleEditEventChange} disabled={!editingEvent || !canEditEvent(editingEvent)} /></div>
                     </div>
                     <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
                       <div><Label>Resend invite to providers</Label><p className="text-xs text-muted-foreground">Select providers who should receive this update. This is required to resend a deadline change.</p></div>
                       <div className="space-y-1.5">
                         {editingEvent?.contacts?.map((contact) => {
                           const selected = resendProviderIds.includes(contact.providerId);
-                          return <button type="button" key={contact.providerId} onClick={() => setResendProviderIds((current) => selected ? current.filter((id) => id !== contact.providerId) : [...current, contact.providerId])} className={`flex w-full items-center justify-between rounded border px-2 py-1.5 text-left text-xs ${selected ? "border-primary bg-primary/5" : ""}`}><span>{contact.name}</span><Badge variant="outline" className="text-[10px]">{selected ? "Selected" : contact.role}</Badge></button>;
+                          return <button type="button" key={contact.providerId} onClick={() => setResendProviderIds((current) => selected ? current.filter((id) => id !== contact.providerId) : [...current, contact.providerId])} disabled={!editingEvent || !canEditEvent(editingEvent)} className={`flex w-full items-center justify-between rounded border px-2 py-1.5 text-left text-xs ${selected ? "border-primary bg-primary/5" : ""}`}><span>{contact.name}</span><Badge variant="outline" className="text-[10px]">{selected ? "Selected" : contact.role}</Badge></button>;
                         })}
                       </div>
                     </div>
@@ -1002,7 +1039,7 @@ const sortedProviders = useMemo(() => {
                 </ScrollArea>
                 <DialogFooter className="px-6 py-4 border-t">
                   <Button type="button" variant="outline" size="sm" onClick={() => setEditingEvent(null)} disabled={savingEvent}>Cancel</Button>
-                  <Button type="submit" size="sm" disabled={savingEvent || !editEventForm.title || !editEventForm.date || !editEventForm.location}>{savingEvent ? "Saving..." : "Save Changes"}</Button>
+                  <Button type="submit" size="sm" disabled={savingEvent || !editingEvent || !canEditEvent(editingEvent) || !editEventForm.title || !editEventForm.date || !editEventForm.location}>{savingEvent ? "Saving..." : "Save Changes"}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>

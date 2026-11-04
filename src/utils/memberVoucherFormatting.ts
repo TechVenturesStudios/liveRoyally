@@ -11,6 +11,8 @@ export type MemberVoucherRecord = {
   member_price: string | number | null;
   max_redemptions: number | null;
   event_title: string | null;
+  partner_organization_name?: string | null;
+  event_location?: string | null;
   event_start_date?: string | Date | null;
   event_end_date?: string | Date | null;
   provider_name: string | null;
@@ -129,6 +131,10 @@ export const getVoucherDescription = (voucher: MemberVoucherRecord) => {
 };
 
 export const getVoucherLocation = (voucher: MemberVoucherRecord) => {
+  if (voucher.event_location?.trim()) {
+    return voucher.event_location.trim();
+  }
+
   const parts = [voucher.provider_city, voucher.provider_state].filter(Boolean);
   if (parts.length > 0) {
     return parts.join(", ");
