@@ -101,7 +101,9 @@ const AdminPendingPartnersPage = () => {
 
       if (action === "approve") {
         toast.success(
-          isFreePlan
+          partner.promoCode
+            ? `${partner.organizationName} approved with a 6-month free trial (${partner.promoCode})`
+            : isFreePlan
             ? `${partner.organizationName} approved and activated`
             : `${partner.organizationName} approved and charged ${formatMoney(
                 partner.monthlyPriceCents,
@@ -145,8 +147,18 @@ const AdminPendingPartnersPage = () => {
       { label: "Subscription Tier", value: planLabel },
       { label: "Yearly Price", value: planPrice },
       {
+        label: "Promo Code",
+        value: partner.promoCode ? (
+          <Badge variant="outline" className="bg-violet-50 text-violet-700">{partner.promoCode}: 6-month free trial, no auto-renew</Badge>
+        ) : (
+          "None"
+        ),
+      },
+      {
         label: "Card on File",
-        value: isFreePlan ? (
+        value: partner.promoCode ? (
+          <Badge variant="outline" className="bg-violet-50 text-violet-700">Not collected: promo trial</Badge>
+        ) : isFreePlan ? (
           <Badge variant="outline" className="bg-slate-50 text-slate-700">Not required for free plan</Badge>
         ) : (
           <Badge variant="outline" className="bg-emerald-50 text-emerald-700">Stored for later charge</Badge>

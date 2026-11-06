@@ -4,7 +4,8 @@ param(
 
   [string]$Region = "us-east-2",
   [string]$AccountId = "609948378142",
-  [string]$Repository = "live-royally"
+  [string]$Repository = "live-royally",
+  [string]$AwsProfile = "live-royally"
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,8 +18,8 @@ $registry = "$AccountId.dkr.ecr.$Region.amazonaws.com"
 $localTag = "${Repository}:$Version"
 $remoteTag = "${registry}/${Repository}:$Version"
 
-Write-Host "Logging in to ECR registry $registry..."
-aws ecr get-login-password --region $Region | docker login --username AWS --password-stdin $registry
+Write-Host "Logging in to ECR registry $registry using AWS profile '$AwsProfile'..."
+aws ecr get-login-password --profile $AwsProfile --region $Region | docker login --username AWS --password-stdin $registry
 
 Write-Host "Building image $localTag..."
 docker build -t $localTag .

@@ -7,6 +7,7 @@ import { prisma } from "../../lib/prisma";
 import { awardAccountCreationReward } from "../../lib/rewards";
 import { createSquareCard, createSquareCustomer, disableSquareCard, squareIdempotencyKey } from "../../lib/square-partner-billing";
 import { getOrCreateRole } from "../../lib/roles";
+import { findActivePromoCode } from "../../lib/promo-codes";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../src/config/subscriptionPlans";
 
 type RegisterPartnerResponse =
@@ -19,6 +20,7 @@ type RegisterPartnerResponse =
       squareCustomerId: string | null;
       squareCardId: string | null;
       subscriptionStatus: PartnerSubscriptionStatus;
+      promoTrial: boolean;
     }
   | {
       error: string;
@@ -66,12 +68,30 @@ export default async function handler(
     const plan = PARTNER_SUBSCRIPTION_PLANS[selectedPlan as keyof typeof PARTNER_SUBSCRIPTION_PLANS];
     const paymentToken = String(body.paymentToken || body.cardToken || "").trim();
     const isFreePlan = plan?.monthlyPriceCents === 0;
+    const submittedPromoCode = String(body.promoCode || "").trim();
 
     if (!plan) {
       return res.status(400).json({ error: "A valid membershipPlan is required" });
     }
 
-    if (!isFreePlan && !paymentToken) {
+    let promoCodeId: string | null = null;
+    if (submittedPromoCode) {
+      if (isFreePlan) {
+        return res.status(400).json({ error: "Promo codes only apply to paid membership plans" });
+      }
+
+      const promo = await findActivePromoCode(submittedPromoCode);
+      if (!promo) {
+        return res.status(400).json({ error: "This promo code is invalid or no longer active" });
+      }
+      promoCodeId = promo.promo_code_id;
+    }
+
+    // A promo trial does not collect a card: the trial never auto-renews and the
+    // partner pays from their profile once they choose to subscribe.
+    const requiresCard = !isFreePlan && !promoCodeId;
+
+    if (requiresCard && !paymentToken) {
       return res.status(400).json({ error: "paymentToken is required" });
     }
 
@@ -137,7 +157,7 @@ export default async function handler(
     let squareCustomerId: string | null = null;
     let squareCardId: string | null = null;
 
-    if (!isFreePlan) {
+    if (requiresCard) {
       squareCustomerId = existingUserByEmail?.partner_subscriptions[0]?.billing_provider_customer_id ?? null;
 
       if (!squareCustomerId) {
@@ -286,6 +306,8 @@ export default async function handler(
         current_period_end: null,
         approved_at: null,
         canceled_at: null,
+        promo_code_id: promoCodeId,
+        trial_ends_at: null,
       };
 
       const subscription = await tx.partner_subscriptions.create({
@@ -313,6 +335,7 @@ export default async function handler(
       squareCustomerId,
       squareCardId,
       subscriptionStatus: PartnerSubscriptionStatus.pending,
+      promoTrial: Boolean(promoCodeId),
     });
   } catch (error) {
     if (createdCardId) {

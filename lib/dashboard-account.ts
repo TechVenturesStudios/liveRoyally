@@ -2,6 +2,7 @@ import type { NextApiRequest } from "next";
 import { prisma } from "./prisma";
 import { getCognitoIdFromRequest } from "./api-auth";
 import { PartnerSubscriptionStatus } from "@prisma/client";
+import { expireEndedPartnerTrials } from "./promo-codes";
 
 export type DashboardAccountType = "member" | "provider" | "partner" | "admin";
 
@@ -38,7 +39,8 @@ type AssignmentLookupRow = {
 export async function resolveDashboardAccount(
   req: NextApiRequest,
   expectedTypes?: DashboardAccountType[],
-  allowInactiveProvider = false
+  allowInactiveProvider = false,
+  allowInactivePartner = false
 ): Promise<DashboardAccount | { error: string; status: number } | null> {
   const cognitoId = getCognitoIdFromRequest(req);
 
@@ -128,14 +130,22 @@ export async function resolveDashboardAccount(
     return { error: "Current account is not authorized for this view", status: 403 };
   }
 
-  if (actingAccount.actingUserType === "partner") {
+  if (actingAccount.actingUserType === "partner" && !allowInactivePartner) {
+    await expireEndedPartnerTrials(actingAccount.actingUserId);
+
     const subscription = await prisma.partner_subscriptions.findFirst({
       where: { partner_id: actingAccount.actingUserId },
       orderBy: { created_at: "desc" },
-      select: { status: true },
+      select: { status: true, trial_ends_at: true },
     });
 
     if (subscription?.status !== PartnerSubscriptionStatus.active) {
+      if (subscription?.status === PartnerSubscriptionStatus.expired && subscription.trial_ends_at) {
+        return {
+          error: "Your free plan period has ended. Go to your Profile to purchase a subscription and restore access.",
+          status: 403,
+        };
+      }
       return { error: "Your partner account is not approved for Local Metrics access", status: 403 };
     }
   }

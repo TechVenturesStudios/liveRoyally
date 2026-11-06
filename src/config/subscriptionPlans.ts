@@ -2,12 +2,12 @@ export const PARTNER_SUBSCRIPTION_PLANS = {
   starter: {
     value: "starter",
     label: "Starter",
-    price: "$0/yr",
+    price: "Free for 1 year",
     monthlyPrice: 0,
     monthlyPriceCents: 0,
     maxProviders: 2,
-    description: "Be a partner for free.",
-    features: ["Up to 2 businesses"],
+    description: "Be a partner free for your first year.",
+    features: ["Up to 2 businesses", "Upgrade to a paid tier after 1 year"],
     squarePlanVariationEnvVar: "SQUARE_PLAN_VARIATION_STARTER_ANNUAL_ID",
   },
   spotlight: {

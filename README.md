@@ -64,6 +64,20 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/2c9c8299-f5df-4c19-a6dd-663603d9883e) and click on Share -> Publish.
 
+## Square partner connections
+
+Live Royally provider subscriptions use the annual Square variation configured by `SQUARE_PLAN_VARIATION_LIVE_ROYALLY_PROVIDER_ANNUAL_ID` (or `SQUARE_PLAN_VARIATION_LIVE_ROYALLY_ANNUAL_ID`). If neither is set, the existing annual Starter variation is used as the subscription template with a $100 price override.
+
+Partner Square OAuth requires these server-side environment variables:
+
+```text
+SQUARE_APPLICATION_SECRET=<Square application secret>
+SQUARE_OAUTH_REDIRECT_URI=https://<host>/api/square/oauth/callback
+SQUARE_OAUTH_ENCRYPTION_KEY=<base64 or 64-character hex value representing 32 random bytes>
+```
+
+Register the exact redirect URI in the Square Developer Dashboard and run the Prisma migration before enabling the feature. `SQUARE_OAUTH_SCOPES` may optionally override the default `PAYMENTS_WRITE MERCHANT_PROFILE_READ` scopes.
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!

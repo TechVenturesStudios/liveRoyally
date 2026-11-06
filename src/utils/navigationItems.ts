@@ -15,7 +15,8 @@ import {
   Link,
   LayoutDashboard,
   Crown,
-  ScanLine
+  ScanLine,
+  Ticket
 } from "lucide-react";
 import { UserType } from "@/types/user";
 
@@ -157,6 +158,12 @@ const navigationItemsByType: NavItemsByUserType = {
       shortName: "Pending",
       icon: Building,
       path: "/dashboard/admin/pending-partners",
+    },
+    {
+      name: "Promo Codes",
+      shortName: "Promos",
+      icon: Ticket,
+      path: "/dashboard/admin/promo-codes",
     },
     {
       name: "Network Analytics",

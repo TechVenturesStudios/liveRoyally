@@ -82,6 +82,12 @@ export default async function handler(
     });
     if (!subscription) return res.status(404).json({ error: "No active subscription found" });
 
+    if (subscription.trial_ends_at && !subscription.billing_provider_subscription_id) {
+      return res.status(409).json({
+        error: "Your free plan period ends automatically. Use Subscribe Now on your profile to start a paid plan.",
+      });
+    }
+
     const providerCount = await prisma.provider_profiles.count({
       where: { partner_id: account.actingUserId, application_status: "active", users: { user_type: "provider" } },
     });

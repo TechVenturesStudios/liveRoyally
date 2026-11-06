@@ -9,6 +9,7 @@ import {
   getSquarePlanVariationId,
 } from "../../../../lib/square-partner-billing";
 import { setCognitoTemporaryPassword } from "../../../../lib/cognito-admin";
+import { addMonths, PROMO_TRIAL_MONTHS, STARTER_FREE_TERM_MONTHS } from "../../../../lib/promo-codes";
 import { queuePartnerApprovedEmail, queuePartnerDeclinedEmail, queueTemporaryPasswordEmail } from "../../../../lib/notification-templates";
 
 type PendingPartnerActionResponse =
@@ -93,6 +94,7 @@ export default async function handler(
         billing_provider_subscription_id: true,
         approval_email_sent_at: true,
         monthly_price_cents: true,
+        promo_code_id: true,
         users: {
           select: {
             user_id: true,
@@ -141,15 +143,64 @@ export default async function handler(
 
       const approvedAt = new Date();
       const isFreePlan = subscription.monthly_price_cents === 0;
+      const isPromoTrial = Boolean(subscription.promo_code_id) && !isFreePlan;
 
-      if (isFreePlan) {
+      if (isPromoTrial) {
+        // Trial clock starts at approval because the partner cannot use the
+        // dashboard before then. No Square subscription is created, so nothing
+        // renews automatically when the trial ends.
+        const trialEndsAt = addMonths(approvedAt, PROMO_TRIAL_MONTHS);
         const updated = await prisma.partner_subscriptions.update({
           where: { subscription_id: subscription.subscription_id },
           data: {
             status: PartnerSubscriptionStatus.active,
             billing_provider_subscription_id: null,
             current_period_start: approvedAt,
-            current_period_end: null,
+            current_period_end: trialEndsAt,
+            trial_ends_at: trialEndsAt,
+            cancel_at_period_end: true,
+            approved_at: approvedAt,
+            canceled_at: null,
+            updated_at: approvedAt,
+          },
+          select: {
+            subscription_id: true,
+            status: true,
+            approved_at: true,
+            canceled_at: true,
+            billing_provider_subscription_id: true,
+          },
+        });
+
+        await sendPartnerApprovalEmail(subscription.users);
+        const emailSentAt = new Date();
+        await prisma.partner_subscriptions.update({
+          where: { subscription_id: subscription.subscription_id },
+          data: { approval_email_sent_at: emailSentAt, updated_at: emailSentAt },
+        });
+
+        return res.status(200).json({
+          subscriptionId: updated.subscription_id,
+          status: updated.status,
+          approvedAt: updated.approved_at?.toISOString() ?? null,
+          canceledAt: updated.canceled_at?.toISOString() ?? null,
+          squareSubscriptionId: null,
+        });
+      }
+
+      if (isFreePlan) {
+        // Starter is free for one year only; afterwards the account locks until
+        // the partner buys a paid tier.
+        const freeTermEndsAt = addMonths(approvedAt, STARTER_FREE_TERM_MONTHS);
+        const updated = await prisma.partner_subscriptions.update({
+          where: { subscription_id: subscription.subscription_id },
+          data: {
+            status: PartnerSubscriptionStatus.active,
+            billing_provider_subscription_id: null,
+            current_period_start: approvedAt,
+            current_period_end: freeTermEndsAt,
+            trial_ends_at: freeTermEndsAt,
+            cancel_at_period_end: true,
             approved_at: approvedAt,
             canceled_at: null,
             updated_at: approvedAt,
