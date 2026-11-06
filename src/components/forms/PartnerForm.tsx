@@ -7,7 +7,9 @@ import { PartnerUser } from "@/types/user";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Check, ArrowLeft, Loader2 } from "lucide-react";
+import { Check, ArrowLeft, Loader2, Tag, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { validatePromoCode } from "@/api/promoCodes";
 import { Separator } from "@/components/ui/separator";
 import { registerPartner } from "@/api/registration";
 import { PARTNER_SUBSCRIPTION_PLAN_LIST } from "@/config/subscriptionPlans";
@@ -29,6 +31,10 @@ const PartnerForm = () => {
   const [showCheckout, setShowCheckout] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; trialMonths: number } | null>(null);
+  const [promoError, setPromoError] = useState("");
+  const [promoChecking, setPromoChecking] = useState(false);
   const [applicationKey] = useState(() => {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return crypto.randomUUID();
@@ -134,6 +140,10 @@ const PartnerForm = () => {
         payload.paymentToken = paymentToken;
       }
 
+      if (appliedPromo) {
+        payload.promoCode = appliedPromo.code;
+      }
+
       await registerPartner(payload);
 
       navigate("/registration-success/partner", { replace: true });
@@ -146,12 +156,35 @@ const PartnerForm = () => {
 
   const selectedPlan = PARTNER_SUBSCRIPTION_PLAN_LIST.find((p) => p.value === membershipPlan);
   const isFreePlan = selectedPlan?.monthlyPrice === 0;
+  const hasPromoTrial = Boolean(appliedPromo) && !isFreePlan;
+
+  const handleApplyPromo = async () => {
+    const code = promoInput.trim();
+    if (!code) return;
+    setPromoChecking(true);
+    setPromoError("");
+    try {
+      const result = await validatePromoCode(code);
+      if (result.valid) {
+        setAppliedPromo({ code: result.code, trialMonths: result.trialMonths });
+        setPromoInput("");
+      } else {
+        setAppliedPromo(null);
+        setPromoError("error" in result ? result.error : "This promo code is invalid or no longer active.");
+      }
+    } catch (error) {
+      setPromoError(error instanceof Error ? error.message : "Unable to validate promo code");
+    } finally {
+      setPromoChecking(false);
+    }
+  };
 
   // ── Checkout / Summary View ──
   if (showCheckout && selectedPlan) {
     const platformFee = 0;
     const subtotal = selectedPlan.monthlyPrice;
-    const total = subtotal + platformFee;
+    const trialDiscount = hasPromoTrial ? subtotal : 0;
+    const total = subtotal + platformFee - trialDiscount;
 
     return (
       <Card className="royal-card w-full max-w-2xl mx-auto p-8 md:p-10">
@@ -217,6 +250,14 @@ const PartnerForm = () => {
             <span className="text-muted-foreground">Platform fee</span>
             <span className="text-foreground">${platformFee.toFixed(2)}</span>
           </div>
+          {hasPromoTrial && appliedPromo && (
+            <div className="flex justify-between text-sm">
+              <span className="text-emerald-700">
+                Promo {appliedPromo.code}: {appliedPromo.trialMonths}-month free trial
+              </span>
+              <span className="text-emerald-700">-${trialDiscount.toFixed(2)}</span>
+            </div>
+          )}
           <Separator />
           <div className="flex justify-between text-base font-bold">
             <span className="text-foreground">{isFreePlan ? "Total due today" : "Total due on approval"}</span>
@@ -224,12 +265,80 @@ const PartnerForm = () => {
           </div>
           <p className="text-[11px] text-muted-foreground">
             {isFreePlan
-              ? "No card information is required for the Starter plan."
-              : "Your card will be stored securely today and charged only after admin approval. Billed yearly thereafter."}
+              ? "No card information is required for the Starter plan. Starter is free for one year from approval; after that, choose a paid plan from your profile to keep creating events and adding providers."
+              : hasPromoTrial && appliedPromo
+                ? `Your ${appliedPromo.trialMonths}-month free trial starts when your application is approved. It does not renew automatically: when it ends, purchase a subscription from your profile to keep creating events and adding providers.`
+                : "Your card will be stored securely today and charged only after admin approval. Billed yearly thereafter."}
           </p>
         </div>
 
-        {isFreePlan ? (
+        {!isFreePlan && (
+          <div className="rounded-lg border p-5 mb-6">
+            <Label htmlFor="promoCode" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <Tag className="h-4 w-4 text-primary" /> Promo code
+            </Label>
+            {appliedPromo ? (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                <span>
+                  <strong className="font-mono">{appliedPromo.code}</strong> applied: {appliedPromo.trialMonths}-month free trial
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAppliedPromo(null)}
+                  className="text-emerald-800 hover:text-emerald-950"
+                  aria-label="Remove promo code"
+                  disabled={isSubmitting}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3 flex gap-2">
+                <Input
+                  id="promoCode"
+                  value={promoInput}
+                  onChange={(e) => {
+                    setPromoInput(e.target.value.toUpperCase());
+                    setPromoError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void handleApplyPromo();
+                    }
+                  }}
+                  placeholder="Enter promo code"
+                  className="font-mono"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleApplyPromo()}
+                  disabled={promoChecking || !promoInput.trim()}
+                >
+                  {promoChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                </Button>
+              </div>
+            )}
+            {promoError && <p className="mt-2 text-xs text-destructive">{promoError}</p>}
+          </div>
+        )}
+
+        {hasPromoTrial ? (
+          <div className="space-y-4">
+            <Button
+              type="button"
+              onClick={() => void handlePay()}
+              disabled={isSubmitting}
+              className="w-full bg-royal hover:bg-royal-dark text-white h-12 text-base font-semibold gap-2"
+            >
+              {isSubmitting && <Loader2 className="h-5 w-5 animate-spin" />}
+              {isSubmitting ? "Submitting..." : "Submit Application with Free Trial"}
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">No card is required for your free trial.</p>
+            {submitError && <p className="text-sm text-destructive text-center">{submitError}</p>}
+          </div>
+        ) : isFreePlan ? (
           <div className="space-y-4">
             <div className="rounded-lg border bg-muted/20 p-4">
               <h3 className="text-sm font-semibold text-foreground">Starter plan</h3>

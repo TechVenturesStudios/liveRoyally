@@ -70,6 +70,7 @@ export default async function handler(
         monthly_price_cents: true,
         currency: true,
         created_at: true,
+        promo_codes: { select: { code: true } },
         users: {
           select: {
             user_id: true,
@@ -127,6 +128,7 @@ export default async function handler(
         monthlyPriceCents: subscription.monthly_price_cents,
         currency: subscription.currency,
         submittedAt: subscription.created_at?.toISOString() ?? null,
+        promoCode: subscription.promo_codes?.code ?? null,
       };
     });
 

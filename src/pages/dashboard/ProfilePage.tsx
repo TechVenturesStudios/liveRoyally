@@ -18,6 +18,15 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { getUserFromStorage, User as StorageUser } from "@/utils/userStorage";
 import type { User as UserType, MemberUser, ProviderUser, PartnerUser, AdminUser } from "@/types/user";
 import { PARTNER_SUBSCRIPTION_PLAN_LIST, PARTNER_SUBSCRIPTION_PLANS, type PartnerSubscriptionPlan } from "@/config/subscriptionPlans";
+import SquareCardCheckout from "@/components/forms/SquareCardCheckout";
+import { activatePartnerSubscription } from "@/api/promoCodes";
+
+const PAID_PARTNER_PLANS = PARTNER_SUBSCRIPTION_PLAN_LIST.filter((plan) => plan.monthlyPriceCents > 0);
+
+const newCheckoutKey = () =>
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const formatPlanName = (plan?: string | null) => {
   if (!plan) return "No active plan";
@@ -59,6 +68,11 @@ const ProfilePage = () => {
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
   const [subscriptionTargetPlan, setSubscriptionTargetPlan] = useState<PartnerSubscriptionPlan | null>(null);
   const [subscriptionUpdatePending, setSubscriptionUpdatePending] = useState(false);
+  const [subscribeDialogOpen, setSubscribeDialogOpen] = useState(false);
+  const [subscribePlan, setSubscribePlan] = useState<PartnerSubscriptionPlan | null>(null);
+  const [subscribePending, setSubscribePending] = useState(false);
+  const [subscribeError, setSubscribeError] = useState("");
+  const [subscribeCheckoutKey, setSubscribeCheckoutKey] = useState(newCheckoutKey);
   const [providerCanceling, setProviderCanceling] = useState(false);
   const [pointsGuideSending, setPointsGuideSending] = useState(false);
   const [squareConnected, setSquareConnected] = useState(false);
@@ -120,6 +134,8 @@ const ProfilePage = () => {
             pendingPlan: data.profile.pendingPlan,
             pendingChangeEffectiveAt: data.profile.pendingChangeEffectiveAt,
             cancelAtPeriodEnd: data.profile.cancelAtPeriodEnd,
+            isFreeTerm: data.profile.isFreeTerm,
+            trialEndsAt: data.profile.trialEndsAt,
             agentFirstName: data.profile.partnerAgentFirstName,
             agentLastName: data.profile.partnerAgentLastName,
             agentPhone: data.profile.partnerAgentPhone,
@@ -289,6 +305,39 @@ const ProfilePage = () => {
       toast({ title: "Subscription update failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
     } finally {
       setSubscriptionUpdatePending(false);
+    }
+  };
+
+  const handleTrialSubscribe = async (paymentToken: string) => {
+    if (!subscribePlan) return;
+    setSubscribePending(true);
+    setSubscribeError("");
+    try {
+      const result = await activatePartnerSubscription({
+        plan: subscribePlan,
+        paymentToken,
+        checkoutKey: subscribeCheckoutKey,
+      });
+      const planConfig = PARTNER_SUBSCRIPTION_PLANS[subscribePlan];
+      setUser((previous) => previous ? ({
+        ...previous,
+        membershipPlan: subscribePlan,
+        membershipStatus: "active",
+        membershipPrice: planConfig.monthlyPriceCents / 100,
+        maxProviders: planConfig.maxProviders,
+        subscriptionStartDate: new Date().toISOString(),
+        subscriptionEndDate: result.currentPeriodEnd,
+        isFreeTerm: false,
+        cancelAtPeriodEnd: false,
+        pendingPlan: null,
+      } as unknown as UserType) : previous);
+      setSubscribeDialogOpen(false);
+      setSubscribeCheckoutKey(newCheckoutKey());
+      toast({ title: "Subscription active", description: result.message });
+    } catch (error) {
+      setSubscribeError(error instanceof Error ? error.message : "Unable to start your subscription");
+    } finally {
+      setSubscribePending(false);
     }
   };
 
@@ -483,6 +532,14 @@ const ProfilePage = () => {
     const cancelAtPeriodEnd = Boolean((user as any).cancelAtPeriodEnd);
     const selectedTarget = subscriptionTargetPlan ? PARTNER_SUBSCRIPTION_PLANS[subscriptionTargetPlan] : null;
     const isSelectedDowngrade = Boolean(selectedTarget && currentPlanKey && selectedTarget.monthlyPriceCents < (PARTNER_SUBSCRIPTION_PLANS[currentPlanKey]?.monthlyPriceCents ?? 0));
+    const isFreeTerm = Boolean((user as any).isFreeTerm);
+    const trialEndsAt = (user as any).trialEndsAt as string | null;
+    const trialExpired = isFreeTerm && (user as any).membershipStatus === "expired";
+    const freeTermLabel = currentPlanKey === "starter" ? "free Starter year" : "free trial";
+    const formattedTrialEnd = trialEndsAt
+      ? new Date(trialEndsAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+      : "the end of your trial";
+    const subscribePlanConfig = subscribePlan ? PARTNER_SUBSCRIPTION_PLANS[subscribePlan] : null;
     const formattedStart = startDate
       ? new Date(startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
       : "Not available";
@@ -622,7 +679,11 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Current Plan</p>
                 <p className="text-2xl font-bold">{plan}</p>
               </div>
-              <Badge className="text-sm px-3 py-1">${price.toFixed(2)}/yr</Badge>
+              {isFreeTerm ? (
+                <Badge className="text-sm px-3 py-1">{trialExpired ? "Free period ended" : currentPlanKey === "starter" ? "Free for 1 year" : "Free trial"}</Badge>
+              ) : (
+                <Badge className="text-sm px-3 py-1">${price.toFixed(2)}/yr</Badge>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-start gap-3">
@@ -658,28 +719,105 @@ const ProfilePage = () => {
                   : "Unlimited provider slots"}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSubscriptionTargetPlan(currentPlanKey || null);
-                setSubscriptionDialogOpen(true);
-              }}
-            >
-              <CreditCard className="h-4 w-4 mr-2" /> Manage Subscription
-            </Button>
+            {trialExpired && (
+              <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>
+                  Your {freeTermLabel} ended on {formattedTrialEnd}. Creating events, adding providers, and other partner tools are
+                  locked until you purchase a subscription.
+                </p>
+              </div>
+            )}
+            {isFreeTerm && !trialExpired && (
+              <p className="text-xs rounded-md border border-amber-200 bg-amber-50 text-amber-900 p-3">
+                Your {freeTermLabel} ends on {formattedTrialEnd} and will not renew automatically. Subscribe before then to keep
+                creating events and adding providers.
+              </p>
+            )}
+            {isFreeTerm ? (
+              <Button
+                size="sm"
+                className="bg-royal hover:bg-royal-dark text-white"
+                onClick={() => {
+                  const fallbackPlan = PAID_PARTNER_PLANS[0]?.value ?? null;
+                  const trialPlan = PARTNER_SUBSCRIPTION_PLANS[currentPlanKey]?.monthlyPriceCents ? currentPlanKey : fallbackPlan;
+                  setSubscribePlan(trialPlan);
+                  setSubscribeError("");
+                  setSubscribeDialogOpen(true);
+                }}
+              >
+                <CreditCard className="h-4 w-4 mr-2" /> {trialExpired ? "Purchase Subscription" : "Subscribe Now"}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSubscriptionTargetPlan(currentPlanKey || null);
+                  setSubscriptionDialogOpen(true);
+                }}
+              >
+                <CreditCard className="h-4 w-4 mr-2" /> Manage Subscription
+              </Button>
+            )}
             {pendingPlan && pendingChangeDate && (
               <p className="text-xs rounded-md border border-amber-200 bg-amber-50 text-amber-900 p-3">
                 Your current plan, price, and provider limit remain active until renewal. On {new Date(pendingChangeDate).toLocaleDateString()}, your plan will change to <strong>{pendingPlanConfig?.label}</strong> ({pendingPlanConfig?.price}) with up to <strong>{pendingPlanConfig?.maxProviders}</strong> providers.
               </p>
             )}
-            {cancelAtPeriodEnd && (
+            {cancelAtPeriodEnd && !isFreeTerm && (
               <p className="text-xs rounded-md border border-amber-200 bg-amber-50 text-amber-900 p-3">
                 Your subscription will remain active through the current billing period and will not renew.
               </p>
             )}
           </CardContent>
         </Card>
+        <Dialog open={subscribeDialogOpen} onOpenChange={(open) => !subscribePending && setSubscribeDialogOpen(open)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{trialExpired ? "Purchase Subscription" : "Subscribe Now"}</DialogTitle>
+              <DialogDescription>
+                Choose a yearly plan. Your card is charged today and renews yearly.
+                {!trialExpired && ` Subscribing now ends your ${freeTermLabel} immediately.`}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {PAID_PARTNER_PLANS.map((planOption) => (
+                <button
+                  type="button"
+                  key={planOption.value}
+                  disabled={subscribePending}
+                  onClick={() => setSubscribePlan(planOption.value)}
+                  className={`rounded-lg border p-4 text-left transition-colors ${subscribePlan === planOption.value ? "border-primary bg-primary/5" : "hover:border-primary/50"}`}
+                >
+                  <span className="font-semibold">{planOption.label}</span>
+                  <p className="mt-1 text-sm font-medium">{planOption.price}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Up to {planOption.maxProviders} providers</p>
+                </button>
+              ))}
+            </div>
+            {subscribeDialogOpen && subscribePlanConfig && (
+              <SquareCardCheckout
+                total={subscribePlanConfig.monthlyPrice}
+                isSubmitting={subscribePending}
+                billingContact={{
+                  givenName: String(user.agentFirstName || "").trim(),
+                  familyName: String(user.agentLastName || "").trim(),
+                  email: String(user.email || "").trim(),
+                  phone: String(user.organizationPhone || "").trim(),
+                  addressLines: [String(user.organizationAddress || "").trim()].filter(Boolean),
+                  city: String(user.organizationCity || "").trim(),
+                  state: String(user.organizationState || "").trim(),
+                  countryCode: "US",
+                }}
+                onSubmitToken={handleTrialSubscribe}
+                submitError={subscribeError}
+                buttonLabel={`Pay ${subscribePlanConfig.price} & Activate`}
+                securityMessage="Secure Square card entry. Charged today, then yearly."
+              />
+            )}
+          </DialogContent>
+        </Dialog>
         <Dialog open={subscriptionDialogOpen} onOpenChange={setSubscriptionDialogOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>

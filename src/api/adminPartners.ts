@@ -21,6 +21,7 @@ export type AdminPendingPartner = {
   monthlyPriceCents: number;
   currency: string;
   submittedAt: string | null;
+  promoCode: string | null;
 };
 
 export async function fetchPendingPartnerApplications(cognitoId?: string) {

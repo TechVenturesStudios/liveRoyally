@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import VoucherWorkflowPage from "./pages/dashboard/VoucherWorkflowPage";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import AdminPendingPartnersPage from "./pages/dashboard/AdminPendingPartnersPage";
+import AdminPromoCodesPage from "./pages/dashboard/AdminPromoCodesPage";
 import AdminPartnerAnalyticsPage from "./pages/dashboard/AdminPartnerAnalyticsPage";
 import AdminMembersPage from "./pages/dashboard/AdminMembersPage";
 import AdminProvidersPage from "./pages/dashboard/AdminProvidersPage";
@@ -128,6 +129,7 @@ const App = () => (
           {/* ── Admin-only routes ── */}
           <Route path="/dashboard/admin" element={<RoleRoute allowed={["admin"]}><AdminDashboard /></RoleRoute>} />
           <Route path="/dashboard/admin/pending-partners" element={<RoleRoute allowed={["admin"]}><AdminPendingPartnersPage /></RoleRoute>} />
+          <Route path="/dashboard/admin/promo-codes" element={<RoleRoute allowed={["admin"]}><AdminPromoCodesPage /></RoleRoute>} />
           <Route path="/dashboard/admin/analytics" element={<RoleRoute allowed={["admin"]}><AdminPartnerAnalyticsPage /></RoleRoute>} />
           <Route path="/dashboard/admin/members" element={<RoleRoute allowed={["admin"]}><AdminMembersPage /></RoleRoute>} />
           <Route path="/dashboard/admin/providers" element={<RoleRoute allowed={["admin"]}><AdminProvidersPage /></RoleRoute>} />

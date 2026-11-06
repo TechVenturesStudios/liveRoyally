@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { LIVE_ROYALLY_PARTNER_EMAIL } from "../../lib/live-royally";
+import { expireEndedPartnerTrials } from "../../lib/promo-codes";
 
 type UserByIdResponse =
   | {
@@ -44,6 +45,14 @@ export default async function handler(
       return res.status(400).json({ error: "Missing cognitoId" });
     }
 
+    const partnerUser = await prisma.users.findUnique({
+      where: { cognito_id: cognitoId },
+      select: { user_id: true, user_type: true },
+    });
+    if (partnerUser?.user_type === "partner") {
+      await expireEndedPartnerTrials(partnerUser.user_id);
+    }
+
     const user = await prisma.users.findUnique({
       where: { cognito_id: cognitoId },
       select: {
@@ -79,7 +88,12 @@ export default async function handler(
         partner_profiles: true,
         partner_subscriptions: {
           where: {
-            status: "active",
+            OR: [
+              { status: "active" },
+              // Surface an ended free term (promo trial or Starter year) so the
+              // partner can pay to reactivate.
+              { status: "expired", trial_ends_at: { not: null }, billing_provider_subscription_id: null },
+            ],
           },
           orderBy: { created_at: "desc" },
           take: 1,
@@ -95,6 +109,8 @@ export default async function handler(
             current_period_start: true,
             current_period_end: true,
             created_at: true,
+            trial_ends_at: true,
+            billing_provider_subscription_id: true,
           },
         },
         provider_subscriptions: {
@@ -239,6 +255,11 @@ export default async function handler(
         pendingPlan: partnerSubscription?.pending_plan ?? null,
         pendingChangeEffectiveAt: partnerSubscription?.pending_change_effective_at ?? null,
         cancelAtPeriodEnd: partnerSubscription?.cancel_at_period_end ?? false,
+        isFreeTerm: Boolean(
+          partnerSubscription?.trial_ends_at &&
+          !partnerSubscription.billing_provider_subscription_id
+        ),
+        trialEndsAt: partnerSubscription?.trial_ends_at ?? null,
         currentProviders: currentProviderCount?.[0]?.count ?? null,
         providerSubscriptionStatus: providerSubscription?.status ?? null,
         providerSubscriptionPrice: providerSubscription ? providerSubscription.annual_price_cents / 100 : null,
