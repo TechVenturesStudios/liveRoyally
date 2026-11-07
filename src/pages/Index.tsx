@@ -45,7 +45,20 @@ const Index = () => {
             Connect businesses, consumers, and community stakeholders to circulate dollars locally and drive sustainable economic development.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button 
+            <Button
+              asChild
+              variant="outline"
+              className="w-full sm:w-56 h-14 min-h-14 border-2 border-white bg-transparent hover:bg-white/10 text-white hover:text-white font-bold text-lg px-8 py-0"
+            >
+              <a
+                href="https://calendly.com/localmetrics/demo"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Schedule a Demo
+              </a>
+            </Button>
+            <Button
               className="w-full sm:w-56 h-14 min-h-14 border-2 border-transparent bg-white hover:bg-white/90 text-brand-purple font-bold text-lg px-8 py-0"
               onClick={() => navigate("/register")}
             >
