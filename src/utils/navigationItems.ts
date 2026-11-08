@@ -172,8 +172,8 @@ const navigationItemsByType: NavItemsByUserType = {
       path: "/dashboard/admin/analytics",
     },
     {
-      name: "Historical Events",
-      shortName: "History",
+      name: "All Events",
+      shortName: "Events",
       icon: Clock,
       path: "/dashboard/admin/history",
     },

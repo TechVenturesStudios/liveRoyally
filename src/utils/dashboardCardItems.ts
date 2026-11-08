@@ -139,8 +139,8 @@ export const dashboardCardItems: CardItemsByUserType = {
       stats: "5 Pending"
     },
     {
-      title: "Historical Events",
-      description: "View all past events",
+      title: "All Events",
+      description: "View pending, active, and past events",
       icon: Clock,
       path: "/dashboard/admin/history",
       color: "bg-amber-100 text-amber-600",

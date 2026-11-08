@@ -11,8 +11,8 @@ const toNumber = (value: unknown) => {
 };
 
 const formatDate = (value: Date | null | undefined) => value ? value.toISOString().slice(0, 10) : "";
-const networkKey = (code: string | null | undefined, name: string | null | undefined) =>
-  code?.trim() || name?.trim() || "Unassigned Network";
+const statusGroup = (status: string) =>
+  status === "pending" ? "pending" : status === "active" ? "active" : "historical";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           orderBy: [{ start_date: "desc" }, { created_at: "desc" }],
           select: {
             event_id: true, title: true, description: true, location: true, event_time: true,
-            start_date: true, end_date: true, response_deadline: true, published: true,
+            start_date: true, end_date: true, response_deadline: true, published: true, status: true,
             event_provider_invites: {
               orderBy: { invited_at: "desc" },
               select: { provider_id: true, status: true, provider: { select: { provider_profiles: { select: { business_name: true, business_category: true, agent_first_name: true, agent_last_name: true } } } } },
@@ -43,18 +43,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
 
-    const networks = new Map<string, { name: string; code: string; partners: Map<string, { name: string; events: any[] }> }>();
+    const result: Array<{ id: string; name: string; networkName: string; events: any[] }> = [];
 
     for (const partner of partners) {
       const profile = partner.partner_profiles;
-      const code = networkKey(profile?.network_code, profile?.network_name);
-      const network = networks.get(code) ?? { name: profile?.network_name?.trim() || code, code, partners: new Map() };
-      const partnerName = profile?.org_name?.trim() || "Unnamed partner";
-      const partnerData = network.partners.get(partner.user_id) ?? { name: partnerName, events: [] };
+      const partnerData = {
+        id: partner.user_id,
+        name: profile?.org_name?.trim() || "Unnamed partner",
+        networkName: profile?.network_name?.trim() || profile?.network_code?.trim() || "Unassigned Network",
+        events: [] as any[],
+      };
 
       for (const event of partner.events) {
-        const status = deriveEventLifecycleStatus({ startDate: event.start_date, endDate: event.end_date, responseDeadline: event.response_deadline, published: event.published, inviteStatuses: event.event_provider_invites.map((invite) => invite.status) });
-        if (status !== "completed") continue;
+        const status = deriveEventLifecycleStatus({ startDate: event.start_date, endDate: event.end_date, responseDeadline: event.response_deadline, published: event.published, status: event.status, inviteStatuses: event.event_provider_invites.map((invite) => invite.status) });
 
         const metrics = await prisma.$queryRaw<MetricRow[]>`
           WITH voucher_base AS (SELECT voucher_id, COALESCE(member_price, 0) AS member_price FROM vouchers WHERE event_id = ${event.event_id}),
@@ -70,16 +71,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .filter((invite) => invite.status === "accepted")
             .map((invite) => invite.provider_id),
         ).size;
-        partnerData.events.push({ id: event.event_id, title: event.title || "Untitled Event", date: formatDate(event.start_date), time: event.event_time || "", location: event.location || "", description: event.description || "", membersInvited: toNumber(metric?.members_invited), membersAttended: toNumber(metric?.members_attended), revenue: toNumber(metric?.revenue), acceptedProviderCount });
+        partnerData.events.push({ id: event.event_id, title: event.title || "Untitled Event", date: formatDate(event.start_date), time: event.event_time || "", location: event.location || "", description: event.description || "", status, statusGroup: statusGroup(status), membersInvited: toNumber(metric?.members_invited), membersAttended: toNumber(metric?.members_attended), revenue: toNumber(metric?.revenue), acceptedProviderCount });
       }
 
-      if (partnerData.events.length > 0) network.partners.set(partner.user_id, partnerData);
-      networks.set(code, network);
+      if (partnerData.events.length > 0) result.push(partnerData);
     }
 
-    return res.status(200).json({ networks: Array.from(networks.values()).map((network) => ({ name: network.name, code: network.code, partners: Array.from(network.partners.values()) })) });
+    result.sort((a, b) => a.name.localeCompare(b.name));
+    return res.status(200).json({ partners: result });
   } catch (error) {
-    console.error("admin historical events error:", error);
-    return res.status(500).json({ error: error instanceof Error ? error.message : "Failed to load historical events" });
+    console.error("admin events error:", error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : "Failed to load events" });
   }
 }
