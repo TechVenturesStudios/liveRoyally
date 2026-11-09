@@ -77,6 +77,15 @@ const plans = [
     amount: 500000,
     currency: "USD",
   },
+  {
+    // Provider subscription bought through the Live Royally join flow.
+    // Prints SQUARE_PLAN_VARIATION_LIVE_ROYALLY_PROVIDER_ANNUAL_ID.
+    key: "live_royally_provider",
+    planName: "Live Royally Provider Membership",
+    variationName: "Live Royally Provider Annual",
+    amount: 10000,
+    currency: "USD",
+  },
 ];
 
 /**
@@ -241,26 +250,70 @@ async function getOrCreateSubscriptionPlan(planConfig) {
  * ============================================================
  */
 
+/**
+ * A variation auto-renews only if its final phase has no `periods`.
+ */
+function variationAutoRenews(variation) {
+  const phases =
+    variation?.subscription_plan_variation_data?.phases ?? [];
+  const finalPhase = [...phases].sort(
+    (a, b) => Number(a.ordinal ?? 0) - Number(b.ordinal ?? 0)
+  ).at(-1);
+
+  return Boolean(finalPhase) && finalPhase.periods == null;
+}
+
 async function createAnnualVariation(planConfig, planId) {
   /**
    * ----------------------------------------------------------
-   * Check whether annual variation already exists
+   * Reuse an existing auto-renewing annual variation.
+   *
+   * Older variations were created with `periods: 1`, so they end
+   * after the first year. Phases can't be edited, so those are
+   * skipped and a new "<name> (Auto-Renew)" variation is created.
    * ----------------------------------------------------------
    */
+
+  let variationName = planConfig.variationName;
 
   const existingAnnualVariation =
     await findCatalogObjectByName(
       "SUBSCRIPTION_PLAN_VARIATION",
-      planConfig.variationName
+      variationName
     );
 
-  if (existingAnnualVariation) {
+  if (existingAnnualVariation && !variationAutoRenews(existingAnnualVariation)) {
+    console.warn(
+      `Annual variation "${variationName}" (${existingAnnualVariation.id}) does not auto-renew; skipping it.`
+    );
+
+    variationName = `${planConfig.variationName} (Auto-Renew)`;
+
+    const existingRenewingVariation =
+      await findCatalogObjectByName(
+        "SUBSCRIPTION_PLAN_VARIATION",
+        variationName
+      );
+
+    if (existingRenewingVariation) {
+      console.log(
+        `Annual variation "${variationName}" already exists: ${existingRenewingVariation.id}`
+      );
+
+      return {
+        variationId: existingRenewingVariation.id,
+        variationName,
+        created: false,
+      };
+    }
+  } else if (existingAnnualVariation) {
     console.log(
-      `Annual variation "${planConfig.variationName}" already exists: ${existingAnnualVariation.id}`
+      `Annual variation "${variationName}" already exists: ${existingAnnualVariation.id}`
     );
 
     return {
       variationId: existingAnnualVariation.id,
+      variationName,
       created: false,
     };
   }
@@ -272,7 +325,7 @@ async function createAnnualVariation(planConfig, planId) {
    */
 
   console.log(
-    `Creating annual variation "${planConfig.variationName}"...`
+    `Creating annual variation "${variationName}"...`
   );
 
   const temporaryVariationId =
@@ -286,7 +339,7 @@ async function createAnnualVariation(planConfig, planId) {
     present_at_all_locations: true,
 
     subscription_plan_variation_data: {
-      name: planConfig.variationName,
+      name: variationName,
 
       subscription_plan_id: planId,
 
@@ -294,7 +347,9 @@ async function createAnnualVariation(planConfig, planId) {
         {
           cadence: "ANNUAL",
 
-          periods: 1,
+          // No `periods`: Square ends a subscription after a final phase
+          // that has a fixed number of periods. Leaving it unset makes the
+          // phase repeat every year until the subscription is canceled.
 
           ordinal: 0,
 
@@ -328,11 +383,12 @@ async function createAnnualVariation(planConfig, planId) {
   );
 
   console.log(
-    `Created annual variation "${planConfig.variationName}": ${createdVariation.id}`
+    `Created annual variation "${variationName}": ${createdVariation.id}`
   );
 
   return {
     variationId: createdVariation.id,
+    variationName,
     created: true,
   };
 }
@@ -378,7 +434,7 @@ async function processPlan(planConfig) {
 
     planName: planConfig.planName,
 
-    variationName: planConfig.variationName,
+    variationName: variationResult.variationName,
 
     planId: planResult.planId,
 

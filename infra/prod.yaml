@@ -1,0 +1,653 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Live Royally production: app service, database, email pipeline, daily email
+  schedules and the Cognito custom-message trigger. The public domain's DNS is
+  managed outside AWS (GoDaddy); nothing here changes where it points.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-0737111b270a55289
+  VpcCidr:
+    Type: String
+    Default: 172.31.0.0/16
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Two subnets in the ALB's AZs. The first also hosts the SES endpoint.
+    Default: subnet-02138a6cf74fb6ea8,subnet-0ca70c7eb55f48381
+  ClusterName:
+    Type: String
+    Default: live-royally-cluster
+  HttpsListenerArn:
+    Type: String
+    Default: arn:aws:elasticloadbalancing:us-east-2:609948378142:listener/app/live-royally-load-balancer/bc5d6b6607475d82/e2f9b5ceb8f56fd8
+  AppDomain:
+    Type: String
+    Default: localmetrics.net
+  AppImageUri:
+    Type: String
+    Description: ARM64 app image (runner target).
+  MigrateImageUri:
+    Type: String
+    Description: AMD64 image built with --target migrate.
+  AppDesiredCount:
+    Type: Number
+    Default: 0
+    MinValue: 0
+  EmailScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues: [ENABLED, DISABLED]
+    Description: Keep DISABLED until the domain points at the ALB.
+  CognitoUserPoolId:
+    Type: String
+    Default: us-east-2_SPfoA3iIC
+  CognitoClientId:
+    Type: String
+    Default: 4g4mdd9a9651gkf1ho5lbfbsu5
+  SesFromEmail:
+    Type: String
+    Default: noreply@localmetrics.net
+  SesFromName:
+    Type: String
+    Default: Local Metrics
+  SupportEmail:
+    Type: String
+    Default: info.localmetrics@gmail.com
+
+Resources:
+  # ---------------------------------------------------------------- network
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: live-royally-alb
+      GroupDescription: Public HTTP/HTTPS into the shared load balancer
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0 }
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: live-royally-prod-app
+      GroupDescription: Prod app tasks; only the load balancer may connect
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          SourceSecurityGroupId: !Ref AlbSecurityGroup
+
+  EmailWorkerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: live-royally-prod-email-worker
+      GroupDescription: Prod email worker Lambda (outbound only)
+      VpcId: !Ref VpcId
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: live-royally-prod-db
+      GroupDescription: Prod Postgres; app tasks and the email worker only
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref EmailWorkerSecurityGroup
+
+  # Private DNS sends every SES call in the VPC to this endpoint, so it is
+  # open to the whole VPC (the staging email worker uses it too); IAM still
+  # decides who may send.
+  SesEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: live-royally-prod-ses-endpoint
+      GroupDescription: SES API endpoint; email worker only
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr
+
+  # Lets VPC-bound email workers reach SES without a NAT gateway.
+  # One subnet keeps it to a single ENI (~$7/mo).
+  SesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.email
+      VpcId: !Ref VpcId
+      SubnetIds: [!Select [0, !Ref SubnetIds]]
+      SecurityGroupIds: [!Ref SesEndpointSecurityGroup]
+      PrivateDnsEnabled: true
+
+  # --------------------------------------------------------------- database
+  DatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: live-royally/prod/database
+      Description: Prod Postgres master credentials (generated)
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"liveroyally_admin"}'
+        GenerateStringKey: password
+        PasswordLength: 40
+        ExcludePunctuation: true
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: live-royally-prod
+      DBSubnetGroupDescription: Prod database subnets
+      SubnetIds: !Ref SubnetIds
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: live-royally-prod
+      Engine: postgres
+      EngineVersion: "18.3"
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: "20"
+      MaxAllocatedStorage: 100
+      StorageType: gp3
+      StorageEncrypted: true
+      DBName: live_royally
+      MasterUsername: !Sub "{{resolve:secretsmanager:${DatabaseSecret}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DatabaseSecret}:SecretString:password}}"
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups: [!Ref DatabaseSecurityGroup]
+      PubliclyAccessible: false
+      MultiAZ: false
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: "08:00-08:30"
+      PreferredMaintenanceWindow: "sun:09:00-sun:09:30"
+      AutoMinorVersionUpgrade: true
+      CopyTagsToSnapshot: true
+      DeletionProtection: true
+      EnablePerformanceInsights: false
+
+  DatabaseSecretAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref DatabaseSecret
+      TargetId: !Ref Database
+      TargetType: AWS::RDS::DBInstance
+
+  # ------------------------------------------------------------------ email
+  EmailDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: live-royally-prod-email-jobs-dlq
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+
+  EmailQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: live-royally-prod-email-jobs
+      # Six times the worker timeout, as Lambda recommends.
+      VisibilityTimeout: 360
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt EmailDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  EmailWorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/live-royally-prod-email-worker
+      RetentionInDays: 14
+
+  EmailWorkerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: live-royally-prod-email-worker
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: email-worker
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:ChangeMessageVisibility
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt EmailQueue.Arn
+              - Effect: Allow
+                Action: [ses:SendEmail, ses:SendRawEmail]
+                Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*
+
+  EmailWorkerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: live-royally-prod-email-worker
+      Description: Sends queued email_jobs rows through SES
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      Handler: processEmailJobs.handler
+      Code: ../processEmailJobs.zip
+      MemorySize: 256
+      Timeout: 60
+      Role: !GetAtt EmailWorkerRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref EmailWorkerLogGroup
+      VpcConfig:
+        SubnetIds: !Ref SubnetIds
+        SecurityGroupIds: [!Ref EmailWorkerSecurityGroup]
+      Environment:
+        Variables:
+          DB_HOST: !GetAtt Database.Endpoint.Address
+          DB_PORT: !GetAtt Database.Endpoint.Port
+          DB_NAME: live_royally
+          DB_USER: !Sub "{{resolve:secretsmanager:${DatabaseSecret}:SecretString:username}}"
+          DB_PASS: !Sub "{{resolve:secretsmanager:${DatabaseSecret}:SecretString:password}}"
+          SES_FROM_EMAIL: !Ref SesFromEmail
+          SES_FROM_NAME: !Ref SesFromName
+          EMAIL_MAX_ATTEMPTS: "5"
+          EMAIL_CONCURRENCY: "5"
+
+  EmailWorkerEventSource:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt EmailQueue.Arn
+      FunctionName: !Ref EmailWorkerFunction
+      BatchSize: 10
+      FunctionResponseTypes: [ReportBatchItemFailures]
+      # The account's Lambda concurrency limit is 10, and the t4g.micro DB
+      # has few connections to spare, so cap the worker here.
+      ScalingConfig:
+        MaximumConcurrency: 2
+
+  # -------------------------------------------------------- email schedules
+  ScheduleEmailJobsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/live-royally-prod-schedule-email-jobs
+      RetentionInDays: 14
+
+  ScheduleEmailJobsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: live-royally-prod-schedule-email-jobs
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: read-scheduler-secret
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/EMAIL_SCHEDULER_SECRET
+
+  ScheduleEmailJobsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: live-royally-prod-schedule-email-jobs
+      Description: Calls the app's /api/jobs/* endpoints once a day
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      Handler: index.handler
+      Code: lambda/schedule-email-jobs
+      MemorySize: 128
+      Timeout: 120
+      Role: !GetAtt ScheduleEmailJobsRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref ScheduleEmailJobsLogGroup
+      Environment:
+        Variables:
+          APP_URL: !Sub https://${AppDomain}
+          EMAIL_SCHEDULER_SECRET_PARAM: /live-royally/prod/EMAIL_SCHEDULER_SECRET
+
+  SchedulerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: live-royally-prod-scheduler
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: scheduler.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: invoke-schedule-email-jobs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt ScheduleEmailJobsFunction.Arn
+
+  DailyEmailJobsSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: live-royally-prod-daily-email-jobs
+      Description: Daily voucher, inactivity, reminder and campaign-result emails
+      ScheduleExpression: cron(0 8 * * ? *)
+      ScheduleExpressionTimezone: America/Chicago
+      FlexibleTimeWindow: { Mode: "OFF" }
+      State: !Ref EmailScheduleState
+      Target:
+        Arn: !GetAtt ScheduleEmailJobsFunction.Arn
+        RoleArn: !GetAtt SchedulerRole.Arn
+        RetryPolicy:
+          MaximumRetryAttempts: 2
+          MaximumEventAgeInSeconds: 3600
+
+  # ---------------------------------------------- Cognito custom message
+  CustomMessageLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/live-royally-prod-cognito-custom-message
+      RetentionInDays: 14
+
+  CustomMessageRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: live-royally-prod-cognito-custom-message
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  CustomMessageFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: live-royally-prod-cognito-custom-message
+      Description: Branded Cognito password-reset email
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      Handler: index.handler
+      Code: ../lambda-deploy/custom-message
+      MemorySize: 128
+      Timeout: 5
+      Role: !GetAtt CustomMessageRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref CustomMessageLogGroup
+      Environment:
+        Variables:
+          APP_URL: !Sub https://${AppDomain}
+          SUPPORT_EMAIL: !Ref SupportEmail
+
+  CustomMessagePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref CustomMessageFunction
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+
+  # -------------------------------------------------------------------- app
+  AppLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/live-royally-prod
+      RetentionInDays: 14
+
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: live-royally-prod-task-execution
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: read-prod-secrets
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameters
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/*
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref DatabaseSecret
+
+  AppTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: live-royally-prod-app
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: app
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt EmailQueue.Arn
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminCreateUser
+                  - cognito-idp:AdminGetUser
+                  - cognito-idp:AdminSetUserPassword
+                Resource: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+
+  AppTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: live-royally-prod
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: "512"
+      Memory: "1024"
+      RuntimePlatform:
+        CpuArchitecture: ARM64
+        OperatingSystemFamily: LINUX
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt AppTaskRole.Arn
+      ContainerDefinitions:
+        - Name: app
+          Image: !Ref AppImageUri
+          Essential: true
+          PortMappings:
+            - { ContainerPort: 3000, Protocol: tcp }
+          # Prisma needs a single DATABASE_URL; build it from the generated
+          # secret so the password never appears in the task definition.
+          EntryPoint:
+            - sh
+            - -c
+            - 'export DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require" && exec "$@"'
+            - --
+          Command: [node, server.js]
+          Environment:
+            - { Name: APP_URL, Value: !Sub "https://${AppDomain}" }
+            - { Name: NEXT_PUBLIC_APP_URL, Value: !Sub "https://${AppDomain}" }
+            - { Name: AWS_REGION, Value: !Ref AWS::Region }
+            - { Name: COGNITO_USER_POOL_ID, Value: !Ref CognitoUserPoolId }
+            - { Name: COGNITO_CLIENT_ID, Value: !Ref CognitoClientId }
+            - { Name: EMAIL_QUEUE_URL, Value: !Ref EmailQueue }
+            - { Name: SES_FROM_EMAIL, Value: !Ref SesFromEmail }
+            - { Name: SES_FROM_NAME, Value: !Ref SesFromName }
+            - { Name: SUPPORT_EMAIL, Value: !Ref SupportEmail }
+            - { Name: SQUARE_OAUTH_REDIRECT_URI, Value: !Sub "https://${AppDomain}/api/square/oauth/callback" }
+            - { Name: SQUARE_OAUTH_SCOPES, Value: PAYMENTS_WRITE MERCHANT_PROFILE_READ }
+            - { Name: SQUARE_WEBHOOK_URL, Value: !Sub "https://${AppDomain}/api/webhooks/square" }
+            - { Name: DB_HOST, Value: !GetAtt Database.Endpoint.Address }
+            - { Name: DB_PORT, Value: !GetAtt Database.Endpoint.Port }
+            - { Name: DB_NAME, Value: live_royally }
+          Secrets:
+            - { Name: DB_USER, ValueFrom: !Sub "${DatabaseSecret}:username::" }
+            - { Name: DB_PASS, ValueFrom: !Sub "${DatabaseSecret}:password::" }
+            - { Name: EMAIL_SCHEDULER_SECRET, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/EMAIL_SCHEDULER_SECRET" }
+            - { Name: SQUARE_OAUTH_ENCRYPTION_KEY, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_OAUTH_ENCRYPTION_KEY" }
+            - { Name: SQUARE_WEBHOOK_SIGNATURE_KEY, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_WEBHOOK_SIGNATURE_KEY" }
+            - { Name: SQUARE_ACCESS_TOKEN, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_ACCESS_TOKEN" }
+            - { Name: SQUARE_APPLICATION_SECRET, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_APPLICATION_SECRET" }
+            - { Name: SQUARE_ENVIRONMENT, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_ENVIRONMENT" }
+            - { Name: SQUARE_APP_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_APP_ID" }
+            - { Name: SQUARE_LOCATION_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_LOCATION_ID" }
+            - { Name: SQUARE_PLAN_VARIATION_STARTER_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_PLAN_VARIATION_STARTER_ID" }
+            - { Name: SQUARE_PLAN_VARIATION_SPOTLIGHT_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_PLAN_VARIATION_SPOTLIGHT_ID" }
+            - { Name: SQUARE_PLAN_VARIATION_STANDARD_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_PLAN_VARIATION_STANDARD_ID" }
+            - { Name: SQUARE_PLAN_VARIATION_PREMIUM_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_PLAN_VARIATION_PREMIUM_ID" }
+            - { Name: SQUARE_PLAN_VARIATION_ENTERPRISE_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_PLAN_VARIATION_ENTERPRISE_ID" }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref AppLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: app
+
+  # One-off database tasks. Override the command per run, e.g.
+  #   ["npx","prisma","db","seed"]
+  MigrateTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: live-royally-prod-migrate
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: "256"
+      Memory: "1024"
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: migrate
+          Image: !Ref MigrateImageUri
+          Essential: true
+          EntryPoint:
+            - sh
+            - -c
+            - 'export DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require" && exec "$@"'
+            - --
+          Command: [npx, prisma, migrate, deploy]
+          Environment:
+            - { Name: DB_HOST, Value: !GetAtt Database.Endpoint.Address }
+            - { Name: DB_PORT, Value: !GetAtt Database.Endpoint.Port }
+            - { Name: DB_NAME, Value: live_royally }
+          Secrets:
+            - { Name: DB_USER, ValueFrom: !Sub "${DatabaseSecret}:username::" }
+            - { Name: DB_PASS, ValueFrom: !Sub "${DatabaseSecret}:password::" }
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref AppLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: migrate
+
+  AppTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: live-royally-prod
+      VpcId: !Ref VpcId
+      TargetType: ip
+      Protocol: HTTP
+      Port: 3000
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 15
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher: { HttpCode: "200-399" }
+      TargetGroupAttributes:
+        - { Key: deregistration_delay.timeout_seconds, Value: "30" }
+
+  AppListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HttpsListenerArn
+      Priority: 5
+      Conditions:
+        - Field: host-header
+          HostHeaderConfig:
+            Values: [!Ref AppDomain, !Sub "www.${AppDomain}"]
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref AppTargetGroup
+
+  AppService:
+    Type: AWS::ECS::Service
+    DependsOn: AppListenerRule
+    Properties:
+      ServiceName: live-royally-prod
+      Cluster: !Ref ClusterName
+      LaunchType: FARGATE
+      DesiredCount: !Ref AppDesiredCount
+      TaskDefinition: !Ref AppTaskDefinition
+      HealthCheckGracePeriodSeconds: 60
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+        DeploymentCircuitBreaker: { Enable: true, Rollback: true }
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups: [!Ref AppSecurityGroup]
+      LoadBalancers:
+        - ContainerName: app
+          ContainerPort: 3000
+          TargetGroupArn: !Ref AppTargetGroup
+      EnableECSManagedTags: true
+      PropagateTags: SERVICE
+
+Outputs:
+  AlbSecurityGroupId:
+    Value: !Ref AlbSecurityGroup
+  AppSecurityGroupId:
+    Value: !Ref AppSecurityGroup
+  SubnetIds:
+    Value: !Join [",", !Ref SubnetIds]
+  DatabaseEndpoint:
+    Value: !GetAtt Database.Endpoint.Address
+  DatabaseSecretArn:
+    Value: !Ref DatabaseSecret
+  EmailQueueUrl:
+    Value: !Ref EmailQueue
+  EmailDeadLetterQueueUrl:
+    Value: !Ref EmailDeadLetterQueue
+  CustomMessageFunctionArn:
+    Value: !GetAtt CustomMessageFunction.Arn
+  MigrateTaskDefinitionArn:
+    Value: !Ref MigrateTaskDefinition
+  ServiceName:
+    Value: !GetAtt AppService.Name

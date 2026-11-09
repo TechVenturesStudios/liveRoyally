@@ -4,7 +4,7 @@ import { PartnerSubscriptionStatus } from "@prisma/client";
 
 import { prisma } from "../../../lib/prisma";
 import { offboardPartnerProviders } from "../../../lib/partner-provider-offboarding";
-import { normalizeSquareStatus } from "../../../lib/square-partner-billing";
+import { normalizeSquareStatus, squarePeriodFromChargedThrough } from "../../../lib/square-partner-billing";
 import { PARTNER_SUBSCRIPTION_PLANS } from "../../../src/config/subscriptionPlans";
 
 export const config = {
@@ -26,8 +26,7 @@ type SquareWebhookEvent = {
 type SquareSubscription = {
   id?: string;
   status?: string;
-  current_period_start_date?: string;
-  current_period_end_date?: string;
+  charged_through_date?: string;
   start_date?: string;
   canceled_date?: string;
 };
@@ -94,11 +93,7 @@ function isPaymentMadeEvent(eventType: string) {
 }
 
 function isPaymentFailedEvent(eventType: string) {
-  return (
-    eventType === "invoice.payment_failed" ||
-    eventType === "invoice.scheduled_charge_failed" ||
-    eventType === "subscription.payment_failed"
-  );
+  return eventType === "invoice.payment_failed" || eventType === "invoice.scheduled_charge_failed";
 }
 
 function isSubscriptionEvent(eventType: string) {
@@ -139,6 +134,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const subscription = event.data?.object?.subscription;
   const invoice = event.data?.object?.invoice;
   const squareSubscriptionId = subscription?.id || invoice?.subscription_id;
+  // Only subscription events carry charged_through_date; invoice events leave the period alone.
+  const period = squarePeriodFromChargedThrough(subscription?.charged_through_date);
+  const periodData = period ? { current_period_start: period.start, current_period_end: period.end } : {};
 
   if (!squareSubscriptionId || (!isSubscriptionEvent(eventType) && !isPaymentMadeEvent(eventType) && !isPaymentFailedEvent(eventType))) {
     return res.status(200).json({ received: true, handled: false });
@@ -173,8 +171,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           updated_at: new Date(),
           ...(providerStatus === PartnerSubscriptionStatus.active ? { canceled_at: null } : {}),
           ...(providerStatus === PartnerSubscriptionStatus.canceled ? { canceled_at: toDate(subscription?.canceled_date) || new Date() } : {}),
-          ...(subscription?.current_period_start_date ? { current_period_start: toDate(subscription.current_period_start_date) } : {}),
-          ...(subscription?.current_period_end_date ? { current_period_end: toDate(subscription.current_period_end_date) } : {}),
+          ...periodData,
         },
         select: { subscription_id: true, provider_id: true, status: true, billing_provider_subscription_id: true },
       });
@@ -227,12 +224,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...(status === PartnerSubscriptionStatus.canceled
         ? { canceled_at: toDate(subscription?.canceled_date) || new Date() }
         : {}),
-      ...(subscription?.current_period_start_date
-        ? { current_period_start: toDate(subscription.current_period_start_date) }
-        : {}),
-      ...(subscription?.current_period_end_date
-        ? { current_period_end: toDate(subscription.current_period_end_date) }
-        : {}),
+      ...periodData,
     },
     select: {
       subscription_id: true,

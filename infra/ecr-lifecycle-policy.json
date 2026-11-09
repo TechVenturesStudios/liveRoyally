@@ -1,0 +1,26 @@
+{
+  "rules": [
+    {
+      "rulePriority": 1,
+      "description": "Keep the 20 most recently pushed tagged images",
+      "selection": {
+        "tagStatus": "tagged",
+        "tagPatternList": ["*"],
+        "countType": "imageCountMoreThan",
+        "countNumber": 20
+      },
+      "action": { "type": "expire" }
+    },
+    {
+      "rulePriority": 2,
+      "description": "Remove untagged images a day after push; ECR keeps any still referenced by a tagged image index",
+      "selection": {
+        "tagStatus": "untagged",
+        "countType": "sinceImagePushed",
+        "countUnit": "days",
+        "countNumber": 1
+      },
+      "action": { "type": "expire" }
+    }
+  ]
+}

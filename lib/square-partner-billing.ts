@@ -79,8 +79,8 @@ type SquareSubscriptionResponse = {
     status?: string;
     start_date?: string;
     created_at?: string;
-    current_period_start?: string;
-    current_period_end?: string;
+    charged_through_date?: string;
+    canceled_date?: string;
     card_id?: string;
   };
   errors?: Array<{
@@ -365,19 +365,65 @@ export async function disableSquareCard(cardId: string) {
   await squareRequest<{ card?: { id?: string } }>(`/v2/cards/${encodeURIComponent(cardId)}/disable`, {});
 }
 
+/**
+ * Maps Square's subscription status to ours. Square deactivates a subscription
+ * when billing fails, so DEACTIVATED and PAUSED both mean the partner is no
+ * longer paid up. COMPLETED means a plan with a fixed number of billing
+ * periods ran out; our auto-renewing plans never reach it.
+ */
 export function normalizeSquareStatus(status?: string | null) {
   switch ((status ?? "").toUpperCase()) {
     case "ACTIVE":
       return PartnerSubscriptionStatus.active;
     case "PENDING":
       return PartnerSubscriptionStatus.pending;
-    case "PAST_DUE":
-      return PartnerSubscriptionStatus.past_due;
     case "CANCELED":
       return PartnerSubscriptionStatus.canceled;
-    case "EXPIRED":
+    case "DEACTIVATED":
+    case "PAUSED":
+      return PartnerSubscriptionStatus.past_due;
+    case "COMPLETED":
       return PartnerSubscriptionStatus.expired;
     default:
       return PartnerSubscriptionStatus.pending;
   }
+}
+
+/** Parses a Square YYYY-MM-DD date as UTC midnight. */
+function parseSquareDate(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function addYears(date: Date, years: number) {
+  const result = new Date(date);
+  result.setUTCFullYear(result.getUTCFullYear() + years);
+  return result;
+}
+
+/**
+ * Square has no current-period fields on a subscription; `charged_through_date`
+ * is the date the subscriber has been invoiced through. Every Square plan we
+ * sell bills annually, so the current period is the year ending on that date.
+ * Returns null when Square has not invoiced the subscription yet.
+ */
+export function squarePeriodFromChargedThrough(chargedThroughDate?: string | null) {
+  const end = parseSquareDate(chargedThroughDate);
+  return end ? { start: addYears(end, -1), end } : null;
+}
+
+/**
+ * Billing period for a subscription that was just created. Square usually has
+ * not set `charged_through_date` yet, so fall back to one year from the start
+ * date; the `subscription.updated` webhook corrects it once Square invoices.
+ */
+export function squareInitialPeriod(
+  subscription: { start_date?: string | null; charged_through_date?: string | null },
+  fallbackStart: Date
+) {
+  const charged = squarePeriodFromChargedThrough(subscription.charged_through_date);
+  if (charged) return charged;
+  const start = parseSquareDate(subscription.start_date) ?? fallbackStart;
+  return { start, end: addYears(start, 1) };
 }

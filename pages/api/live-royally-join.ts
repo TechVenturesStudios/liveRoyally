@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 import { PartnerSubscriptionStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { getCognitoIdFromRequest } from "../../lib/api-auth";
-import { createSquareCard, createSquareCustomer, createSquareSubscription, getLiveRoyallyProviderPlanVariationId, squareIdempotencyKey } from "../../lib/square-partner-billing";
+import { createSquareCard, createSquareCustomer, createSquareSubscription, getLiveRoyallyProviderPlanVariationId, squareIdempotencyKey, squareInitialPeriod } from "../../lib/square-partner-billing";
 import { LIVE_ROYALLY_PROVIDER_SUBSCRIPTION_PRICE_CENTS } from "../../lib/live-royally";
 
 const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -56,8 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const customerId = await createSquareCustomer({ email: invite!.provider.email, firstName: invite!.provider.first_name, organizationName: profile?.business_name, organizationPhone: profile?.business_phone, organizationAddress: profile?.business_address, organizationCity: profile?.business_city, organizationState: profile?.business_state, organizationZip: profile?.business_zip, referenceId });
     const cardId = await createSquareCard({ paymentToken, customerId, cardholderName: `${invite!.provider.first_name || ""}`.trim() || profile?.business_name || "Live Royally provider", referenceId });
     const squareSubscription = await createSquareSubscription({ customerId, cardId, planVariationId, priceOverrideCents: LIVE_ROYALLY_PROVIDER_SUBSCRIPTION_PRICE_CENTS, referenceId: `${referenceId}:subscription` });
-    const start = squareSubscription.current_period_start ? new Date(squareSubscription.current_period_start) : new Date();
-    const end = squareSubscription.current_period_end ? new Date(squareSubscription.current_period_end) : new Date(start.getTime() + 365 * 24 * 60 * 60 * 1000);
+    const { start, end } = squareInitialPeriod(squareSubscription, new Date());
 
     const result = await prisma.$transaction(async (tx) => {
       const claimed = await tx.provider_join_tokens.updateMany({ where: { token_id: invite!.token_id, used_at: null, expires_at: { gt: new Date() } }, data: { used_at: new Date() } });

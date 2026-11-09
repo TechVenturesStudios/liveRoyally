@@ -7,6 +7,7 @@ import {
   createSquareSubscription,
   disableSquareCard,
   getSquarePlanVariationId,
+  squareInitialPeriod,
 } from "../../../../lib/square-partner-billing";
 import { setCognitoTemporaryPassword } from "../../../../lib/cognito-admin";
 import { addMonths, PROMO_TRIAL_MONTHS, STARTER_FREE_TERM_MONTHS } from "../../../../lib/promo-codes";
@@ -251,18 +252,15 @@ export default async function handler(
         planVariationId,
         referenceId: `partner-approval:${subscription.subscription_id}`,
       });
+      const period = squareInitialPeriod(squareSubscription, approvedAt);
 
       const updated = await prisma.partner_subscriptions.update({
         where: { subscription_id: subscription.subscription_id },
         data: {
           status: PartnerSubscriptionStatus.active,
           billing_provider_subscription_id: squareSubscription.id,
-          current_period_start: squareSubscription.current_period_start
-            ? new Date(squareSubscription.current_period_start)
-            : approvedAt,
-          current_period_end: squareSubscription.current_period_end
-            ? new Date(squareSubscription.current_period_end)
-            : null,
+          current_period_start: period.start,
+          current_period_end: period.end,
           approved_at: approvedAt,
           canceled_at: null,
           updated_at: approvedAt,

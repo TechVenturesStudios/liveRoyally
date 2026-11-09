@@ -24,6 +24,20 @@ ENV DATABASE_URL=${DATABASE_URL}
 RUN npx prisma generate
 RUN npm run build
 
+# One-off database tasks (migrate, seed, network-code import) run from this
+# image inside the VPC. Build with: docker build --target migrate .
+FROM deps AS migrate
+
+COPY package.json ./
+COPY prisma ./prisma
+COPY scripts ./scripts
+
+RUN npx prisma generate
+
+USER node
+
+CMD ["npx", "prisma", "migrate", "deploy"]
+
 FROM base AS runner
 
 ENV NODE_ENV=production

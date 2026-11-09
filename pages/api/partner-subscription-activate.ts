@@ -10,6 +10,7 @@ import {
   createSquareSubscription,
   disableSquareCard,
   getSquarePlanVariationId,
+  squareInitialPeriod,
 } from "../../lib/square-partner-billing";
 import { PARTNER_SUBSCRIPTION_PLANS, type PartnerSubscriptionPlan } from "../../src/config/subscriptionPlans";
 
@@ -134,6 +135,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     createdCardId = null;
 
     const now = new Date();
+    const period = squareInitialPeriod(squareSubscription, now);
     const updated = await prisma.partner_subscriptions.update({
       where: { subscription_id: subscription.subscription_id },
       data: {
@@ -144,12 +146,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         billing_provider_customer_id: customerId,
         billing_provider_card_id: cardId,
         billing_provider_subscription_id: squareSubscription.id,
-        current_period_start: squareSubscription.current_period_start
-          ? new Date(squareSubscription.current_period_start)
-          : now,
-        current_period_end: squareSubscription.current_period_end
-          ? new Date(squareSubscription.current_period_end)
-          : null,
+        current_period_start: period.start,
+        current_period_end: period.end,
         // Close out a trial that was still running so it reads as converted.
         trial_ends_at:
           subscription.trial_ends_at && subscription.trial_ends_at > now ? now : subscription.trial_ends_at,
