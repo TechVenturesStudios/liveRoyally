@@ -84,11 +84,11 @@ update it if that partner needs to log in.
 ```powershell
 .\infra\scripts\deploy-prod.ps1 -DesiredCount 1 -SkipLambdaBuild
 $ip = (Resolve-DnsName live-royally-load-balancer-123999638.us-east-2.elb.amazonaws.com -Type A)[0].IPAddress
-curl.exe -sS -o NUL -w "%{http_code}`n" --resolve "localmetrics.net:443:$ip" https://localmetrics.net/
+curl.exe -sS -o NUL -w "%{http_code}`n" --resolve "www.localmetrics.net:443:$ip" https://www.localmetrics.net/
 ```
 
 `--resolve` sends real HTTPS for `localmetrics.net` to the ALB, so the
-certificate, host rule and app are all exercised. Add `localmetrics.net` with
+certificate, host rule and app are all exercised. Add `www.localmetrics.net` with
 that IP to `C:\Windows\System32\drivers\etc\hosts` to click through in a
 browser, and remove it afterwards. Scale back down when done:
 
@@ -102,16 +102,18 @@ browser, and remove it afterwards. Scale back down when done:
    `npm run square:seed-subscription-plans` against production, then update
    the `SQUARE_*` parameters with `aws ssm put-parameter --overwrite`
    (`SQUARE_ENVIRONMENT` = `production`). Register
-   `https://localmetrics.net/api/square/oauth/callback` as the OAuth redirect and
-   `https://localmetrics.net/api/webhooks/square` as the webhook, and put its
-   signature key in `SQUARE_WEBHOOK_SIGNATURE_KEY`.
+   `https://www.localmetrics.net/api/square/oauth/callback` as the OAuth redirect and
+   `https://www.localmetrics.net/api/webhooks/square` as the webhook, and put its
+   signature key in `SQUARE_WEBHOOK_SIGNATURE_KEY`. Use `www`: the bare
+   domain is a GoDaddy redirect, and Square does not follow redirects.
 2. Build and push a release: `.\scripts\publish-ecr.ps1 <version>`.
 3. `.\infra\scripts\deploy-prod.ps1 -AppImageTag <version> -DesiredCount 1 -SkipLambdaBuild`
    (this migrates the database first).
-4. At GoDaddy, point `localmetrics.net` and `www` at
-   `live-royally-load-balancer-123999638.us-east-2.elb.amazonaws.com`
-   (CNAME for `www`; for the apex use GoDaddy forwarding to `www`, or move DNS
-   to Route 53 for an alias record, $0.50/mo).
+4. At GoDaddy, change the `www` CNAME to
+   `live-royally-load-balancer-123999638.us-east-2.elb.amazonaws.com`, and
+   forward `localmetrics.net` to `https://www.localmetrics.net` (301
+   permanent, no masking). `www.localmetrics.net` is the site's real address
+   (the `PublicHost` stack parameter); every URL the app hands out uses it.
 5. Once the site answers on the domain:
    `.\infra\scripts\deploy-prod.ps1 -EmailSchedules ENABLED -SkipLambdaBuild`
 

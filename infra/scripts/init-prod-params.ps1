@@ -57,5 +57,7 @@ foreach ($name in @(
 )) {
   Set-Param $name (Get-StagingValue $name) "String"
 }
+# Staging has no provider variation; this is the sandbox "Live Royally Provider Annual" ($100/yr).
+Set-Param "SQUARE_PLAN_VARIATION_LIVE_ROYALLY_PROVIDER_ANNUAL_ID" "DGJ7RVXRED2AJ6ZFY2DNUPFJ" "String"
 
 Write-Host "Done. Parameters live under $prefix."

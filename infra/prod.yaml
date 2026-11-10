@@ -24,6 +24,14 @@ Parameters:
   AppDomain:
     Type: String
     Default: localmetrics.net
+    Description: Root domain; the ALB rule accepts it and its www host.
+  PublicHost:
+    Type: String
+    Default: www.localmetrics.net
+    Description: >-
+      Host in every URL the app hands out (emails, Square OAuth redirect and
+      webhook). GoDaddy forwards the bare domain here, and Square does not
+      follow redirects, so this must be the host that serves the app directly.
   AppImageUri:
     Type: String
     Description: ARM64 app image (runner target).
@@ -323,7 +331,7 @@ Resources:
         LogGroup: !Ref ScheduleEmailJobsLogGroup
       Environment:
         Variables:
-          APP_URL: !Sub https://${AppDomain}
+          APP_URL: !Sub https://${PublicHost}
           EMAIL_SCHEDULER_SECRET_PARAM: /live-royally/prod/EMAIL_SCHEDULER_SECRET
 
   SchedulerRole:
@@ -400,7 +408,7 @@ Resources:
         LogGroup: !Ref CustomMessageLogGroup
       Environment:
         Variables:
-          APP_URL: !Sub https://${AppDomain}
+          APP_URL: !Sub https://${PublicHost}
           SUPPORT_EMAIL: !Ref SupportEmail
 
   CustomMessagePermission:
@@ -499,8 +507,8 @@ Resources:
             - --
           Command: [node, server.js]
           Environment:
-            - { Name: APP_URL, Value: !Sub "https://${AppDomain}" }
-            - { Name: NEXT_PUBLIC_APP_URL, Value: !Sub "https://${AppDomain}" }
+            - { Name: APP_URL, Value: !Sub "https://${PublicHost}" }
+            - { Name: NEXT_PUBLIC_APP_URL, Value: !Sub "https://${PublicHost}" }
             - { Name: AWS_REGION, Value: !Ref AWS::Region }
             - { Name: COGNITO_USER_POOL_ID, Value: !Ref CognitoUserPoolId }
             - { Name: COGNITO_CLIENT_ID, Value: !Ref CognitoClientId }
@@ -508,9 +516,9 @@ Resources:
             - { Name: SES_FROM_EMAIL, Value: !Ref SesFromEmail }
             - { Name: SES_FROM_NAME, Value: !Ref SesFromName }
             - { Name: SUPPORT_EMAIL, Value: !Ref SupportEmail }
-            - { Name: SQUARE_OAUTH_REDIRECT_URI, Value: !Sub "https://${AppDomain}/api/square/oauth/callback" }
+            - { Name: SQUARE_OAUTH_REDIRECT_URI, Value: !Sub "https://${PublicHost}/api/square/oauth/callback" }
             - { Name: SQUARE_OAUTH_SCOPES, Value: PAYMENTS_WRITE MERCHANT_PROFILE_READ }
-            - { Name: SQUARE_WEBHOOK_URL, Value: !Sub "https://${AppDomain}/api/webhooks/square" }
+            - { Name: SQUARE_WEBHOOK_URL, Value: !Sub "https://${PublicHost}/api/webhooks/square" }
             - { Name: DB_HOST, Value: !GetAtt Database.Endpoint.Address }
             - { Name: DB_PORT, Value: !GetAtt Database.Endpoint.Port }
             - { Name: DB_NAME, Value: live_royally }
@@ -530,6 +538,7 @@ Resources:
             - { Name: SQUARE_PLAN_VARIATION_STANDARD_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_PLAN_VARIATION_STANDARD_ID" }
             - { Name: SQUARE_PLAN_VARIATION_PREMIUM_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_PLAN_VARIATION_PREMIUM_ID" }
             - { Name: SQUARE_PLAN_VARIATION_ENTERPRISE_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_PLAN_VARIATION_ENTERPRISE_ID" }
+            - { Name: SQUARE_PLAN_VARIATION_LIVE_ROYALLY_PROVIDER_ANNUAL_ID, ValueFrom: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/live-royally/prod/SQUARE_PLAN_VARIATION_LIVE_ROYALLY_PROVIDER_ANNUAL_ID" }
           LogConfiguration:
             LogDriver: awslogs
             Options:

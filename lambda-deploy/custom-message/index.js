@@ -1,4 +1,4 @@
-const DEFAULT_APP_URL = "https://localmetrics.net";
+const DEFAULT_APP_URL = "https://www.localmetrics.net";
 const DEFAULT_SUPPORT_EMAIL = "info.localmetrics@gmail.com";
 
 function escapeHtml(value) {
