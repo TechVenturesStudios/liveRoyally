@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 const roles = ["member", "provider", "partner", "admin"];
 // Update these placeholder values when using the seeded partner in another environment.
 const liveRoyallyPartner = {
-  email: "liveroyally22+partner@gmail.com",
+  email: "liveroyally22@gmail.com",
   cognito_id: "00000000-0000-4000-8000-000000000022",
   display_id: "PT-LIVE-ROYALLY",
   partner_code: "LRN-PARTNER",
@@ -124,8 +124,7 @@ const rewardTasks = [
   {
     task_key: "member_scan_business_qr_code",
     name: "Scan a business QR code",
-    description:
-      "Awarded for each verified scan. Applies to all scans because network scope is not differentiated.",
+    description: "Awarded for each verified scan.",
     user_type: "member",
     category: "network",
     points: 20,

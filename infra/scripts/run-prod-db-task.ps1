@@ -33,7 +33,9 @@ $overrides = @{ containerOverrides = @($container) } | ConvertTo-Json -Depth 5 -
 $overridesFile = Join-Path ([System.IO.Path]::GetTempPath()) "live-royally-prod-db-task.json"
 $overrides | Out-File -FilePath $overridesFile -Encoding ascii
 
-Write-Host "Running: $($Command -join ' ')"
+$commandText = $Command -join ' '
+if ($commandText.Length -gt 120) { $commandText = $commandText.Substring(0, 117) + "..." }
+Write-Host "Running: $commandText"
 $taskArn = aws ecs run-task --cluster $Cluster --launch-type FARGATE `
   --task-definition (Get-Output 'MigrateTaskDefinitionArn') `
   --network-configuration $network `
@@ -49,14 +51,25 @@ $taskId = $taskArn.Split("/")[-1]
 # console code page cannot encode, which makes the AWS CLI fail to print them.
 $previousEncoding = [Console]::OutputEncoding
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$previousPythonEncoding = $env:PYTHONIOENCODING
+$env:PYTHONIOENCODING = "utf-8"
 try {
-  aws logs get-log-events --log-group-name /ecs/live-royally-prod --log-stream-name "migrate/migrate/$taskId" --start-from-head --query "events[].message" --output text @aws |
-    ForEach-Object { $_ -split "`t" } | ForEach-Object { Write-Host $_ }
-  if ($LASTEXITCODE -ne 0) { Write-Warning "Could not print task logs; see log stream migrate/migrate/$taskId in /ecs/live-royally-prod." }
+  # Logs can reach CloudWatch a few seconds after the task stops.
+  $logs = $null
+  for ($i = 0; $i -lt 6 -and -not $logs; $i++) {
+    if ($i -gt 0) { Start-Sleep -Seconds 5 }
+    $logs = aws logs get-log-events --log-group-name /ecs/live-royally-prod --log-stream-name "migrate/migrate/$taskId" --start-from-head --query "events[].message" --output text @aws 2>$null
+  }
+  if ($logs) {
+    $logs | ForEach-Object { $_ -split "`t" } | ForEach-Object { Write-Host $_ }
+  } else {
+    Write-Warning "Could not print task logs; see log stream migrate/migrate/$taskId in /ecs/live-royally-prod."
+  }
 } catch {
   Write-Warning "Could not print task logs: $_"
 } finally {
   [Console]::OutputEncoding = $previousEncoding
+  $env:PYTHONIOENCODING = $previousPythonEncoding
 }
 
 $exitCode = $task.containers[0].exitCode
