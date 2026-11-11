@@ -244,7 +244,10 @@ Resources:
                 Resource: !GetAtt EmailQueue.Arn
               - Effect: Allow
                 Action: [ses:SendEmail, ses:SendRawEmail]
-                Resource: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*
+                # SES also authorizes against the domain's default configuration set.
+                Resource:
+                  - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*
+                  - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/*
 
   EmailWorkerFunction:
     Type: AWS::Lambda::Function
