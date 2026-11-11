@@ -1,4 +1,5 @@
 import type { AppProps } from "next/app";
+import Head from "next/head";
 import { useEffect } from "react";
 import { Buffer } from "buffer";
 import process from "process";
@@ -17,5 +18,12 @@ export default function App({ Component, pageProps }: AppProps) {
     window.process = process;
   }, []);
 
-  return <Component {...pageProps} />;
+  return (
+    <>
+      <Head>
+        <title>Local Metrics | Community Economic Development Platform</title>
+      </Head>
+      <Component {...pageProps} />
+    </>
+  );
 }
