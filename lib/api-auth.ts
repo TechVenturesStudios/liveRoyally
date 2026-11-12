@@ -1,6 +1,7 @@
 import type { NextApiRequest } from "next";
+import { CognitoJwtVerifier } from "aws-jwt-verify";
 
-function parseCookies(cookieHeader = "") {
+export function parseCookies(cookieHeader = "") {
   return cookieHeader.split(";").reduce<Record<string, string>>((cookies, cookie) => {
     const [rawName, ...rawValue] = cookie.trim().split("=");
 
@@ -8,31 +9,48 @@ function parseCookies(cookieHeader = "") {
       return cookies;
     }
 
-    cookies[rawName] = decodeURIComponent(rawValue.join("="));
+    try {
+      cookies[rawName] = decodeURIComponent(rawValue.join("="));
+    } catch {
+      cookies[rawName] = rawValue.join("=");
+    }
     return cookies;
   }, {});
 }
 
-export function getCognitoIdFromCookie(req: NextApiRequest) {
-  const cookies = parseCookies(req.headers.cookie);
-  const idToken = cookies.lr_id_token;
+let idTokenVerifier: ReturnType<typeof createIdTokenVerifier> | null = null;
 
-  if (!idToken) {
-    return null;
+function createIdTokenVerifier() {
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  const clientId = process.env.COGNITO_CLIENT_ID;
+
+  if (!userPoolId || !clientId) {
+    throw new Error("Missing Cognito environment configuration");
   }
 
-  try {
-    const payload = JSON.parse(
-      Buffer.from(idToken.split(".")[1], "base64url").toString("utf8")
-    ) as { sub?: string };
+  return CognitoJwtVerifier.create({ userPoolId, clientId, tokenUse: "id" });
+}
 
-    return payload.sub ?? null;
+// Returns the Cognito user id (sub) only when the token's signature, issuer, audience
+// and expiry check out against the user pool's published keys.
+export async function verifyIdToken(idToken: string) {
+  idTokenVerifier ??= createIdTokenVerifier();
+
+  try {
+    const payload = await idTokenVerifier.verify(idToken);
+    return payload.sub;
   } catch {
     return null;
   }
 }
 
+export async function getCognitoIdFromCookie(req: NextApiRequest) {
+  const idToken = parseCookies(req.headers.cookie).lr_id_token;
+  return idToken ? verifyIdToken(idToken) : null;
+}
+
+// The signed-in user is identified only by the verified session cookie. Ids sent in the
+// query string or body are never trusted.
 export function getCognitoIdFromRequest(req: NextApiRequest) {
-  const queryCognitoId = String(req.query.cognitoId || req.query.cognito_id || "").trim();
-  return queryCognitoId || getCognitoIdFromCookie(req);
+  return getCognitoIdFromCookie(req);
 }

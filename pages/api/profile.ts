@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { queueProfileUpdatedEmail } from "../../lib/notification-templates";
+import { getCognitoIdFromRequest } from "../../lib/api-auth";
 
 const optional = (value: unknown) => {
   if (value === undefined || value === null || String(value).trim() === "") return null;
@@ -18,8 +19,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const cognitoId = String(req.body?.cognitoId || req.body?.cognitoSub || "").trim();
-    if (!cognitoId) return res.status(400).json({ error: "cognitoId is required" });
+    const cognitoId = await getCognitoIdFromRequest(req);
+    if (!cognitoId) return res.status(401).json({ error: "Not authenticated" });
 
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.users.findUnique({

@@ -42,7 +42,7 @@ export async function resolveDashboardAccount(
   allowInactiveProvider = false,
   allowInactivePartner = false
 ): Promise<DashboardAccount | { error: string; status: number } | null> {
-  const cognitoId = getCognitoIdFromRequest(req);
+  const cognitoId = await getCognitoIdFromRequest(req);
 
   if (!cognitoId) {
     return { error: "Not authenticated", status: 401 };

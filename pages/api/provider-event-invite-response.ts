@@ -74,11 +74,6 @@ export default async function handler(
   }
 
   try {
-    const cognitoId = String(req.query.cognitoId || req.query.cognito_id || "").trim();
-    if (!cognitoId) {
-      return res.status(400).json({ error: "cognitoId is required" });
-    }
-
     const account = await resolveDashboardAccount(req, ["provider"]);
     if (!account) {
       return res.status(500).json({ error: "Failed to resolve account" });

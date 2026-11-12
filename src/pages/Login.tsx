@@ -3,11 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/ui/logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
 import { completeNewPasswordChallenge, confirmPasswordReset, loginWithCognito, requestPasswordReset } from "@/api/auth";
 import { saveUserToStorage } from "@/utils/userStorage";
 import { clearDashboardContext } from "@/utils/dashboardContext";
@@ -21,7 +21,6 @@ const Login = () => {
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -92,7 +91,6 @@ const Login = () => {
         setResetCode("");
         setNewPassword("");
         setConfirmPassword("");
-        setShowPassword(false);
         toast.success("Reset email sent", {
           description: "Check your email for the verification code.",
         });
@@ -117,7 +115,6 @@ const Login = () => {
         setNewPassword("");
         setConfirmPassword("");
         setPassword("");
-        setShowPassword(false);
         toast.success("Password reset", { description: "Sign in with your new password." });
         return;
       }
@@ -146,7 +143,6 @@ const Login = () => {
     } finally {
       setLoading(false);
       setPassword("");
-      setShowPassword(false);
     }
   };
 
@@ -207,25 +203,12 @@ const Login = () => {
                   {!isResetRequestMode && (
                     <div className="space-y-2">
                       <Label>Password</Label>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="pr-10"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((current) => !current)}
-                          className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-gray-500 transition-colors hover:text-royal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-royal focus-visible:ring-inset"
-                          aria-label={showPassword ? "Hide password" : "Show password"}
-                          title={showPassword ? "Hide password" : "Show password"}
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
-                        </button>
-                      </div>
+                      <PasswordInput
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
                     </div>
                   )}
                 </>
@@ -260,8 +243,7 @@ const Login = () => {
 
                   <div className="space-y-2">
                     <Label>New Password</Label>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       placeholder="Enter a new password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
@@ -271,8 +253,7 @@ const Login = () => {
 
                   <div className="space-y-2">
                     <Label>Confirm New Password</Label>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       placeholder="Confirm your new password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
@@ -309,7 +290,6 @@ const Login = () => {
                     setIsResetRequestMode(false);
                     setIsResetCodeMode((current) => !current);
                     setPassword("");
-                    setShowPassword(false);
                     setResetCode("");
                     setNewPassword("");
                     setConfirmPassword("");
@@ -326,7 +306,6 @@ const Login = () => {
                       setError("");
                       setIsResetRequestMode((current) => !current);
                       setPassword("");
-                      setShowPassword(false);
                       setResetCode("");
                       setNewPassword("");
                       setConfirmPassword("");

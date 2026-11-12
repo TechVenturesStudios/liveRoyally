@@ -10,6 +10,16 @@ import {
   missingAwsCredentialsMessage,
 } from "../../../lib/aws-errors";
 import type { UserType } from "@/types/user";
+import { verifyIdToken } from "../../../lib/api-auth";
+import {
+  ACCESS_TOKEN_COOKIE,
+  authCookie,
+  ID_TOKEN_COOKIE,
+  isSecureRequest,
+  REFRESH_COOKIE_MAX_AGE,
+  REFRESH_TOKEN_COOKIE,
+  SESSION_COOKIE_MAX_AGE,
+} from "../../../lib/auth-cookies";
 
 type LoginResponse =
   | {
@@ -39,16 +49,6 @@ function isDeclinedWithoutActiveSubscription(
     !subscriptions.some((subscription) => subscription.status === "active") &&
     subscriptions[0]?.status === "declined"
   );
-}
-
-function isSecureRequest(req: NextApiRequest) {
-  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
-  return forwardedProto === "https";
-}
-
-function authCookie(name: string, value: string, maxAge: number, secure: boolean) {
-  const secureFlag = secure ? "; Secure" : "";
-  return `${name}=${encodeURIComponent(value)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${secureFlag}`;
 }
 
 function cognitoAuthErrorMessage(error: unknown) {
@@ -87,16 +87,14 @@ async function signInWithAuthResult(
     throw new Error("Cognito did not return an auth session");
   }
 
-  const payload = JSON.parse(
-    Buffer.from(idToken.split(".")[1], "base64url").toString("utf8")
-  ) as { sub?: string };
+  const cognitoId = await verifyIdToken(idToken);
 
-  if (!payload.sub) {
-    throw new Error("Could not read Cognito user id from token");
+  if (!cognitoId) {
+    throw new Error("Could not verify Cognito ID token");
   }
 
   const user = await prisma.users.findUnique({
-    where: { cognito_id: payload.sub },
+    where: { cognito_id: cognitoId },
     select: {
       user_id: true,
       cognito_id: true,
@@ -135,14 +133,13 @@ async function signInWithAuthResult(
     }
   }
 
-  const cookieMaxAge = 60 * 60;
   const cookies = [
-    authCookie("lr_id_token", idToken, cookieMaxAge, secure),
-    authCookie("lr_access_token", accessToken, cookieMaxAge, secure),
+    authCookie(ID_TOKEN_COOKIE, idToken, SESSION_COOKIE_MAX_AGE, secure),
+    authCookie(ACCESS_TOKEN_COOKIE, accessToken, SESSION_COOKIE_MAX_AGE, secure),
   ];
 
   if (refreshToken) {
-    cookies.push(authCookie("lr_refresh_token", refreshToken, 60 * 60 * 24 * 30, secure));
+    cookies.push(authCookie(REFRESH_TOKEN_COOKIE, refreshToken, REFRESH_COOKIE_MAX_AGE, secure));
   }
 
   res.setHeader("Set-Cookie", cookies);
@@ -235,7 +232,7 @@ export default async function handler(
         });
       }
 
-        return signInWithAuthResult(challenge.AuthenticationResult ?? {}, res, secure);
+      return signInWithAuthResult(challenge.AuthenticationResult ?? {}, res, secure);
     }
 
     const auth = await cognito.send(

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "../../lib/prisma";
 import { LIVE_ROYALLY_PARTNER_EMAIL } from "../../lib/live-royally";
 import { expireEndedPartnerTrials } from "../../lib/promo-codes";
+import { getCognitoIdFromRequest } from "../../lib/api-auth";
 
 type UserByIdResponse =
   | {
@@ -39,10 +40,10 @@ export default async function handler(
   }
 
   try {
-    const cognitoId = String(req.query.cognitoId || req.query.cognito_id || "").trim();
+    const cognitoId = await getCognitoIdFromRequest(req);
 
     if (!cognitoId) {
-      return res.status(400).json({ error: "Missing cognitoId" });
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
     const partnerUser = await prisma.users.findUnique({

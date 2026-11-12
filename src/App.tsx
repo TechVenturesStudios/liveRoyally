@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { getUserFromStorage } from "@/utils/userStorage";
+import { installSessionRefresh } from "@/utils/sessionRefresh";
 import { getEffectiveDashboardType, getRepresentativeCapabilities, isAuthorizedRepresentativeView } from "@/utils/dashboardContext";
 import { UserType } from "@/types/user";
 import Index from "./pages/Index";
@@ -49,6 +50,8 @@ import PartnerProvidersPage from "./pages/dashboard/PartnerProvidersPage";
 import ProviderRepresentativesPage from "./pages/dashboard/ProviderRepresentativesPage";
 
 const queryClient = new QueryClient();
+
+installSessionRefresh();
 
 // Basic auth guard — redirects to login if not authenticated
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {

@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-    const cognitoId = getCognitoIdFromRequest(req);
+    const cognitoId = await getCognitoIdFromRequest(req);
     if (!cognitoId) return res.status(401).json({ error: "Please sign in to continue" });
     const user = await prisma.users.findUnique({ where: { cognito_id: cognitoId }, select: { user_id: true, user_type: true } });
     if (!user || user.user_type !== "provider" || user.user_id !== invite!.provider_id) return res.status(403).json({ error: "Please sign in to the provider account that received this invitation" });

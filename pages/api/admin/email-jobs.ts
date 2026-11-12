@@ -3,7 +3,7 @@ import { getCognitoIdFromRequest } from "../../../lib/api-auth";
 import { prisma } from "../../../lib/prisma";
 
 async function requireAdmin(req: NextApiRequest) {
-  const cognitoId = getCognitoIdFromRequest(req);
+  const cognitoId = await getCognitoIdFromRequest(req);
   if (!cognitoId) return null;
   const user = await prisma.users.findUnique({ where: { cognito_id: cognitoId }, select: { user_id: true, user_type: true } });
   return user?.user_type === "admin" ? user : null;

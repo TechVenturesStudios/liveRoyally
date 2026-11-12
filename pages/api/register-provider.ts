@@ -10,6 +10,7 @@ import {
   queueProviderApplicationReviewEmail,
 } from "../../lib/notification-templates";
 import { getAppBaseUrl } from "../../lib/app-url";
+import { getCognitoSubForEmail } from "../../lib/cognito-admin";
 
 type RegisterProviderResponse =
   | {
@@ -38,12 +39,11 @@ export default async function handler(
 
   try {
     const body = req.body ?? {};
-    const cognitoId = body.cognitoSub || body.cognitoId;
     const partnerCode = String(body.partnerCode || "").trim().toUpperCase();
     const partnerId = String(body.partnerId || "").trim();
 
-    if (!cognitoId) {
-      return res.status(400).json({ error: "cognitoSub is required" });
+    if (!String(body.businessEmail || "").trim()) {
+      return res.status(400).json({ error: "businessEmail is required" });
     }
 
     if (!String(body.agentPhone || "").trim() || !String(body.businessPhone || "").trim()) {
@@ -55,11 +55,12 @@ export default async function handler(
     }
 
     const displayId = `P-${randomInt(100000000, 999999999)}`;
+    const cognitoId = await getCognitoSubForEmail(String(body.businessEmail));
 
     const result = await prisma.$transaction(async (tx) => {
       const normalizedEmail = String(body.businessEmail || "").toLowerCase().trim();
       const existingUser = await tx.users.findFirst({
-        where: { OR: [{ email: normalizedEmail }, { cognito_id: String(cognitoId) }] },
+        where: { OR: [{ email: normalizedEmail }, { cognito_id: cognitoId }] },
         select: {
           user_id: true,
           user_type: true,
@@ -155,7 +156,7 @@ export default async function handler(
           })
         : await tx.users.create({
             data: {
-              cognito_id: String(cognitoId),
+              cognito_id: cognitoId,
               email: normalizedEmail,
               first_name: body.agentFirstName || null,
               last_name: body.agentLastName || null,

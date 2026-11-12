@@ -1,14 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-
-function isSecureRequest(req: NextApiRequest) {
-  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
-  return forwardedProto === "https";
-}
-
-function clearCookie(name: string, secure: boolean) {
-  const secureFlag = secure ? "; Secure" : "";
-  return `${name}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${secureFlag}`;
-}
+import {
+  ACCESS_TOKEN_COOKIE,
+  clearCookie,
+  ID_TOKEN_COOKIE,
+  isSecureRequest,
+  REFRESH_TOKEN_COOKIE,
+} from "../../../lib/auth-cookies";
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -18,9 +15,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const secure = isSecureRequest(req);
 
   res.setHeader("Set-Cookie", [
-    clearCookie("lr_id_token", secure),
-    clearCookie("lr_access_token", secure),
-    clearCookie("lr_refresh_token", secure),
+    clearCookie(ID_TOKEN_COOKIE, secure),
+    clearCookie(ACCESS_TOKEN_COOKIE, secure),
+    clearCookie(REFRESH_TOKEN_COOKIE, secure),
   ]);
 
   return res.status(200).json({ ok: true });

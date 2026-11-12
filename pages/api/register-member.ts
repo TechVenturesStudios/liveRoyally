@@ -6,6 +6,7 @@ import { awardAccountCreationReward, awardRewardTask } from "../../lib/rewards";
 import { getOrCreateRole } from "../../lib/roles";
 import { queueMemberPointsTierGuideEmail, queueWelcomeEmail } from "../../lib/notification-templates";
 import { getAppBaseUrl } from "../../lib/app-url";
+import { getCognitoSubForEmail } from "../../lib/cognito-admin";
 
 type RegisterMemberResponse =
   | {
@@ -46,8 +47,8 @@ export default async function handler(
   try {
     const body = req.body ?? {};
 
-    if (!body.cognitoSub) {
-      return res.status(400).json({ error: "cognitoSub is required" });
+    if (!String(body.email || "").trim()) {
+      return res.status(400).json({ error: "email is required" });
     }
 
     if (!String(body.phoneNumber || "").trim()) {
@@ -62,10 +63,12 @@ export default async function handler(
       return res.status(400).json({ error: "You must be at least 16 years old to create an account" });
     }
 
+    const cognitoSub = await getCognitoSubForEmail(String(body.email));
+
     const result = await prisma.$transaction(async (tx) => {
       const normalizedEmail = String(body.email || "").toLowerCase().trim();
       const existingUser = await tx.users.findFirst({
-        where: { OR: [{ email: normalizedEmail }, { cognito_id: String(body.cognitoSub) }] },
+        where: { OR: [{ email: normalizedEmail }, { cognito_id: cognitoSub }] },
         select: { user_id: true },
       });
 
@@ -85,7 +88,7 @@ export default async function handler(
 
       const user = await tx.users.create({
         data: {
-          cognito_id: String(body.cognitoSub),
+          cognito_id: cognitoSub,
           email: normalizedEmail,
           first_name: body.firstName || null,
           last_name: body.lastName || null,

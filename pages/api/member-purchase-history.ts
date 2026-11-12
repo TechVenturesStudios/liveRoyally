@@ -111,7 +111,7 @@ export default async function handler(
   }
 
   try {
-    const cognitoId = getCognitoIdFromRequest(req);
+    const cognitoId = await getCognitoIdFromRequest(req);
 
     if (!cognitoId) {
       return res.status(401).json({ error: "Not authenticated" });

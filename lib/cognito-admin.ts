@@ -60,6 +60,16 @@ async function getSub(
   return sub;
 }
 
+// Registration looks up the Cognito user id itself so a client cannot attach an
+// account to someone else's Cognito user.
+export async function getCognitoSubForEmail(email: string) {
+  const cognito = new CognitoIdentityProviderClient({
+    region: process.env.AWS_REGION || "us-east-2",
+  });
+
+  return getSub(cognito, getUserPoolId(), normalizeUsername(email));
+}
+
 function generateTemporaryPassword() {
   // Keep the generated password compatible with Cognito's usual password policy.
   const suffix = randomBytes(12).toString("base64url").replace(/[-_]/g, "A");

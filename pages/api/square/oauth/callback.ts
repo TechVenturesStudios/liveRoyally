@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const state = String(req.query.state || "");
     const expectedState = cookieValue(req, "square_oauth_state");
     if (!state || !expectedState || state !== decodeURIComponent(expectedState)) return finish(res, "state_error");
-    const cognitoId = getCognitoIdFromCookie(req);
+    const cognitoId = await getCognitoIdFromCookie(req);
     if (!cognitoId) return finish(res, "auth_error");
     if (req.query.error) return finish(res, "denied");
 
