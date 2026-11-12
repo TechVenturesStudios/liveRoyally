@@ -1,37 +1,31 @@
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Logo } from "@/components/ui/logo";
+import { LogoMark } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Users, RefreshCw, Building } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { TrendingUp, Users, RefreshCw } from "lucide-react";
 
+// Rendered by Next.js on the server (pages/index.tsx) and by the client app's router,
+// so it uses plain links rather than react-router navigation.
 const Index = () => {
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="py-4 px-6 shadow-sm bg-white">
         <div className="container mx-auto flex justify-between items-center">
-          <Logo />
-          {!isMobile && (
-            <div className="space-x-4">
-              <Button 
-                className="bg-white hover:bg-white/90 text-brand-purple border border-brand-purple font-bold"
-                onClick={() => navigate("/login")}
-              >
-                Sign In
-              </Button>
-              <Button 
-                className="bg-brand-pink hover:bg-brand-pink/90 text-white"
-                onClick={() => navigate("/register")}
-              >
-                Register
-              </Button>
-            </div>
-          )}
+          <a href="/" aria-label="Local Metrics home">
+            <LogoMark />
+          </a>
+          <div className="hidden md:block space-x-4">
+            <Button
+              asChild
+              className="bg-white hover:bg-white/90 text-brand-purple border border-brand-purple font-bold"
+            >
+              <a href="/login">Sign In</a>
+            </Button>
+            <Button asChild className="bg-brand-pink hover:bg-brand-pink/90 text-white">
+              <a href="/register">Register</a>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -59,17 +53,17 @@ const Index = () => {
               </a>
             </Button>
             <Button
+              asChild
               className="w-full sm:w-56 h-14 min-h-14 border-2 border-transparent bg-white hover:bg-white/90 text-brand-purple font-bold text-lg px-8 py-0"
-              onClick={() => navigate("/register")}
             >
-              Join Your Community
+              <a href="/register">Join Your Community</a>
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              asChild
+              variant="outline"
               className="w-full sm:w-56 h-14 min-h-14 border-2 border-white bg-white hover:bg-white/90 text-brand-purple font-bold text-lg px-8 py-0"
-              onClick={() => navigate("/login")}
             >
-              Sign In
+              <a href="/login">Sign In</a>
             </Button>
           </div>
         </div>
@@ -120,11 +114,8 @@ const Index = () => {
           <p className="text-xl max-w-2xl mx-auto mb-10">
             Join Local Metrics today and be part of the community economic development movement.
           </p>
-          <Button 
-            className="bg-brand-pink hover:bg-brand-pink/90 text-white text-lg px-8 py-6"
-            onClick={() => navigate("/register")}
-          >
-            Get Started Now
+          <Button asChild className="bg-brand-pink hover:bg-brand-pink/90 text-white text-lg px-8 py-6">
+            <a href="/register">Get Started Now</a>
           </Button>
         </div>
       </section>
@@ -133,7 +124,7 @@ const Index = () => {
       <footer className="py-12 px-6 bg-gray-900 text-white border-t border-gray-800">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <Logo size="large" />
+            <LogoMark size="large" />
             <div className="mt-6 md:mt-0 text-center md:text-right">
               <p>&copy; {new Date().getFullYear()} Local Metrics. All rights reserved.</p>
               <p className="text-sm mt-2 opacity-80">Romans 8:31</p>

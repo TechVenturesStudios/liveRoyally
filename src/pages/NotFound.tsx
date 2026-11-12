@@ -15,6 +15,15 @@ const NotFound = () => {
     );
   }, [location.pathname]);
 
+  // Unknown URLs still return 200 from the catch-all page; tell crawlers not to index them.
+  useEffect(() => {
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex";
+    document.head.appendChild(meta);
+    return () => meta.remove();
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-cream">
       <div className="text-center max-w-md px-6">
